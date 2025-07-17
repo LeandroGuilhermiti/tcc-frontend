@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:syncfusion_flutter_calendar/calendar.dart';
 
 class HomePageAdmin extends StatefulWidget {
   const HomePageAdmin({super.key});
@@ -11,7 +12,8 @@ class HomePageAdmin extends StatefulWidget {
 class _HomePageAdminState extends State<HomePageAdmin> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  CalendarFormat _calendarFormat = CalendarFormat.week;
+  bool _mostrarTabela = true; // true = TableCalendar, false = SfCalendar
+
   Map<DateTime, List<String>> _eventos = {};
 
   List<String> _getEventosDoDia(DateTime dia) {
@@ -22,8 +24,6 @@ class _HomePageAdminState extends State<HomePageAdmin> {
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
-
-    // Simulação de eventos fixos (você pode carregar do Firebase, AWS, etc.)
     _eventos = {
       DateTime.utc(2025, 7, 7): ['Consulta com João', 'Retorno Maria'],
       DateTime.utc(2025, 7, 8): ['Avaliação inicial Carla'],
@@ -75,54 +75,101 @@ class _HomePageAdminState extends State<HomePageAdmin> {
       ),
       body: Column(
         children: [
-          TableCalendar<String>(
-            focusedDay: _focusedDay,
-            firstDay: DateTime.utc(2025),
-            lastDay: DateTime.utc(2035),
-            startingDayOfWeek: StartingDayOfWeek.monday,
-            calendarFormat: _calendarFormat, availableCalendarFormats: const {
-                CalendarFormat.week: 'Semana',
-                CalendarFormat.month: 'Mês',
-              },
-              onFormatChanged: (format) {
-                setState(() {
-                  _calendarFormat = format;
-                });
-              },
-            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-            eventLoader: _getEventosDoDia,
-            onDaySelected: (selectedDay, focusedDay) {
+          ToggleButtons(
+            isSelected: [_mostrarTabela, !_mostrarTabela],
+            onPressed: (index) {
               setState(() {
-                _selectedDay = selectedDay;
-                _focusedDay = focusedDay;
+                _mostrarTabela = index == 0;
               });
             },
-            calendarStyle: const CalendarStyle(
-              todayDecoration: BoxDecoration(
-                color: Colors.blue,
-                shape: BoxShape.circle,
-              ),
-              selectedDecoration: BoxDecoration(
-                color: Colors.orange,
-                shape: BoxShape.circle,
-              ),
-            ),
+            children: const [
+              Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('Mês')),
+              Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('Semana')),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Expanded(
-            child: ListView(
-              children: _getEventosDoDia(_selectedDay!).map((evento) {
-                return ListTile(
-                  title: Text(evento),
-                  onTap: () {
-                    // Ex: abrir modal com detalhes
-                  },
-                );
-              }).toList(),
-            ),
-          )
+            child: _mostrarTabela
+                ? Column(
+                    children: [
+                      TableCalendar<String>(
+                        focusedDay: _focusedDay,
+                        firstDay: DateTime.utc(2025),
+                        lastDay: DateTime.utc(2035),
+                        startingDayOfWeek: StartingDayOfWeek.monday,
+                        calendarFormat: CalendarFormat.month,
+                        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                        eventLoader: _getEventosDoDia,
+                        onDaySelected: (selectedDay, focusedDay) {
+                          setState(() {
+                            _selectedDay = selectedDay;
+                            _focusedDay = focusedDay;
+                          });
+                        },
+                        calendarStyle: const CalendarStyle(
+                          todayDecoration: BoxDecoration(
+                            color: Colors.blue,
+                            shape: BoxShape.circle,
+                          ),
+                          selectedDecoration: BoxDecoration(
+                            color: Colors.orange,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: ListView(
+                          children: _getEventosDoDia(_selectedDay!).map((evento) {
+                            return ListTile(
+                              title: Text(evento),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
+                  )
+                : SfCalendar(
+                    view: CalendarView.week,
+                    firstDayOfWeek: 1,
+                    timeSlotViewSettings: const TimeSlotViewSettings(
+                      startHour: 8,
+                      endHour: 18,
+                      timeInterval: Duration(minutes: 30),
+					  timeIntervalHeight: 40,
+					  timeRulerSize: 80,
+					  timeFormat: 'h:mm a',
+                    ),
+                    dataSource: _getDataSource(),
+                  ),
+          ),
         ],
       ),
     );
+  }
+
+  MeetingDataSource _getDataSource() {
+    final List<Appointment> appointments = [];
+
+    _eventos.forEach((date, eventos) {
+      for (var evento in eventos) {
+        appointments.add(
+          Appointment(
+            startTime: date.add(const Duration(hours: 9)),
+            endTime: date.add(const Duration(hours: 10)),
+            subject: evento,
+            color: Colors.blue,
+          ),
+        );
+      }
+    });
+
+    return MeetingDataSource(appointments);
+  }
+}
+
+class MeetingDataSource extends CalendarDataSource {
+  MeetingDataSource(List<Appointment> source) {
+    appointments = source;
   }
 }
