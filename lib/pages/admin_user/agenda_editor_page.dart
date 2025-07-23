@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class AgendaEditorPage extends StatefulWidget {
   const AgendaEditorPage({super.key});
@@ -8,6 +10,7 @@ class AgendaEditorPage extends StatefulWidget {
 }
 
 class _AgendaEditorPageState extends State<AgendaEditorPage> {
+  final TextEditingController _profissionalController = TextEditingController();
   final List<String> diasSemana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   final Map<String, bool> diasSelecionados = {
     'Seg': false,
@@ -41,19 +44,52 @@ class _AgendaEditorPageState extends State<AgendaEditorPage> {
     }
   }
 
-  void _salvarAgenda() {
-    final dias = diasSelecionados.entries.where((e) => e.value).map((e) => e.key).toList();
+  Future<void> _salvarAgenda() async {
+    if (_profissionalController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe o nome do profissional')),
+      );
+      return;
+    }
+
+    final dias = diasSelecionados.entries
+        .where((e) => e.value)
+        .map((e) => e.key)
+        .toList();
+
     final agenda = {
-      'diasAtendimento': dias,
-      'horaInicio': '${horaInicio.hour}:${horaInicio.minute.toString().padLeft(2, '0')}',
-      'horaFim': '${horaFim.hour}:${horaFim.minute.toString().padLeft(2, '0')}',
-      'duracaoConsulta': duracaoConsulta,
+      'nome': _profissionalController.text.trim(),
+      'horaInicial': '${horaInicio.hour}:${horaInicio.minute.toString().padLeft(2, '0')}',
+      'horaFinal': '${horaFim.hour}:${horaFim.minute.toString().padLeft(2, '0')}',
+      'duracao': duracaoConsulta,
+      'dias': dias,
     };
-    // Aqui você pode fazer um POST ou salvar no Firestore/DynamoDB
-    debugPrint('Agenda salva: $agenda');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Agenda salva com sucesso!')),
-    );
+
+    try {
+      final url = Uri.parse('https://a1ti365614.execute-api.sa-east-1.amazonaws.com/api/agenda');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(agenda),
+      );
+
+      if (response.statusCode == 201) {
+        debugPrint('Agenda salva no backend: ${response.body}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Agenda salva com sucesso!')),
+        );
+      } else {
+        debugPrint('Erro ao salvar agenda: ${response.body}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao salvar agenda: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Exceção ao salvar agenda: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro de conexão com o servidor')),
+      );
+    }
   }
 
   @override
@@ -64,6 +100,14 @@ class _AgendaEditorPageState extends State<AgendaEditorPage> {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
+            TextField(
+              controller: _profissionalController,
+              decoration: const InputDecoration(
+                labelText: 'Nome do Profissional',
+                hintText: 'Ex.: Dr. João Silva',
+              ),
+            ),
+            const SizedBox(height: 20),
             const Text('Dias de Atendimento', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Wrap(
               children: diasSemana.map((dia) {
