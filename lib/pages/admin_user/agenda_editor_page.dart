@@ -11,6 +11,7 @@ class AgendaEditorPage extends StatefulWidget {
 
 class _AgendaEditorPageState extends State<AgendaEditorPage> {
   final TextEditingController _profissionalController = TextEditingController();
+  final TextEditingController _describeController = TextEditingController();
   final List<String> diasSemana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   final Map<String, bool> diasSelecionados = {
     'Seg': false,
@@ -57,20 +58,25 @@ class _AgendaEditorPageState extends State<AgendaEditorPage> {
         .map((e) => e.key)
         .toList();
 
-    final agenda = {
-      'nome': _profissionalController.text.trim(),
-      'horaInicial': '${horaInicio.hour}:${horaInicio.minute.toString().padLeft(2, '0')}',
-      'horaFinal': '${horaFim.hour}:${horaFim.minute.toString().padLeft(2, '0')}',
-      'duracao': duracaoConsulta,
-      'dias': dias,
-    };
+	final dadosCompletos = {
+		'agenda': {
+		'nome': _profissionalController.text.trim(),
+		'descricao': _describeController.text.trim(),
+		},
+		'periodo': {
+			'horaInicial': '${horaInicio.hour}:${horaInicio.minute.toString().padLeft(2, '0')}',
+			'horaFinal': '${horaFim.hour}:${horaFim.minute.toString().padLeft(2, '0')}',
+			'duracao': duracaoConsulta,
+			'dias': dias,
+		},
+	};
 
     try {
       final url = Uri.parse('https://a1ti365614.execute-api.sa-east-1.amazonaws.com/api/agenda');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: json.encode(agenda),
+        body: json.encode(dadosCompletos),
       );
 
       if (response.statusCode == 201) {
@@ -105,6 +111,13 @@ class _AgendaEditorPageState extends State<AgendaEditorPage> {
               decoration: const InputDecoration(
                 labelText: 'Nome do Profissional',
                 hintText: 'Ex.: Dr. João Silva',
+              ),
+            ),
+			TextField(
+              controller: _describeController,
+              decoration: const InputDecoration(
+                labelText: 'Drescrição breve',
+                hintText: 'Ex.: Insira uma Descrição',
               ),
             ),
             const SizedBox(height: 20),

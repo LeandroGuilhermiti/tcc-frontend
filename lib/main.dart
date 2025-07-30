@@ -7,6 +7,7 @@ import 'pages/client_user/home_page_client.dart';
 import 'pages/admin_user/home_page_admin.dart';
 import 'package:tcc_frontend/models/user_model.dart';       
 import 'pages/admin_user/agenda_editor_page.dart';
+import 'pages/admin_user/register_page_admin.dart';
 
 void main() {
   runApp(
@@ -45,6 +46,7 @@ class MyApp extends StatelessWidget {
         '/admin': (_) => const HomePageAdmin(),
         '/cliente': (_) => const HomePageClient(),
         '/editor': (context) => const AgendaEditorPage(),
+        '/cadastro': (context) => const RegisterPageAdmin(),    
       },
     );
   }

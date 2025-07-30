@@ -30,6 +30,90 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     };
   }
 
+  void _abrirDialogoAgendamento(BuildContext context, DateTime dataSelecionada) async {
+    final TextEditingController _eventoController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Novo Agendamento'),
+          content: TextField(
+            controller: _eventoController,
+            decoration: const InputDecoration(
+              labelText: 'Descrição do evento',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final evento = _eventoController.text.trim();
+                if (evento.isNotEmpty) {
+                  // Usa o horário exato do quadradinho clicado
+                  final DateTime agendamento = dataSelecionada;
+
+                  // Limita a 1 agendamento por horário
+                  if (!_eventos.containsKey(agendamento)) {
+                    setState(() {
+                      _eventos[agendamento] = [evento];
+                    });
+                    Navigator.pop(context);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Já existe agendamento neste horário!')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _abrirDialogoEdicao(BuildContext context, DateTime dataSelecionada, String descricaoAtual) {
+    final TextEditingController _eventoController = TextEditingController(text: descricaoAtual);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Editar Agendamento'),
+          content: TextField(
+            controller: _eventoController,
+            decoration: const InputDecoration(
+              labelText: 'Descrição do evento',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final eventoEditado = _eventoController.text.trim();
+                if (eventoEditado.isNotEmpty) {
+                  setState(() {
+                    _eventos[dataSelecionada] = [eventoEditado];
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -57,13 +141,13 @@ class _HomePageAdminState extends State<HomePageAdmin> {
             ),
             ListTile(
               leading: const Icon(Icons.edit_calendar),
-              title: const Text('Editor agenda'),
+              title: const Text('Editar agenda'),
               onTap: () => Navigator.pushNamed(context, '/editor'),
             ),
             ListTile(
               leading: const Icon(Icons.schedule),
-              title: const Text('Consultar agendas'),
-              onTap: () => Navigator.pushNamed(context, '/agendas'),
+              title: const Text('Cadastrar usuários'),
+              onTap: () => Navigator.pushNamed(context, '/cadastro'),
             ),
             ListTile(
               leading: const Icon(Icons.people),
@@ -98,6 +182,9 @@ class _HomePageAdminState extends State<HomePageAdmin> {
                         lastDay: DateTime.utc(2035),
                         startingDayOfWeek: StartingDayOfWeek.monday,
                         calendarFormat: CalendarFormat.month,
+                        availableCalendarFormats: const {
+                          CalendarFormat.month: 'Mês'
+                        },
                         selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
                         eventLoader: _getEventosDoDia,
                         onDaySelected: (selectedDay, focusedDay) {
@@ -136,11 +223,38 @@ class _HomePageAdminState extends State<HomePageAdmin> {
                       startHour: 8,
                       endHour: 18,
                       timeInterval: Duration(minutes: 30),
-					  timeIntervalHeight: 40,
-					  timeRulerSize: 80,
-					  timeFormat: 'h:mm a',
+                      timeIntervalHeight: 40,
+                      timeRulerSize: 80,
+                      timeFormat: 'h:mm a',
                     ),
                     dataSource: _getDataSource(),
+                    onTap: (CalendarTapDetails details) {
+                      if (details.targetElement == CalendarElement.appointment && details.appointments != null) {
+                        final Appointment appt = details.appointments!.first;
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text(appt.subject),
+                            content: Text('Horário: ${appt.startTime.hour}:${appt.startTime.minute.toString().padLeft(2, '0')}'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Fechar'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context); // Fecha o dialog de detalhes
+                                  _abrirDialogoEdicao(context, appt.startTime, appt.subject);
+                                },
+                                child: const Text('Editar'),
+                              ),
+                            ],
+                          ),
+                        );
+                      } else if (details.targetElement == CalendarElement.calendarCell && details.date != null) {
+                        _abrirDialogoAgendamento(context, details.date!);
+                      }
+                    },
                   ),
           ),
         ],
@@ -155,8 +269,8 @@ class _HomePageAdminState extends State<HomePageAdmin> {
       for (var evento in eventos) {
         appointments.add(
           Appointment(
-            startTime: date.add(const Duration(hours: 9)),
-            endTime: date.add(const Duration(hours: 10)),
+            startTime: date,
+            endTime: date.add(const Duration(minutes: 30)),
             subject: evento,
             color: Colors.blue,
           ),
