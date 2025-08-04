@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'controllers/auth_controller.dart';
+import 'providers/auth_controller.dart';
 import 'pages/login_page.dart';
 import 'pages/client_user/home_page_client.dart';
 import 'pages/admin_user/home_page_admin.dart';
 import 'package:tcc_frontend/models/user_model.dart';       
 import 'pages/admin_user/agenda_editor_page.dart';
 import 'pages/admin_user/register_page_admin.dart';
+import 'package:tcc_frontend/providers/user_provider.dart';
 
 void main() {
   runApp(
