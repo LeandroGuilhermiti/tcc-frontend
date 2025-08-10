@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tcc_frontend/models/user_model.dart';
 
 class UsuarioProvider with ChangeNotifier {
-  List<UserModel> _usuarios = [];
+  final List<UserModel> _usuarios = [];
 
   List<UserModel> get usuarios => _usuarios;
 

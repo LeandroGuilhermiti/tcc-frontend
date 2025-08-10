@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:tcc_frontend/theme/app_colors.dart';
 
 class HomePageAdmin extends StatefulWidget {
   const HomePageAdmin({super.key});
@@ -31,7 +32,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
   }
 
   void _abrirDialogoAgendamento(BuildContext context, DateTime dataSelecionada) async {
-    final TextEditingController _eventoController = TextEditingController();
+    final TextEditingController eventoController = TextEditingController();
 
     showDialog(
       context: context,
@@ -39,7 +40,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
         return AlertDialog(
           title: const Text('Novo Agendamento'),
           content: TextField(
-            controller: _eventoController,
+            controller: eventoController,
             decoration: const InputDecoration(
               labelText: 'Descrição do evento',
             ),
@@ -51,7 +52,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
             ),
             ElevatedButton(
               onPressed: () {
-                final evento = _eventoController.text.trim();
+                final evento = eventoController.text.trim();
                 if (evento.isNotEmpty) {
                   // Usa o horário exato do quadradinho clicado
                   final DateTime agendamento = dataSelecionada;
@@ -78,7 +79,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
   }
 
   void _abrirDialogoEdicao(BuildContext context, DateTime dataSelecionada, String descricaoAtual) {
-    final TextEditingController _eventoController = TextEditingController(text: descricaoAtual);
+    final TextEditingController eventoController = TextEditingController(text: descricaoAtual);
 
     showDialog(
       context: context,
@@ -86,7 +87,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
         return AlertDialog(
           title: const Text('Editar Agendamento'),
           content: TextField(
-            controller: _eventoController,
+            controller: eventoController,
             decoration: const InputDecoration(
               labelText: 'Descrição do evento',
             ),
@@ -98,7 +99,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
             ),
             ElevatedButton(
               onPressed: () {
-                final eventoEditado = _eventoController.text.trim();
+                final eventoEditado = eventoController.text.trim();
                 if (eventoEditado.isNotEmpty) {
                   setState(() {
                     _eventos[dataSelecionada] = [eventoEditado];
@@ -117,8 +118,10 @@ class _HomePageAdminState extends State<HomePageAdmin> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
         title: const Text('Admin Home'),
+        backgroundColor: AppColors.primary,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -166,6 +169,11 @@ class _HomePageAdminState extends State<HomePageAdmin> {
                 _mostrarTabela = index == 0;
               });
             },
+            color:AppColors.details,            // texto quando não selecionado
+            selectedColor: Colors.white,        // texto quando selecionado
+            fillColor: AppColors.details,       // fundo quando selecionado
+            borderColor: Colors.blueGrey,       // borda quando não selecionado
+            selectedBorderColor: AppColors.details, // borda quando selecionado
             children: const [
               Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('Mês')),
               Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('Semana')),
@@ -228,6 +236,15 @@ class _HomePageAdminState extends State<HomePageAdmin> {
                       timeFormat: 'h:mm a',
                     ),
                     dataSource: _getDataSource(),
+                      headerStyle: CalendarHeaderStyle(
+                        backgroundColor: AppColors.backgroundLight,  
+                        textAlign: TextAlign.center,  
+                        textStyle: TextStyle(
+                        color: AppColors.textPrimary,     
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     onTap: (CalendarTapDetails details) {
                       if (details.targetElement == CalendarElement.appointment && details.appointments != null) {
                         final Appointment appt = details.appointments!.first;

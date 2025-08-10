@@ -2,18 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/auth_controller.dart';
+
+import 'models/user_model.dart';
 import 'pages/login_page.dart';
 import 'pages/client_user/home_page_client.dart';
 import 'pages/admin_user/home_page_admin.dart';
-import 'package:tcc_frontend/models/user_model.dart';       
 import 'pages/admin_user/agenda_editor_page.dart';
 import 'pages/admin_user/register_page_admin.dart';
-import 'package:tcc_frontend/providers/user_provider.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // 🔹 Garante que o Flutter iniciou
+  // await dotenv.load(fileName: ".env"); // 🔹 Carrega o .env
+
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AuthController(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthController()),
+        // ChangeNotifierProvider(create: (_) => UserProvider()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -40,14 +46,14 @@ class MyApp extends StatelessWidget {
               return const HomePageClient();
             }
           } else {
-            return LoginPage();
+            return const LoginPage(); // 🔹 const para otimizar
           }
         },
-        '/login': (_) => LoginPage(),
+        '/login': (_) => const LoginPage(),
         '/admin': (_) => const HomePageAdmin(),
         '/cliente': (_) => const HomePageClient(),
-        '/editor': (context) => const AgendaEditorPage(),
-        '/cadastro': (context) => const RegisterPageAdmin(),    
+        '/editor': (_) => const AgendaEditorPage(),
+        '/cadastro': (_) => const RegisterPageAdmin(),
       },
     );
   }
