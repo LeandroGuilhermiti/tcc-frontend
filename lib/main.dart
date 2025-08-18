@@ -30,15 +30,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth = Provider.of<AuthController>(context);
-
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'App de Agendamento',
       theme: ThemeData.light(),
-      initialRoute: '/',
-      routes: {
-        '/': (_) {
+      home: Builder(
+        builder: (context) {
+          final auth = Provider.of<AuthController>(context);
           if (auth.isLogado) {
             if (auth.tipoUsuario == UserRole.admin) {
               return const HomePageAdmin();
@@ -46,9 +44,11 @@ class MyApp extends StatelessWidget {
               return const HomePageClient();
             }
           } else {
-            return const LoginPage(); // 🔹 const para otimizar
+            return const LoginPage();
           }
         },
+      ),
+      routes: {
         '/login': (_) => const LoginPage(),
         '/admin': (_) => const HomePageAdmin(),
         '/cliente': (_) => const HomePageClient(),
