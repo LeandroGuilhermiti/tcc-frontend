@@ -1,0 +1,27 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo "Installing Flutter"
+      - git clone https://github.com/flutter/flutter.git -b 3.32.6
+      - export PATH="$PATH:`pwd`/flutter/bin"
+      - echo "Flutter installed"
+      - echo "Installing your project dependencies"
+      - printenv > .env
+      - flutter pub get
+
+  build:
+    commands:
+      - echo "Building Flutter Web project"
+      - flutter build web --release
+  
+  post_build:
+    commands:
+      - echo "Cleaning old deploy files"
+      - aws s3 rm s3://tcc-agendamento-frontend/ --recursive
+
+artifacts:
+  files:
+    - '**/*'
+  base-directory: 'build/web'
