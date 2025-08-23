@@ -5,8 +5,6 @@ import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:tcc_frontend/theme/app_colors.dart';
 
-// Importe TODOS os seus providers e models
-
 import 'package:tcc_frontend/models/agendamento_model.dart';
 import 'package:tcc_frontend/models/bloqueio_model.dart';
 import 'package:tcc_frontend/models/periodo_model.dart';
