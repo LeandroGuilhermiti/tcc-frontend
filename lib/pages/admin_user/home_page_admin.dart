@@ -3,6 +3,14 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:tcc_frontend/theme/app_colors.dart';
 
+import 'package:tcc_frontend/models/agendamento_model.dart';
+import 'package:tcc_frontend/models/bloqueio_model.dart';
+import 'package:tcc_frontend/models/periodo_model.dart';
+
+import 'package:tcc_frontend/providers/agendamento_provider.dart';
+import 'package:tcc_frontend/providers/bloqueio_provider.dart';
+import 'package:tcc_frontend/providers/periodo_provider.dart';
+
 class HomePageAdmin extends StatefulWidget {
   const HomePageAdmin({super.key});
 
