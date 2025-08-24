@@ -57,8 +57,9 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     bloqueioProvider.carregarBloqueios(idAgenda);
   }
 
-  // Suas funções de diálogo para criar/editar agendamentos permanecem aqui
-  // Lembre-se de chamar os métodos do provider para salvar as alterações
+  //funções de diálogo para criar/editar agendamentos 
+  //chamar os métodos do provider para salvar as alterações
+
   void _abrirDialogoAgendamento(
     BuildContext context,
     DateTime dataSelecionada,

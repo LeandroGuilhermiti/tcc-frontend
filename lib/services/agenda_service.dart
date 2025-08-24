@@ -5,7 +5,7 @@ import '../models/agenda_model.dart';
 
 class AgendaService {
   final String baseUrl = dotenv.env['API_BASE_URL']!;
-  /// Busca todas as agendas
+  // Busca todas as agendas
   Future<List<Agenda>> getAgendas() async {
     final response = await http.get(Uri.parse('$baseUrl/agenda'));
 
@@ -17,7 +17,7 @@ class AgendaService {
     }
   }
 
-  /// Salva uma nova agenda
+  // Salva uma nova agenda
   Future<void> salvarAgenda(Agenda agenda) async {
     final response = await http.post(
       Uri.parse('$baseUrl/agenda'),
@@ -30,7 +30,7 @@ class AgendaService {
     }
   }
 
-  /// Atualiza uma agenda existente
+  // Atualiza uma agenda existente
   Future<void> atualizarAgenda(Agenda agenda) async {
     if (agenda.id == null) {
       throw Exception('ID da agenda não informado para atualização.');
@@ -47,7 +47,7 @@ class AgendaService {
     }
   }
 
-  /// Remove uma agenda
+  // Remove uma agenda
   Future<void> deletarAgenda(String id) async {
     final response = await http.delete(Uri.parse('$baseUrl/agenda/$id'));
 

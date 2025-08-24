@@ -15,7 +15,7 @@ class Agendamento {
     // this.descricao,
   });
 
-  /// Construtor de fábrica para criar um Agendamento a partir de um mapa JSON (vindo da API)
+  // Construtor de fábrica para criar um Agendamento a partir de um mapa JSON (vindo da API)
   factory Agendamento.fromJson(Map<String, dynamic> json) {
     return Agendamento(
       // O backend pode retornar o ID como `id` ou `_id`
@@ -29,7 +29,7 @@ class Agendamento {
     );
   }
 
-  /// Converte o objeto Agendamento para um mapa JSON (para enviar para a API)
+  // Converte o objeto Agendamento para um mapa JSON (para enviar para a API)
   Map<String, dynamic> toJson() {
     return {
       // O ID não é enviado ao criar um novo agendamento, pois o banco o gera

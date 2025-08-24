@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Converte uma string no formato "HH:mm:ss" para um objeto TimeOfDay.
+// Converte uma string no formato "HH:mm:ss" para um objeto TimeOfDay.
 TimeOfDay _timeOfDayFromString(String timeString) {
   final parts = timeString.split(':');
   final hour = int.parse(parts[0]);
@@ -8,13 +8,12 @@ TimeOfDay _timeOfDayFromString(String timeString) {
   return TimeOfDay(hour: hour, minute: minute);
 }
 
-/// Formata um objeto TimeOfDay para uma string no formato "HH:mm:ss".
+// Formata um objeto TimeOfDay para uma string no formato "HH:mm:ss".
 String _stringFromTimeOfDay(TimeOfDay time) {
   final hour = time.hour.toString().padLeft(2, '0');
   final minute = time.minute.toString().padLeft(2, '0');
   return '$hour:$minute:00';
 }
-
 
 class Periodo {
   final String? id; // ID único do período (pode ser nulo ao criar)
@@ -31,7 +30,7 @@ class Periodo {
     required this.fim,
   });
 
-  /// Cria um Periodo a partir de um JSON vindo da API.
+  // Cria um Periodo a partir de um JSON vindo da API.
   factory Periodo.fromJson(Map<String, dynamic> json) {
     return Periodo(
       id: json['id']?.toString(), // Converte para String por segurança
@@ -43,7 +42,7 @@ class Periodo {
     );
   }
 
-  /// Converte um Periodo para um JSON para enviar à API.
+  // Converte um Periodo para um JSON para enviar à API.
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
