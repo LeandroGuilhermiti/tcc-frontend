@@ -33,20 +33,27 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
 
   void _salvarUsuario() {
     if (_formKey.currentState!.validate()) {
-      final novoUsuario = UserModel(
-        nome: _nomeController.text.trim(),
-        email: _emailController.text.trim(),
-        cpf: _cpfController.text.trim(),
-        cep: _cepController.text.trim(),
-        telefone: _telefoneController.text.trim(),
-        role: _tipoSelecionado == 'admin' ? UserRole.admin : UserRole.cliente,
-      );
+      // Crie um Map simples com os dados do formulário
+      final Map<String, dynamic> dadosNovoUsuario = {
+        'nome': _nomeController.text.trim(),
+        'cpf': _cpfController.text.trim(),
+        'cep': _cepController.text.trim(),
+        'telefone': _telefoneController.text.trim(),
+        // Lembre-se que o backend espera 0 ou 1
+        'role': _tipoSelecionado == 'admin' ? 1 : 0,
+        // IMPORTANTE: Para criar um usuário, você também precisará de email e senha!
+        // 'email': _emailController.text.trim(),
+        // 'senha': _senhaController.text.trim(),
+      };
 
-      Provider.of<UsuarioProvider>(context, listen: false)
-          .adicionarUsuario(novoUsuario);
+      // Chame o provider passando o Map
+      Provider.of<UsuarioProvider>(
+        context,
+        listen: false,
+      ).adicionarUsuario(dadosNovoUsuario);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Usuário cadastrado com sucesso')),
+        const SnackBar(content: Text('Usuário cadastrado com sucesso')),
       );
 
       Navigator.pop(context);

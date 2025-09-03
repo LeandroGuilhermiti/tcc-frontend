@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/agenda_model.dart';
+import '../models/periodo_model.dart';
 
 class AgendaService {
   final String baseUrl = dotenv.env['API_BASE_URL']!;
@@ -29,6 +30,24 @@ class AgendaService {
       throw Exception('Erro ao salvar agenda: ${response.body}');
     }
   }
+
+  /// Salva uma nova agenda e seus períodos de trabalho em uma única requisição.
+  Future<void> salvarAgendaCompleta(Agenda agenda, List<Periodo> periodos) async {
+    final payload = {
+      "agenda": agenda.toJson(),
+      "periodos": periodos.map((p) => p.toJson()).toList(),
+    };
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/agenda-completa'), // Crie este endpoint no seu backend
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(payload),
+    );
+
+  if (response.statusCode != 201) {
+    throw Exception('Erro ao salvar agenda completa: ${response.body}');
+  }
+}
 
   // Atualiza uma agenda existente
   Future<void> atualizarAgenda(Agenda agenda) async {

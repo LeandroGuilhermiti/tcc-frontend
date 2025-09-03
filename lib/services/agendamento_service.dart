@@ -6,10 +6,17 @@ import '../models/agendamento_model.dart';
 class AgendamentoService {
   final String baseUrl = dotenv.env['API_BASE_URL']!;
 
-  // Busca todos os agendamentos de uma agenda/profissional específico.
-  Future<List<Agendamento>> getAgendamentos(String idAgenda) async {
-    // Endpoint para buscar agendamentos filtrando pelo ID da agenda/profissional
-    final response = await http.get(Uri.parse('$baseUrl/agendamentos/agenda/$idAgenda'));
+  // Cabeçalhos padrão para incluir o token de autenticação
+  Map<String, String> _getHeaders(String token) => {
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Bearer $token',
+      };
+
+  Future<List<Agendamento>> getAgendamentos(String idAgenda, String token) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/agendamentos/agenda/$idAgenda'),
+      headers: _getHeaders(token),
+    );
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
@@ -19,32 +26,26 @@ class AgendamentoService {
     }
   }
 
-  // Cria um novo agendamento.
-  Future<Agendamento> criarAgendamento(Agendamento agendamento) async {
+  Future<Agendamento> criarAgendamento(Agendamento agendamento, String token) async {
     final response = await http.post(
       Uri.parse('$baseUrl/agendamentos'),
-      headers: {'Content-Type': 'application/json'},
+      headers: _getHeaders(token),
       body: jsonEncode(agendamento.toJson()),
     );
 
-    // 201 (Created) é o status de sucesso padrão para POST
     if (response.statusCode == 201) {
-      // Retorna o agendamento criado (que agora inclui o ID gerado pelo banco)
       return Agendamento.fromJson(jsonDecode(response.body));
     } else {
       throw Exception('Erro ao criar agendamento: ${response.body}');
     }
   }
 
-  // Atualiza um agendamento existente.
-  Future<void> atualizarAgendamento(Agendamento agendamento) async {
-    if (agendamento.id == null) {
-      throw Exception('ID do agendamento não informado para atualização.');
-    }
+  Future<void> atualizarAgendamento(Agendamento agendamento, String token) async {
+    if (agendamento.id == null) throw Exception('ID do agendamento não informado.');
 
     final response = await http.patch(
       Uri.parse('$baseUrl/agendamentos/${agendamento.id}'),
-      headers: {'Content-Type': 'application/json'},
+      headers: _getHeaders(token),
       body: jsonEncode(agendamento.toJson()),
     );
 
@@ -53,9 +54,11 @@ class AgendamentoService {
     }
   }
 
-  // Remove/deleta um agendamento.
-  Future<void> deletarAgendamento(String id) async {
-    final response = await http.delete(Uri.parse('$baseUrl/agendamentos/$id'));
+  Future<void> deletarAgendamento(String id, String token) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/agendamentos/$id'),
+      headers: _getHeaders(token),
+    );
 
     if (response.statusCode != 200) {
       throw Exception('Erro ao excluir agendamento: ${response.body}');

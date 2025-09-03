@@ -57,22 +57,252 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     bloqueioProvider.carregarBloqueios(idAgenda);
   }
 
-  //funções de diálogo para criar/editar agendamentos 
-  //chamar os métodos do provider para salvar as alterações
-
   void _abrirDialogoAgendamento(
     BuildContext context,
     DateTime dataSelecionada,
   ) {
-    /* ... Sua lógica de diálogo aqui ... */
-    // Ao salvar, você chamaria algo como:
-    // Provider.of<AgendamentoProvider>(context, listen: false).adicionarAgendamento(novoAgendamento);
+    final _formKey = GlobalKey<FormState>();
+    final TextEditingController idUsuarioController = TextEditingController();
+    final TextEditingController descricaoController = TextEditingController();
+    // Você pode obter a duração padrão da sua tabela `Agenda` no futuro
+    final int duracaoPadrao = 30; // Ex: 30 minutos
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        bool isSaving = false; // Estado de loading local para o diálogo
+        return StatefulBuilder(
+          // Permite atualizar o estado apenas do diálogo
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Novo Agendamento'),
+              content: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Horário: ${DateFormat('dd/MM/yyyy HH:mm').format(dataSelecionada)}',
+                    ),
+                    TextFormField(
+                      controller: idUsuarioController,
+                      decoration: const InputDecoration(
+                        labelText: 'ID do Usuário/Cliente',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Informe o ID do usuário.';
+                        }
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      controller: descricaoController,
+                      decoration: const InputDecoration(
+                        labelText: 'Descrição (opcional)',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          if (_formKey.currentState!.validate()) {
+                            setDialogState(() {
+                              isSaving = true;
+                            });
+
+                            final provider = Provider.of<AgendamentoProvider>(
+                              context,
+                              listen: false,
+                            );
+
+                            final novoAgendamento = Agendamento(
+                              // O ID será gerado pelo backend, então não passamos aqui
+                              idAgenda: idAgenda, // ID do profissional logado
+                              idUsuario: idUsuarioController.text.trim(),
+                              dataHora: dataSelecionada,
+                              duracao: duracaoPadrao,
+                              // descricao: descricaoController.text.trim(),
+                            );
+
+                            try {
+                              await provider.adicionarAgendamento(
+                                novoAgendamento,
+                              );
+                              if (context.mounted) Navigator.pop(context);
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      "Erro ao salvar: ${e.toString()}",
+                                    ),
+                                  ),
+                                );
+                              }
+                            } finally {
+                              if (context.mounted) {
+                                setDialogState(() {
+                                  isSaving = false;
+                                });
+                              }
+                            }
+                          }
+                        },
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Salvar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   void _abrirDialogoEdicao(BuildContext context, Appointment appointment) {
-    /* ... Sua lógica de diálogo aqui ... */
-    // Ao salvar, você chamaria algo como:
-    // Provider.of<AgendamentoProvider>(context, listen: false).atualizarAgendamento(agendamentoEditado);
+    final provider = Provider.of<AgendamentoProvider>(context, listen: false);
+
+    // Encontra o objeto Agendamento completo correspondente ao Appointment clicado
+    Agendamento? agendamentoParaEditar;
+    try {
+      agendamentoParaEditar = provider.agendamentos.firstWhere(
+        (ag) =>
+            ag.dataHora == appointment.startTime &&
+            ag.idUsuario ==
+                appointment.notes, // Ajuste o critério de busca se necessário
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Não foi possível encontrar o agendamento para editar.",
+          ),
+        ),
+      );
+      return;
+    }
+
+    final _formKey = GlobalKey<FormState>();
+    final TextEditingController idUsuarioController = TextEditingController(
+      text: agendamentoParaEditar.idUsuario,
+    );
+    // final TextEditingController descricaoController = TextEditingController(
+    //   text: agendamentoParaEditar.descricao,
+    // );
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        bool isSaving = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Editar Agendamento'),
+              content: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Horário: ${DateFormat('dd/MM/yyyy HH:mm').format(agendamentoParaEditar!.dataHora)}',
+                    ),
+                    TextFormField(
+                      controller: idUsuarioController,
+                      decoration: const InputDecoration(
+                        labelText: 'ID do Usuário/Cliente',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Informe o ID do usuário.';
+                        }
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      // controller: descricaoController,
+                      decoration: const InputDecoration(
+                        labelText: 'Descrição (opcional)',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          if (_formKey.currentState!.validate()) {
+                            setDialogState(() {
+                              isSaving = true;
+                            });
+
+                            final agendamentoAtualizado = Agendamento(
+                              id: agendamentoParaEditar!
+                                  .id, // Mantém o ID original!
+                              idAgenda: agendamentoParaEditar.idAgenda,
+                              idUsuario: idUsuarioController.text.trim(),
+                              dataHora: agendamentoParaEditar.dataHora,
+                              duracao: agendamentoParaEditar.duracao,
+                              // descricao: descricaoController.text.trim(),
+                            );
+
+                            try {
+                              await provider.atualizarAgendamento(
+                                agendamentoAtualizado,
+                              );
+                              if (context.mounted) Navigator.pop(context);
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      "Erro ao atualizar: ${e.toString()}",
+                                    ),
+                                  ),
+                                );
+                              }
+                            } finally {
+                              if (context.mounted) {
+                                setDialogState(() {
+                                  isSaving = false;
+                                });
+                              }
+                            }
+                          }
+                        },
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Salvar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -268,12 +498,12 @@ class _HomePageAdminState extends State<HomePageAdmin> {
           // ... resto das suas configurações ...
         ),
         headerStyle: CalendarHeaderStyle(
-          backgroundColor: AppColors.backgroundLight,  
-          textAlign: TextAlign.center,  
+          backgroundColor: AppColors.backgroundLight,
+          textAlign: TextAlign.center,
           textStyle: TextStyle(
-          color: AppColors.textPrimary,     
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
           ),
         ),
         onTap: (details) {
@@ -293,25 +523,30 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     DateTime dia,
     List<Periodo> periodos,
   ) {
-    // dia.weekday retorna 1 para Segunda, 7 para Domingo. Seu modelo usa 0-6? Ajuste se necessário.
+    //Esta linha converte CADA dia da semana de 0 a 6
+    final diaDaSemanaCorrigido = dia.weekday % 7;
+
     final periodosDoDia = periodos
-        .where((p) => p.diaDaSemana == dia.weekday)
+        .where((p) => p.diaDaSemana == diaDaSemanaCorrigido)
         .toList();
 
     if (periodosDoDia.isEmpty) {
-      return (
-        startHour: 9,
-        endHour: 18,
-      ); // Horário padrão se não houver período
+      // Retorna um horário padrão se não houver período de trabalho para o dia
+      return (startHour: 9, endHour: 18);
     }
 
-    // Encontra o horário mais cedo de início e o mais tarde de fim
+    // Lógica para encontrar o menor e maior TimeOfDay
     final inicio = periodosDoDia
-        .map((p) => DateFormat('HH:mm').parse(p.inicio))
-        .reduce((a, b) => a.isBefore(b) ? a : b);
+        .map((p) => p.inicio)
+        .reduce(
+          (a, b) => (a.hour * 60 + a.minute) < (b.hour * 60 + b.minute) ? a : b,
+        );
+
     final fim = periodosDoDia
-        .map((p) => DateFormat('HH:mm').parse(p.fim))
-        .reduce((a, b) => a.isAfter(b) ? a : b);
+        .map((p) => p.fim)
+        .reduce(
+          (a, b) => (a.hour * 60 + a.minute) > (b.hour * 60 + b.minute) ? a : b,
+        );
 
     return (
       startHour: inicio.hour + inicio.minute / 60.0,
@@ -363,9 +598,16 @@ class MeetingDataSource extends CalendarDataSource {
   }
 
   List<Appointment> getEventsForDay(DateTime day) {
-    return appointments?.where((appt) {
-          return isSameDay(appt.startTime, day);
-        }).toList() ??
-        [];
+    // O 'appointments' pode ser nulo, então usamos o operador '?.' para segurança.
+    // O '.where' filtra a lista, pegando apenas os agendamentos do dia especificado.
+    return appointments
+            ?.where((appt) {
+              // 'isSameDay' é uma função auxiliar do pacote table_calendar
+              // que compara apenas o dia, mês e ano, ignorando as horas.
+              return isSameDay(appt.startTime, day);
+            })
+            .toList()
+            .cast<Appointment>() ?? // Faz o cast para List<Appointment>
+        []; // Se 'appointments' for nulo, retorna uma lista vazia para evitar erros.
   }
 }

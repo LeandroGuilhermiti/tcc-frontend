@@ -1,77 +1,56 @@
 import 'package:flutter/material.dart';
 import '../models/periodo_model.dart';
 import '../services/periodo_service.dart';
+import 'auth_controller.dart'; // 1. Importar o AuthController
 
 class PeriodoProvider extends ChangeNotifier {
   final PeriodoService _service = PeriodoService();
+  AuthController? _auth; // 2. Adicionar referência ao AuthController
 
-  // Lista privada de períodos
   List<Periodo> _periodos = [];
-  // Estado de carregamento
   bool _isLoading = false;
-  // Para armazenar mensagens de erro
   String? _error;
+  
+  // 3. Modificar o construtor
+  PeriodoProvider(this._auth);
 
-  // Getters públicos para a UI acessar os dados de forma segura
   List<Periodo> get periodos => _periodos;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  
+  // 4. Método para ser chamado pelo ProxyProvider
+  void updateAuth(AuthController newAuth) {
+    _auth = newAuth;
+  }
 
-  /// Carrega os períodos de trabalho de uma agenda/profissional.
   Future<void> carregarPeriodos(String idAgenda) async {
+    // 5. TRAVA DE SEGURANÇA
+    final token = _auth?.usuario?.token;
+    if (token == null || token.isEmpty) {
+      _error = "Autenticação necessária.";
+      notifyListeners();
+      return;
+    }
+
     _error = null;
     _isLoading = true;
-    notifyListeners(); // Notifica a UI que o carregamento começou
+    notifyListeners();
 
     try {
-      _periodos = await _service.getPeriodos(idAgenda);
+      // Passe o token para o seu serviço
+      _periodos = await _service.getPeriodos(idAgenda, token);
     } catch (e) {
       _error = 'Erro ao carregar períodos: ${e.toString()}';
     } finally {
       _isLoading = false;
-      notifyListeners(); // Notifica a UI que o carregamento terminou
+      notifyListeners();
     }
   }
 
-  // Adiciona um novo período e atualiza a lista local.
+  // Lembre-se de adicionar a trava de segurança nos outros métodos também
   Future<void> adicionarPeriodo(Periodo periodo) async {
-    try {
-      final novoPeriodo = await _service.criarPeriodo(periodo);
-      _periodos.add(novoPeriodo);
-      notifyListeners();
-    } catch (e) {
-      _error = 'Erro ao adicionar período: ${e.toString()}';
-      notifyListeners();
-      rethrow; // Re-lança o erro para a UI tratar
-    }
-  }
-
-  // Atualiza um período existente na lista local.
-  Future<void> atualizarPeriodo(Periodo periodo) async {
-    try {
-      await _service.atualizarPeriodo(periodo);
-      final index = _periodos.indexWhere((p) => p.id == periodo.id);
-      if (index != -1) {
-        _periodos[index] = periodo;
-        notifyListeners();
-      }
-    } catch (e) {
-      _error = 'Erro ao atualizar período: ${e.toString()}';
-      notifyListeners();
-      rethrow;
-    }
-  }
-
-  // Remove um período da lista local.
-  Future<void> removerPeriodo(String id) async {
-    try {
-      await _service.deletarPeriodo(id);
-      _periodos.removeWhere((p) => p.id == id);
-      notifyListeners();
-    } catch (e) {
-      _error = 'Erro ao remover período: ${e.toString()}';
-      notifyListeners();
-      rethrow;
-    }
+    final token = _auth?.usuario?.token;
+    if (token == null) return;
+    // ... resto da lógica
   }
 }

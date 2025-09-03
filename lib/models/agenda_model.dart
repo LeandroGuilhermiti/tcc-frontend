@@ -3,14 +3,14 @@ class Agenda {
   final String nome;
   final String descricao;
   final String duracao;
-  final String aviso;
+  // final String aviso;
 
   Agenda({
     this.id,
     required this.nome,
     required this.descricao,
     required this.duracao,
-    required this.aviso,
+    // required this.aviso,
   });
 
   factory Agenda.fromJson(Map<String, dynamic> json) {
@@ -19,7 +19,7 @@ class Agenda {
       nome: json['nome'],
       descricao: json['descricao'],
       duracao: json['duracao'],
-      aviso: json['aviso'], 
+      // aviso: json['aviso'], 
     );
   }
 
@@ -29,7 +29,7 @@ class Agenda {
       'nome': nome,
       'descricao': descricao,
       'duracao': duracao,
-      'aviso': aviso,
+      // 'aviso': aviso,
     };
   }
 }

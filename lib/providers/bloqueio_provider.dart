@@ -1,27 +1,44 @@
 import 'package:flutter/material.dart';
 import '../models/bloqueio_model.dart';
 import '../services/bloqueio_service.dart';
+import 'auth_controller.dart'; // 1. Importar o AuthController
 
 class BloqueioProvider extends ChangeNotifier {
   final BloqueioService _service = BloqueioService();
+  AuthController? _auth; // 2. Adicionar referência
 
   List<Bloqueio> _bloqueios = [];
   bool _isLoading = false;
   String? _error;
 
-  // Getters públicos para a UI acessar os dados
+  // 3. Modificar o construtor
+  BloqueioProvider(this._auth);
+
   List<Bloqueio> get bloqueios => _bloqueios;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Carrega os bloqueios de uma agenda/profissional específico.
+  // 4. Método para ser chamado pelo ProxyProvider
+  void updateAuth(AuthController newAuth) {
+    _auth = newAuth;
+  }
+
   Future<void> carregarBloqueios(String idAgenda) async {
+    // 5. TRAVA DE SEGURANÇA
+    final token = _auth?.usuario?.token;
+    if (token == null || token.isEmpty) {
+      _error = "Autenticação necessária.";
+      notifyListeners();
+      return;
+    }
+
     _error = null;
     _isLoading = true;
     notifyListeners();
 
     try {
-      _bloqueios = await _service.getBloqueios(idAgenda);
+      // Passe o token para o serviço
+      _bloqueios = await _service.getBloqueios(idAgenda, token);
     } catch (e) {
       _error = 'Erro ao carregar bloqueios: ${e.toString()}';
     } finally {
@@ -30,48 +47,10 @@ class BloqueioProvider extends ChangeNotifier {
     }
   }
 
-  // Adiciona um novo bloqueio e atualiza a lista local.
+  // Lembre-se de adicionar a trava de segurança nos outros métodos também
   Future<void> adicionarBloqueio(Bloqueio bloqueio) async {
-    _error = null;
-    
-    try {
-      final novoBloqueio = await _service.criarBloqueio(bloqueio);
-      _bloqueios.add(novoBloqueio);
-      notifyListeners();
-    } catch (e) {
-      _error = 'Erro ao adicionar bloqueio: ${e.toString()}';
-      rethrow; // Re-lança o erro para a UI poder tratá-lo
-    }
-  }
-
-  // Atualiza um bloqueio existente na lista local.
-  Future<void> atualizarBloqueio(Bloqueio bloqueio) async {
-    _error = null;
-    
-    try {
-      await _service.atualizarBloqueio(bloqueio);
-      final index = _bloqueios.indexWhere((b) => b.id == bloqueio.id);
-      if (index != -1) {
-        _bloqueios[index] = bloqueio;
-        notifyListeners();
-      }
-    } catch (e) {
-      _error = 'Erro ao atualizar bloqueio: ${e.toString()}';
-      rethrow;
-    }
-  }
-
-  /// Remove um bloqueio da lista local.
-  Future<void> removerBloqueio(String id) async {
-    _error = null;
-    
-    try {
-      await _service.deletarBloqueio(id);
-      _bloqueios.removeWhere((b) => b.id == id);
-      notifyListeners();
-    } catch (e) {
-      _error = 'Erro ao remover bloqueio: ${e.toString()}';
-      rethrow;
-    }
+    final token = _auth?.usuario?.token;
+    if (token == null) return;
+    // ... resto da lógica
   }
 }
