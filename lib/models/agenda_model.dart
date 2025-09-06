@@ -3,6 +3,7 @@ class Agenda {
   final String nome;
   final String descricao;
   final String duracao;
+  final bool principal;
   // final String aviso;
 
   Agenda({
@@ -10,6 +11,7 @@ class Agenda {
     required this.nome,
     required this.descricao,
     required this.duracao,
+    required this.principal,
     // required this.aviso,
   });
 
@@ -19,6 +21,7 @@ class Agenda {
       nome: json['nome'],
       descricao: json['descricao'],
       duracao: json['duracao'],
+      principal: json['principal'] ?? false,
       // aviso: json['aviso'], 
     );
   }
@@ -29,6 +32,7 @@ class Agenda {
       'nome': nome,
       'descricao': descricao,
       'duracao': duracao,
+      'principal': principal,
       // 'aviso': aviso,
     };
   }

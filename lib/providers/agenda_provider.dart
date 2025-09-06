@@ -1,66 +1,70 @@
 import 'package:flutter/material.dart';
 import '../models/agenda_model.dart';
-import '../services/agenda_service.dart';
 import '../models/periodo_model.dart';
+import '../services/agenda_service.dart';
+import 'auth_controller.dart';
 
-class AgendaProvider extends ChangeNotifier {
+class AgendaProvider with ChangeNotifier {
   final AgendaService _service = AgendaService();
+  AuthController? _auth;
+
   List<Agenda> _agendas = [];
   bool _isLoading = false;
+  String? _erro;
+
+  AgendaProvider(this._auth);
 
   List<Agenda> get agendas => _agendas;
   bool get isLoading => _isLoading;
+  String? get erro => _erro;
 
-  /// Carrega todas as agendas
-  Future<void> carregarAgendas() async {
+  void updateAuth(AuthController newAuth) {
+    if (_auth?.isLogado != newAuth.isLogado) {
+      _agendas = [];
+      _erro = null;
+    }
+    _auth = newAuth;
+  }
+
+  Future<void> buscarAgendasDoProfissional(String profissionalId) async {
+    final token = _auth?.usuario?.token;
+    if (token == null || token.isEmpty) {
+      _erro = "Autenticação necessária.";
+      notifyListeners();
+      return;
+    }
     _isLoading = true;
+    _erro = null;
     notifyListeners();
-
     try {
-      _agendas = await _service.getAgendas();
+      _agendas = await _service.buscarAgendasPorProfissional(profissionalId, token);
     } catch (e) {
-      rethrow;
+      _erro = e.toString();
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  /// Adiciona nova agenda
-  Future<void> adicionarAgenda(Agenda agenda) async {
-    await _service.salvarAgenda(agenda);
-    await carregarAgendas();
-  }
-
-  /// Adiciona uma nova agenda completa (com seus períodos)
-  Future<void> adicionarAgendaCompleta(
-    Agenda agenda,
-    List<Periodo> periodos,
-  ) async {
-    _isLoading = true;
-    notifyListeners();
-    try {
-      // Não precisamos dos períodos no provider de agenda, apenas salvá-los
-      await _service.salvarAgendaCompleta(agenda, periodos);
-      // Após salvar, recarregamos a lista de agendas
-      await carregarAgendas();
-    } catch (e) {
-      rethrow;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+  /// NOVO: Busca os períodos de uma agenda específica. Retorna a lista de períodos.
+  Future<List<Periodo>> buscarPeriodosDaAgenda(String agendaId) async {
+    final token = _auth?.usuario?.token;
+    if (token == null) {
+      throw Exception("Autenticação necessária.");
     }
+    return await _service.buscarPeriodosPorAgenda(agendaId, token);
   }
 
-  /// Atualiza agenda existente
-  Future<void> atualizarAgenda(Agenda agenda) async {
-    await _service.atualizarAgenda(agenda);
-    await carregarAgendas();
+  Future<void> adicionarAgendaCompleta(Agenda agenda, List<Periodo> periodos) async {
+    final token = _auth?.usuario?.token;
+    if (token == null) throw Exception("Ação não permitida. Faça login.");
+    await _service.criarAgendaCompleta(agenda, periodos, token);
   }
 
-  /// Remove agenda
-  Future<void> removerAgenda(String id) async {
-    await _service.deletarAgenda(id);
-    await carregarAgendas();
+  Future<void> atualizarAgendaCompleta(Agenda agenda, List<Periodo> periodos) async {
+    final token = _auth?.usuario?.token;
+    if (token == null) throw Exception("Ação não permitida. Faça login.");
+    await _service.atualizarAgendaCompleta(agenda, periodos, token);
   }
 }
+

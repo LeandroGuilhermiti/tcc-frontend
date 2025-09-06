@@ -346,8 +346,13 @@ class _HomePageAdminState extends State<HomePageAdmin> {
             ),
             ListTile(
               leading: const Icon(Icons.edit_calendar),
+              title: const Text('Criar agenda'),
+              onTap: () => Navigator.pushNamed(context, '/create'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_calendar),
               title: const Text('Editar agenda'),
-              onTap: () => Navigator.pushNamed(context, '/editor'),
+              onTap: () => Navigator.pushNamed(context, '/agendas'),
             ),
             ListTile(
               leading: const Icon(Icons.schedule),
