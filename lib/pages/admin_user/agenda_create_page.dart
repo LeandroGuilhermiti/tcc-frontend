@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/agenda_model.dart';
 import '../../models/periodo_model.dart';
 import '../../providers/agenda_provider.dart';
+import 'dart:convert';
 
 // Classe auxiliar para gerir os intervalos de tempo no estado da página.
 class TimeRange {
@@ -191,6 +192,20 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
         }
       }
     }
+
+        /// CÓDIGO DE DEPURAÇÃO PARA VER O JSON
+    //=======================================================================
+    final payloadParaBackend = {
+      'agenda': agenda.toJson(),
+      'periodos': periodosParaSalvar.map((p) => p.toJson()).toList(),
+    };
+
+    const encoder = JsonEncoder.withIndent('  ');
+    final jsonFormatado = encoder.convert(payloadParaBackend);
+
+    debugPrint('--- JSON A ENVIAR PARA O BACKEND ---');
+    debugPrint(jsonFormatado);
+    debugPrint('------------------------------------');
 
     try {
       final agendaProvider = Provider.of<AgendaProvider>(
