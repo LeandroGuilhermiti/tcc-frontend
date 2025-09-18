@@ -23,6 +23,7 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _profissionalController = TextEditingController();
   final TextEditingController _describeController = TextEditingController();
+  final TextEditingController _avisoController = TextEditingController();
 
   final Map<String, int> diasSemanaMap = {
     'Seg': 1,
@@ -172,6 +173,7 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
       nome: _profissionalController.text.trim(),
       descricao: _describeController.text.trim(),
       duracao: duracaoConsulta!.replaceAll(' min', ''),
+      avisoAgendamento: _avisoController.text.trim(),
       principal: definirComoPrincipal,
     );
 
@@ -507,6 +509,17 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
                 },
                 validator: (value) =>
                     value == null ? 'Por favor, selecione a duração.' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _avisoController,
+                decoration: const InputDecoration(
+                  labelText: 'Aviso do Agendamento (opcional)',
+                  hintText: 'Ex: "Trazer exames anteriores"',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.info_outline),
+                ),
+                // Nenhum validator é necessário, pois o campo é opcional
               ),
               const SizedBox(height: 30),
               ElevatedButton(

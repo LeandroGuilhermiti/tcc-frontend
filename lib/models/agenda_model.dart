@@ -3,16 +3,16 @@ class Agenda {
   final String nome;
   final String descricao;
   final String duracao;
+  final String? avisoAgendamento;
   final bool principal;
-  // final String aviso;
 
   Agenda({
     this.id,
     required this.nome,
     required this.descricao,
     required this.duracao,
+    this.avisoAgendamento,
     required this.principal,
-    // required this.aviso,
   });
 
   factory Agenda.fromJson(Map<String, dynamic> json) {
@@ -21,8 +21,8 @@ class Agenda {
       nome: json['nome'],
       descricao: json['descricao'],
       duracao: json['duracao'],
+      avisoAgendamento: json['aviso_agendamento'] ?? '', 
       principal: json['principal'] ?? false,
-      // aviso: json['aviso'], 
     );
   }
 
@@ -32,8 +32,8 @@ class Agenda {
       'nome': nome,
       'descricao': descricao,
       'duracao': duracao,
+      if (avisoAgendamento != null && avisoAgendamento!.isNotEmpty) 'aviso_agendamento': avisoAgendamento,
       'principal': principal,
-      // 'aviso': aviso,
     };
   }
 }
