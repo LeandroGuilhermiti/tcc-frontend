@@ -216,7 +216,7 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
       id: widget.agenda.id,
       nome: _profissionalController.text.trim(),
       descricao: _describeController.text.trim(),
-      duracao: duracaoConsulta!.replaceAll(' min', ''),
+      duracao: int.parse(duracaoConsulta!.replaceAll(' min', '')),
       principal: definirComoPrincipal,
     );
 
