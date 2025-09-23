@@ -172,7 +172,7 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
     final agenda = Agenda(
       nome: _profissionalController.text.trim(),
       descricao: _describeController.text.trim(),
-      duracao: duracaoConsulta!.replaceAll(' min', ''),
+      duracao: int.parse(duracaoConsulta!.replaceAll(' min', '')),
       avisoAgendamento: _avisoController.text.trim(),
       principal: definirComoPrincipal,
     );
