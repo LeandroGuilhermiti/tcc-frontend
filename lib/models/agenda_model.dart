@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 class Agenda {
   final String? id;
   final String nome;
