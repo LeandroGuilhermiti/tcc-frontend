@@ -113,7 +113,7 @@ class AuthService {
   Future<Null> _loginWeb() async {
     try {
       final authUrl = Uri.parse(
-        '$_authEndpoint?response_type=code&client_id=$_clientId&redirect_uri=$_getTokenUrl&scope=openid profile email',
+        '$_authEndpoint?response_type=code&client_id=$_clientId&redirect_uri=$_getTokenUrl&scope=email+openid',
       );
 		debugPrint('authUrl: $authUrl');
 
