@@ -152,30 +152,73 @@ class AuthService {
   }
 
   // Método unificado para processar os tokens após a autenticação.
-  UserModel _processAndStoreTokens(String idToken, String? refreshToken) {
+  Future<UserModel> _processAndStoreTokens(String idToken, String? refreshToken) async {
     _idToken = idToken;
     _refreshToken = refreshToken;
     final Map<String, dynamic> decodedToken = JwtDecoder.decode(_idToken!);
-    _currentUser = _userModelFromTokenClaims(decodedToken, _idToken!);
-    
-    debugPrint(jsonEncode(_currentUser!.toJson()));
-    return _currentUser!;
+    final String userId = decodedToken['sub']!;
+    // _currentUser = _userModelFromTokenClaims(decodedToken, _idToken!);
+
+    try {
+      // Pegar detalhes do usuário com backend
+      final Map<String, dynamic> backendUserDetails = await _fetchBackendUserDetails(userId, idToken);
+
+      // O backend retorna os detalhes, e nós adicionamos o token que veio do Cognito
+      final Map<String, dynamic> fullUserData = {
+        ...backendUserDetails,
+        'token': idToken,
+      };
+
+      // 4. USAR O CONSTRUTOR .fromJson QUE VOCÊ JÁ TEM!
+      _currentUser = UserModel.fromJson(fullUserData);
+      debugPrint(jsonEncode(_currentUser!.toJson()));
+
+      return _currentUser!;
+
+    } catch (e) {
+      debugPrint("ERRO: Falha ao buscar detalhes do usuário no backend. $e");
+      // Aqui você pode decidir o que fazer em caso de falha:
+      // - Deslogar o usuário?
+      // - Tentar criar um UserModel com dados parciais?
+      // Por enquanto, vamos lançar uma exceção para que o AuthController saiba que o login falhou.
+      throw Exception("Não foi possível carregar seu perfil. Tente novamente.");
+    }
   }
 
-//   // Construtor auxiliar para criar um UserModel a partir das claims de um JWT.
-  UserModel _userModelFromTokenClaims(
-    Map<String, dynamic> claims,
-    String token,
-  ) {
-    final String? principal = claims['custom:principal'];
-    return UserModel(
-      id: claims['sub']!,
-      token: token,
-      nome: claims['name'] ?? claims['email'],
-      cpf: claims['custom:cpf'] ?? '',
-      cep: claims['custom:cep'] ?? '',
-      telefone: claims['phone_number'] ?? '',
-      role: principal == '1' ? UserRole.admin : UserRole.cliente,
+  Future<Map<String, dynamic>> _fetchBackendUserDetails(String userId, String idToken) async {
+    // SUBSTITUA PELA URL REAL DO SEU ENDPOINT NO API GATEWAY
+    final baseUrl = Uri.parse(AppConfig.apiBaseUrl);
+    final url = Uri.parse('$baseUrl/usuario/$userId/buscar');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $idToken',
+      },
     );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Código de erro do backend: ${response.statusCode}');
+    }
   }
+
+  // Construtor auxiliar para criar um UserModel a partir das claims de um JWT.
+//   UserModel _userModelFromTokenClaims(
+//     Map<String, dynamic> claims,
+//     String token,
+//   ) {
+//     final String? principal = claims['custom:principal'];
+//     return UserModel(
+//       id: claims['sub']!,
+//       token: token,
+//       nome: claims['name'] ?? claims['email'],
+//       cpf: claims['custom:cpf'] ?? '',
+//       cep: claims['custom:cep'] ?? '',
+//       telefone: claims['phone_number'] ?? '',
+//       role: principal == '1' ? UserRole.admin : UserRole.cliente,
+//     );
+//   }
 }
