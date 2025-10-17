@@ -140,7 +140,6 @@ class AuthService {
 
       if (tokenResponse.statusCode == 200) {
         final tokens = jsonDecode(tokenResponse.body);
-        debugPrint('Tokens recebidos: ${tokens.toString()}');
         return _processAndStoreTokens(tokens['id_token'], tokens['refresh_token']);
       } else {
         throw Exception('Falha ao trocar código por token: ${tokenResponse.body}');
