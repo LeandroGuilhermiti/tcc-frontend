@@ -151,61 +151,6 @@ class AuthService {
     }
   }
 
-
-
-  // Lógica de login para Web usando flutter_web_auth_2 e http.
-  Future<Null> _loginWeb() async {
-    try {
-      final authUrl = Uri.parse(
-        '$_authEndpoint?response_type=code&client_id=$_clientId&redirect_uri=$_getTokenUrl&scope=email+openid',
-      );
-		debugPrint('authUrl: $authUrl');
-
-      // 1. Abre o popup/aba de login e obtém o código de autorização
-      final resultUrl = await FlutterWebAuth2.authenticate(
-        url: authUrl.toString(),
-        callbackUrlScheme:
-            "http", // ou "https", dependendo se usar http ou https no localhost
-      );
-
-      debugPrint('authUrlParseada: ${Uri.parse(resultUrl).toString()}');
-      final authCode = Uri.parse(resultUrl).queryParameters['code'];
-      if (authCode == null) {
-        throw Exception('Não foi possível obter o código de autorização.');
-      }
-
-      // 2. Troca o código de autorização pelos tokens
-      final tokenResponse = await http.post(
-        Uri.parse(_tokenEndpoint),
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: {
-          'grant_type': 'authorization_code',
-          'client_id': _clientId,
-          'code': authCode,
-          'redirect_uri': _webCallbackUrl,
-        },
-      );
-
-      if (tokenResponse.statusCode == 200) {
-        final tokens = jsonDecode(tokenResponse.body);
-        final idToken = tokens['id_token'];
-        final refreshToken = tokens['refresh_token'];
-        // return _processAndStoreTokens(idToken, refreshToken);
-    	debugPrint('idToken: $idToken, refreshToken: $refreshToken');
-
-      } else {
-        throw Exception(
-          'Falha ao trocar código por token: ${tokenResponse.body}',
-        );
-      }
-    } catch (e) {
-      print('Erro no login web: $e');
-      throw Exception("Ocorreu um erro durante o login.");
-    }
-  }
-	
-	
-
   // Método unificado para processar os tokens após a autenticação.
 //   UserModel _processAndStoreTokens(String idToken, String? refreshToken) {
 //     _idToken = idToken;
