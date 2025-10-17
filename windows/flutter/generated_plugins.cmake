@@ -3,6 +3,8 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  amplify_db_common
+  desktop_webview_window
   url_launcher_windows
   window_to_front
 )

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // 1. Importar o dotenv
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 //controllers, providers, models
 import 'providers/auth_controller.dart';
@@ -19,7 +19,7 @@ import 'pages/admin_user/agenda_create_page.dart';
 import 'pages/admin_user/register_page_admin.dart';
 
 Future<void> main() async {
-  // 2. Garantir que o Flutter está pronto e carregar as variáveis de ambiente
+  //Garantir que o Flutter está pronto e carregar as variáveis de ambiente
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
 

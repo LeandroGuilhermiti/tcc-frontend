@@ -3,25 +3,8 @@ import 'package:provider/provider.dart';
 import '../providers/auth_controller.dart';
 import '../models/user_model.dart';
 
-
-class LoginPage extends StatefulWidget {
+class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
-
-  @override
-  State<LoginPage> createState() => _LoginPageState();
-}
-
-class _LoginPageState extends State<LoginPage> {
-  final emailController = TextEditingController();
-  final senhaController = TextEditingController();
-
-  // Limpa os controladores quando a página é descartada
-  @override
-  void dispose() {
-    emailController.dispose();
-    senhaController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,54 +12,47 @@ class _LoginPageState extends State<LoginPage> {
 
     return Scaffold(
       body: Center(
-        child: SingleChildScrollView(
-          child: SizedBox(
-            width: 320,
-            child: Card(
-              elevation: 8,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('Login', style: Theme.of(context).textTheme.headlineSmall),
-                    const SizedBox(height: 20),
-                    TextField(
-                      controller: emailController,
-                      decoration: const InputDecoration(labelText: 'E-mail'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: senhaController,
-                      obscureText: true,
-                      decoration: const InputDecoration(labelText: 'Senha'),
-                    ),
-                    const SizedBox(height: 20),
-                    if (auth.erro != null)
-                      Text(auth.erro!, style: const TextStyle(color: Colors.red)),
-                    const SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: () async {
-                        await auth.login(
-                          emailController.text.trim(),
-                          senhaController.text.trim(),
-                        );
-                        if (auth.isLogado) {
-                          if (auth.tipoUsuario == UserRole.admin) {
-                            Navigator.pushReplacementNamed(context, '/admin');
-                          } else {
-                            Navigator.pushReplacementNamed(context, '/cliente');
-                          }
-                        }
-                      },
-                      child: const Text('Entrar'),
-                    ),
-                  ],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Bem-vindo!',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 15,
                 ),
               ),
+              // O onPressed agora chama o novo método de login
+              onPressed: auth.isLoading
+                  ? null // Desabilita o botão enquanto carrega
+                  : () async {
+                      // Chama o método de login do seu AuthController,
+                      // que por sua vez deve chamar o auth_service.loginComHostedUI()
+                      await auth.loginComHostedUI();
+
+                      // A lógica de navegação permanece a mesma
+                      // if (auth.isLogado) {
+                      //   if (auth.tipoUsuario == UserRole.admin) {
+                      //     Navigator.pushReplacementNamed(context, '/admin');
+                      //   } else {
+                      //     Navigator.pushReplacementNamed(context, '/cliente');
+                      //   }
+                      // }
+                    },
+              child: auth.isLoading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text('Entrar ou Cadastrar'),
             ),
-          ),
+            const SizedBox(height: 20),
+            // Mostra o erro, se houver
+            if (auth.erro != null)
+              Text(auth.erro!, style: const TextStyle(color: Colors.red)),
+          ],
         ),
       ),
     );

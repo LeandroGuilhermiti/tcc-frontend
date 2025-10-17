@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/user_model.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../config/app_config.dart';
 
 /// Classe de serviço responsável pela comunicação com a API para operações de usuário.
 class UsuarioService {
 
-  final String _baseUrl = dotenv.env['API_BASE_URL']!;
+  final String _baseUrl = AppConfig.apiBaseUrl;
 
   /// Busca uma lista de todos os usuários do backend.
   /// Requer um [token] de autenticação de um usuário admin.
