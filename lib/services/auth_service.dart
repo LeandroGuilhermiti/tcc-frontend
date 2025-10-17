@@ -88,27 +88,27 @@ class AuthService {
   // --- MÉTODOS PRIVADOS ESPECÍFICOS DE CADA PLATAFORMA ---
 
   // Lógica de login para Android e iOS usando flutter_appauth.
-//   Future<UserModel> _loginMobile() async {
-//     try {
-//       final result = await _appAuth.authorizeAndExchangeCode(
-//         AuthorizationTokenRequest(
-//           _clientId,
-//           _mobileCallbackUrl,
-//           discoveryUrl: _discoveryUrl,
-//           scopes: ['openid', 'profile', 'email'],
-//         ),
-//       );
+  // Future<UserModel> _loginMobile() async {
+  //   try {
+  //     final result = await _appAuth.authorizeAndExchangeCode(
+  //       AuthorizationTokenRequest(
+  //         _clientId,
+  //         _mobileCallbackUrl,
+  //         discoveryUrl: _discoveryUrl,
+  //         scopes: ['openid', 'email'],
+  //       ),
+  //     );
 
-//       if (result != null && result.idToken != null) {
-//         return _processAndStoreTokens(result.idToken!, result.refreshToken);
-//       } else {
-//         throw Exception("Falha ao obter resposta de autorização.");
-//       }
-//     } catch (e) {
-//       print('Erro no login mobile: $e');
-//       throw Exception("Ocorreu um erro durante o login.");
-//     }
-//   }
+  //     if (result != null && result.idToken != null) {
+  //       return await _processAndStoreTokens(result.idToken!, result.accessToken, result.refreshToken);
+  //     } else {
+  //       throw Exception("Falha ao obter resposta de autorização.");
+  //     }
+  //   } catch (e) {
+  //     print('Erro no login mobile: $e');
+  //     throw Exception("Ocorreu um erro durante o login.");
+  //   }
+  // }
 
   // Lógica de login para Web usando redirecionamento.
   Future<void> _loginWithRedirect() async {
@@ -140,7 +140,7 @@ class AuthService {
 
       if (tokenResponse.statusCode == 200) {
         final tokens = jsonDecode(tokenResponse.body);
-        return _processAndStoreTokens(tokens['id_token'], tokens['refresh_token']);
+        return _processAndStoreTokens(tokens['id_token'], tokens['access_token'], tokens['refresh_token']);
       } else {
         throw Exception('Falha ao trocar código por token: ${tokenResponse.body}');
       }
@@ -151,24 +151,25 @@ class AuthService {
   }
 
   // Método unificado para processar os tokens após a autenticação.
-  Future<UserModel> _processAndStoreTokens(String idToken, String? refreshToken) async {
+  Future<UserModel> _processAndStoreTokens(String idToken, String accessToken, String? refreshToken) async {
     _idToken = idToken;
     _refreshToken = refreshToken;
     final Map<String, dynamic> decodedToken = JwtDecoder.decode(_idToken!);
     final String userId = decodedToken['sub']!;
-    // _currentUser = _userModelFromTokenClaims(decodedToken, _idToken!);
 
     try {
       // Pegar detalhes do usuário com backend
-      final Map<String, dynamic> backendUserDetails = await _fetchBackendUserDetails(userId, idToken);
+      final Map<String, dynamic> backendUserDetails = await _fetchBackendUserDetails(userId, accessToken);
 
       // O backend retorna os detalhes, e nós adicionamos o token que veio do Cognito
       final Map<String, dynamic> fullUserData = {
         ...backendUserDetails,
-        'token': idToken,
+        'idToken': idToken,
+        'access_token': accessToken,
+        'refresh_token': refreshToken
       };
 
-      // 4. USAR O CONSTRUTOR .fromJson QUE VOCÊ JÁ TEM!
+      // Criando usuário atual
       _currentUser = UserModel.fromJson(fullUserData);
       debugPrint(jsonEncode(_currentUser!.toJson()));
 
@@ -184,8 +185,8 @@ class AuthService {
     }
   }
 
-  Future<Map<String, dynamic>> _fetchBackendUserDetails(String userId, String idToken) async {
-    // SUBSTITUA PELA URL REAL DO SEU ENDPOINT NO API GATEWAY
+  Future<Map<String, dynamic>> _fetchBackendUserDetails(String userId, String acessToken) async {
+    
     final baseUrl = Uri.parse(AppConfig.apiBaseUrl);
     final url = Uri.parse('$baseUrl/usuario/$userId/buscar');
 
@@ -193,7 +194,7 @@ class AuthService {
       url,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $idToken',
+        'Authorization': 'Bearer $acessToken',
       },
     );
 
@@ -204,20 +205,4 @@ class AuthService {
     }
   }
 
-  // Construtor auxiliar para criar um UserModel a partir das claims de um JWT.
-//   UserModel _userModelFromTokenClaims(
-//     Map<String, dynamic> claims,
-//     String token,
-//   ) {
-//     final String? principal = claims['custom:principal'];
-//     return UserModel(
-//       id: claims['sub']!,
-//       token: token,
-//       nome: claims['name'] ?? claims['email'],
-//       cpf: claims['custom:cpf'] ?? '',
-//       cep: claims['custom:cep'] ?? '',
-//       telefone: claims['phone_number'] ?? '',
-//       role: principal == '1' ? UserRole.admin : UserRole.cliente,
-//     );
-//   }
 }

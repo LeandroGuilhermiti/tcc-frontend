@@ -25,7 +25,7 @@ class BloqueioProvider extends ChangeNotifier {
 
   Future<void> carregarBloqueios(String idAgenda) async {
     // 5. TRAVA DE SEGURANÇA
-    final token = _auth?.usuario?.token;
+    final token = _auth?.usuario?.accessToken;
     if (token == null || token.isEmpty) {
       _error = "Autenticação necessária.";
       notifyListeners();
@@ -49,7 +49,7 @@ class BloqueioProvider extends ChangeNotifier {
 
   // Lembre-se de adicionar a trava de segurança nos outros métodos também
   Future<void> adicionarBloqueio(Bloqueio bloqueio) async {
-    final token = _auth?.usuario?.token;
+    final token = _auth?.usuario?.accessToken;
     if (token == null) return;
     // ... resto da lógica
   }

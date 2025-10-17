@@ -2,7 +2,9 @@ enum UserRole { admin, cliente }
 
 class UserModel {
   final String id;
-  final String token;
+  final String idToken;
+  final String accessToken;
+  final String refreshToken;
   final String primeiroNome;
   final String? sobrenome;
   final String cpf;
@@ -13,7 +15,9 @@ class UserModel {
   // Construtor 
   UserModel({
     required this.id,
-    required this.token,
+    required this.idToken,
+    required this.accessToken,
+    required this.refreshToken,
     required this.primeiroNome,
     this.sobrenome,
     required this.cpf,
@@ -28,7 +32,9 @@ class UserModel {
     return UserModel(
       // Usa '??' para garantir que nunca seja nulo, mesmo se o JSON falhar.
       id: json['id'] ?? '',
-      token: json['token'] ?? '',
+      idToken: json['token'] ?? '',
+      accessToken: json['access_token'] ?? '',
+      refreshToken: json['refresh_token'] ?? '',
       primeiroNome: json['nome'] ?? json['primeiroNome'] ?? json['givenName'] ?? '',
       sobrenome: json['sobrenome'] ?? json['familyName'],
       cpf: json['cpf'] ?? '',
@@ -45,7 +51,9 @@ class UserModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'token': token,
+      'idToken': idToken,
+      'acessToken': accessToken,
+      'refreshToken': refreshToken,
       'nome': primeiroNome + (sobrenome != null ? ' $sobrenome' : ''),
       'cpf': cpf,
       'cep': cep,
