@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html; // Necessário para web
 
 //controllers, providers, models
 import 'providers/auth_controller.dart';
@@ -18,22 +20,41 @@ import 'pages/admin_user/home_page_admin.dart';
 import 'pages/admin_user/agenda_create_page.dart';
 import 'pages/admin_user/register_page_admin.dart';
 
+// Service
+import 'services/auth_service.dart';
+
 Future<void> main() async {
   //Garantir que o Flutter está pronto e carregar as variáveis de ambiente
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
 
-  runApp(const MyApp());
+  UserModel? initialUser;
+  final authService = AuthService(); // Instancia o serviço diretamente
+
+  if (kIsWeb) {
+    final uri = Uri.parse(html.window.location.href);
+    if (uri.queryParameters.containsKey('code')) {
+      final code = uri.queryParameters['code']!;
+      initialUser = await authService.exchangeCodeForToken(code);
+
+      // Limpa a URL para remover o código, evitando reuso
+      final cleanUri = uri.removeFragment().replace(queryParameters: {});
+      html.window.history.replaceState(null, 'home', cleanUri.toString());
+    }
+  }
+
+  runApp(MyApp(initialUser: initialUser));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final UserModel? initialUser;
+  const MyApp({super.key, this.initialUser});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthController()),
+        ChangeNotifierProvider(create: (_) => AuthController(initialUser)),
         ChangeNotifierProxyProvider<AuthController, PeriodoProvider>(
           create: (_) => PeriodoProvider(null),
           update: (_, auth, previousProvider) =>

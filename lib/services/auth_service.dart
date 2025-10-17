@@ -1,6 +1,7 @@
 import 'package:tcc_frontend/models/user_model.dart';
 import 'package:tcc_frontend/config/app_config.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb; // Para detectar a plataforma
@@ -40,12 +41,12 @@ class AuthService {
   String? _refreshToken;
 
   /// Inicia o fluxo de login, escolhendo o método correto baseado na plataforma.
-  Future<Null> login() async {
+  Future<void> login() async {
     if (kIsWeb) {
-      return _loginWeb();
+      return _loginWithRedirect();
     } else {
     //   return _loginMobile();
-    return null;
+    return;
     }
   }
 
@@ -108,6 +109,49 @@ class AuthService {
 //       throw Exception("Ocorreu um erro durante o login.");
 //     }
 //   }
+
+  // Lógica de login para Web usando redirecionamento.
+  Future<void> _loginWithRedirect() async {
+    final authUrl = Uri.parse(
+        '$_authEndpoint?response_type=code&client_id=$_clientId&redirect_uri=$_getTokenUrl&scope=email+openid',
+      );
+
+    if (!await launchUrl(
+      authUrl,
+      webOnlyWindowName: '_self', // Garante que abrirá na mesma aba
+    )) {
+      throw Exception('Não foi possível abrir a URL de autenticação.');
+    }
+  }
+
+  // Nova função para ser chamada na inicialização do app
+  Future<UserModel?> exchangeCodeForToken(String code) async {
+    try {
+      final tokenResponse = await http.post(
+        Uri.parse(_tokenEndpoint),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {
+          'grant_type': 'authorization_code',
+          'client_id': _clientId,
+          'code': code,
+          'redirect_uri': _webCallbackUrl,
+        },
+      );
+
+      if (tokenResponse.statusCode == 200) {
+        final tokens = jsonDecode(tokenResponse.body);
+        // return _processAndStoreTokens(tokens['id_token'], tokens['refresh_token']);
+        debugPrint('Tokens recebidos: ${tokens.toString()}');
+      } else {
+        throw Exception('Falha ao trocar código por token: ${tokenResponse.body}');
+      }
+    } catch (e) {
+      print(e);
+      return null;
+    }
+  }
+
+
 
   // Lógica de login para Web usando flutter_web_auth_2 e http.
   Future<Null> _loginWeb() async {

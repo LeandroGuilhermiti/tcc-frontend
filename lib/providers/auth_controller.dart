@@ -11,6 +11,8 @@ class AuthController with ChangeNotifier {
   String? _erro;
   bool _isLoading = false;
 
+  AuthController(this._usuario);
+
   // Getters para a UI acessar o estado de forma segura e reativa.
   bool get isLogado => _usuario != null;
   UserModel? get usuario => _usuario;
@@ -28,7 +30,7 @@ class AuthController with ChangeNotifier {
     try {
       // Chama o método de login do nosso novo AuthService
       final user = await _authService.login();
-      _usuario = user;
+      // _usuario = user;
     } catch (e) {
       // Captura qualquer erro que possa ocorrer durante o fluxo de autenticação
       _erro = e.toString().replaceFirst('Exception: ', '');
