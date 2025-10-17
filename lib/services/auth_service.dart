@@ -140,8 +140,8 @@ class AuthService {
 
       if (tokenResponse.statusCode == 200) {
         final tokens = jsonDecode(tokenResponse.body);
-        // return _processAndStoreTokens(tokens['id_token'], tokens['refresh_token']);
         debugPrint('Tokens recebidos: ${tokens.toString()}');
+        return _processAndStoreTokens(tokens['id_token'], tokens['refresh_token']);
       } else {
         throw Exception('Falha ao trocar código por token: ${tokenResponse.body}');
       }
@@ -152,28 +152,30 @@ class AuthService {
   }
 
   // Método unificado para processar os tokens após a autenticação.
-//   UserModel _processAndStoreTokens(String idToken, String? refreshToken) {
-//     _idToken = idToken;
-//     _refreshToken = refreshToken;
-//     final Map<String, dynamic> decodedToken = JwtDecoder.decode(_idToken!);
-//     _currentUser = _userModelFromTokenClaims(decodedToken, _idToken!);
-//     return _currentUser!;
-//   }
+  UserModel _processAndStoreTokens(String idToken, String? refreshToken) {
+    _idToken = idToken;
+    _refreshToken = refreshToken;
+    final Map<String, dynamic> decodedToken = JwtDecoder.decode(_idToken!);
+    _currentUser = _userModelFromTokenClaims(decodedToken, _idToken!);
+    
+    debugPrint(jsonEncode(_currentUser!.toJson()));
+    return _currentUser!;
+  }
 
 //   // Construtor auxiliar para criar um UserModel a partir das claims de um JWT.
-//   UserModel _userModelFromTokenClaims(
-//     Map<String, dynamic> claims,
-//     String token,
-//   ) {
-//     final String? principal = claims['custom:principal'];
-//     return UserModel(
-//       id: claims['sub']!,
-//       token: token,
-//       nome: claims['name'] ?? claims['email'],
-//       cpf: claims['custom:cpf'] ?? '',
-//       cep: claims['custom:cep'] ?? '',
-//       telefone: claims['phone_number'] ?? '',
-//       role: principal == '1' ? UserRole.admin : UserRole.cliente,
-//     );
-//   }
+  UserModel _userModelFromTokenClaims(
+    Map<String, dynamic> claims,
+    String token,
+  ) {
+    final String? principal = claims['custom:principal'];
+    return UserModel(
+      id: claims['sub']!,
+      token: token,
+      nome: claims['name'] ?? claims['email'],
+      cpf: claims['custom:cpf'] ?? '',
+      cep: claims['custom:cep'] ?? '',
+      telefone: claims['phone_number'] ?? '',
+      role: principal == '1' ? UserRole.admin : UserRole.cliente,
+    );
+  }
 }
