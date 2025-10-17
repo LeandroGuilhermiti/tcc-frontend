@@ -3,7 +3,8 @@ enum UserRole { admin, cliente }
 class UserModel {
   final String id;
   final String token;
-  final String? nome;
+  final String primeiroNome;
+  final String? sobrenome;
   final String cpf;
   final String cep;
   final String telefone;
@@ -13,7 +14,8 @@ class UserModel {
   UserModel({
     required this.id,
     required this.token,
-    this.nome,
+    required this.primeiroNome,
+    this.sobrenome,
     required this.cpf,
     required this.cep,
     required this.telefone,
@@ -27,7 +29,8 @@ class UserModel {
       // Usa '??' para garantir que nunca seja nulo, mesmo se o JSON falhar.
       id: json['id'] ?? '',
       token: json['token'] ?? '',
-      nome: json['nome'] ?? '',
+      primeiroNome: json['nome'] ?? json['primeiroNome'] ?? json['givenName'] ?? '',
+      sobrenome: json['sobrenome'] ?? json['familyName'],
       cpf: json['cpf'] ?? '',
       cep: json['cep'] ?? '',
       telefone: json['telefone'] ?? '',
@@ -43,7 +46,7 @@ class UserModel {
     return {
       'id': id,
       'token': token,
-      'nome': nome,
+      'nome': primeiroNome + (sobrenome != null ? ' $sobrenome' : ''),
       'cpf': cpf,
       'cep': cep,
       'telefone': telefone,
