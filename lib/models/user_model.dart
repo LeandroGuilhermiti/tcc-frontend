@@ -32,7 +32,7 @@ class UserModel {
     return UserModel(
       // Usa '??' para garantir que nunca seja nulo, mesmo se o JSON falhar.
       id: json['id'] ?? '',
-      idToken: json['token'] ?? '',
+      idToken: json['idToken'] ?? '',
       accessToken: json['access_token'] ?? '',
       refreshToken: json['refresh_token'] ?? '',
       primeiroNome: json['nome'] ?? json['primeiroNome'] ?? json['givenName'] ?? '',
