@@ -11,8 +11,7 @@ class AppConfig {
   static const _clientIdFromDefine = String.fromEnvironment('AWS_CLIENT_ID');
   static const _cognitoDomainFromDefine = String.fromEnvironment('AWS_COGNITO_DOMAIN');
   static const _apiBaseUrlFromDefine = String.fromEnvironment('API_BASE_URL');
-  static const _webCallbackUrlFromDefine = String.fromEnvironment('WEB_CALLBACK_URL');
-  static const _getTokenUrlFromDefine = String.fromEnvironment('GET_TOKEN_URL');
+  static const _clientBaseUrlFromDefine = String.fromEnvironment('CLIENT_BASE_URL');
 
   /// Retorna o ID do User Pool do Cognito.
   static String get awsUserPoolId {
@@ -42,17 +41,11 @@ class AppConfig {
         : dotenv.env['API_BASE_URL']!;
   }
 
-  static String get webCallbackUrl {
-    return _webCallbackUrlFromDefine.isNotEmpty
-        ? _webCallbackUrlFromDefine
-        : dotenv.env['WEB_CALLBACK_URL']!;
-  }
-
-  /// Retorna a URL para obtenção do token.
-  static String get getTokenUrl {
-    return _getTokenUrlFromDefine.isNotEmpty
-        ? _getTokenUrlFromDefine
-        : dotenv.env['GET_TOKEN_URL']!;
+  // Retorna a URL do próprio client.
+  static String get clientBaseUrL {
+    return _clientBaseUrlFromDefine.isNotEmpty
+        ? _clientBaseUrlFromDefine
+        : dotenv.env['CLIENT_BASE_URL']!;
   }
   
 }

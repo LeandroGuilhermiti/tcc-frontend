@@ -24,8 +24,7 @@ class AuthService {
 
   // URLs de callback para cada plataforma
   final String _mobileCallbackUrl = 'meuapptcc://callback';
-  final String _webCallbackUrl = AppConfig.webCallbackUrl;
-  final String _getTokenUrl = AppConfig.getTokenUrl;
+  final String _webCallbackUrl = AppConfig.clientBaseUrL;
 
   // Endpoints do Cognito
   String get _discoveryUrl =>
@@ -113,7 +112,7 @@ class AuthService {
   // Lógica de login para Web usando redirecionamento.
   Future<void> _loginWithRedirect() async {
     final authUrl = Uri.parse(
-        '$_authEndpoint?response_type=code&client_id=$_clientId&redirect_uri=$_getTokenUrl&scope=email+openid',
+        '$_authEndpoint?response_type=code&client_id=$_clientId&redirect_uri=$_webCallbackUrl&scope=email+openid',
       );
 
     if (!await launchUrl(
