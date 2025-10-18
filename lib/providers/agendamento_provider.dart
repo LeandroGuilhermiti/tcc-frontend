@@ -25,7 +25,7 @@ class AgendamentoProvider extends ChangeNotifier {
 
   Future<void> carregarAgendamentos(String idAgenda) async {
     // 5. TRAVA DE SEGURANÇA: Só continua se houver token
-    final token = _auth?.usuario?.accessToken;
+    final token = _auth?.usuario?.idToken;
     if (token == null || token.isEmpty) {
       _error = "Autenticação necessária.";
       notifyListeners();
@@ -49,19 +49,19 @@ class AgendamentoProvider extends ChangeNotifier {
 
   // Adicione a mesma trava de segurança para os outros métodos
   Future<void> adicionarAgendamento(Agendamento agendamento) async {
-    final token = _auth?.usuario?.accessToken;
+    final token = _auth?.usuario?.idToken;
     if (token == null) return;
     // ... resto da lógica
   }
 
   Future<void> atualizarAgendamento(Agendamento agendamento) async {
-    final token = _auth?.usuario?.accessToken;
+    final token = _auth?.usuario?.idToken;
     if (token == null) return;
     // ... resto da lógica
   }
 
   Future<void> removerAgendamento(String id) async {
-    final token = _auth?.usuario?.accessToken;
+    final token = _auth?.usuario?.idToken;
     if (token == null) return;
     // ... resto da lógica
   }

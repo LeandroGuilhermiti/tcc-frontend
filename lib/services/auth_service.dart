@@ -159,7 +159,7 @@ class AuthService {
 
     try {
       // Pegar detalhes do usuário com backend
-      final Map<String, dynamic> backendUserDetails = await _fetchBackendUserDetails(userId, accessToken);
+      final Map<String, dynamic> backendUserDetails = await _fetchBackendUserDetails(userId, idToken);
 
       // O backend retorna os detalhes, e nós adicionamos o token que veio do Cognito
       final Map<String, dynamic> fullUserData = {
@@ -185,7 +185,7 @@ class AuthService {
     }
   }
 
-  Future<Map<String, dynamic>> _fetchBackendUserDetails(String userId, String acessToken) async {
+  Future<Map<String, dynamic>> _fetchBackendUserDetails(String userId, String idToken) async {
     
     final baseUrl = Uri.parse(AppConfig.apiBaseUrl);
     final url = Uri.parse('$baseUrl/usuario/$userId/buscar');
@@ -194,7 +194,7 @@ class AuthService {
       url,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $acessToken',
+        'Authorization': 'Bearer $idToken',
       },
     );
 

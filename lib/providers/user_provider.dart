@@ -28,7 +28,7 @@ class UsuarioProvider with ChangeNotifier {
   /// Requer que um usuário (geralmente um admin) esteja logado.
   Future<void> buscarUsuarios() async {
     // Verifica se temos um token válido para fazer a requisição.
-    final token = _auth?.usuario?.accessToken;
+    final token = _auth?.usuario?.idToken;
     if (token == null || token.isEmpty) {
       _erro = "Usuário não autenticado. Não é possível buscar dados.";
       notifyListeners();
@@ -53,7 +53,7 @@ class UsuarioProvider with ChangeNotifier {
   /// Adiciona um novo usuário ao sistema.
   /// Requer os dados do novo usuário e um token de admin.
   Future<bool> adicionarUsuario(Map<String, dynamic> dadosUsuario) async {
-    final token = _auth?.usuario?.accessToken;
+    final token = _auth?.usuario?.idToken;
     if (token == null || token.isEmpty) {
       _erro = "Usuário não autenticado. Não é possível cadastrar.";
       notifyListeners();
@@ -79,7 +79,7 @@ class UsuarioProvider with ChangeNotifier {
 
   /// Deleta um usuário do sistema.
   Future<void> deletarUsuario(String id) async {
-    final token = _auth?.usuario?.accessToken;
+    final token = _auth?.usuario?.idToken;
     if (token == null || token.isEmpty) {
       _erro = "Usuário não autenticado. Não é possível deletar.";
       notifyListeners();

@@ -27,7 +27,7 @@ class AgendaProvider with ChangeNotifier {
   }
 
   Future<void> buscarAgendasDoProfissional(String profissionalId) async {
-    final token = _auth?.usuario?.accessToken;
+    final token = _auth?.usuario?.idToken;
     if (token == null || token.isEmpty) {
       _erro = "Autenticação necessária.";
       notifyListeners();
@@ -48,7 +48,7 @@ class AgendaProvider with ChangeNotifier {
 
   /// NOVO: Busca os períodos de uma agenda específica. Retorna a lista de períodos.
   Future<List<Periodo>> buscarPeriodosDaAgenda(String agendaId) async {
-    final token = _auth?.usuario?.accessToken;
+    final token = _auth?.usuario?.idToken;
     if (token == null) {
       throw Exception("Autenticação necessária.");
     }
@@ -56,13 +56,13 @@ class AgendaProvider with ChangeNotifier {
   }
 
   Future<void> adicionarAgendaCompleta(Agenda agenda, List<Periodo> periodos) async {
-    final token = _auth?.usuario?.accessToken;
+    final token = _auth?.usuario?.idToken;
     if (token == null) throw Exception("Ação não permitida. Faça login.");
     await _service.criarAgendaCompleta(agenda, periodos, token);
   }
 
   Future<void> atualizarAgendaCompleta(Agenda agenda, List<Periodo> periodos) async {
-    final token = _auth?.usuario?.accessToken;
+    final token = _auth?.usuario?.idToken;
     if (token == null) throw Exception("Ação não permitida. Faça login.");
     await _service.atualizarAgendaCompleta(agenda, periodos, token);
   }
