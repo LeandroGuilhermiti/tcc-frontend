@@ -5,33 +5,55 @@ import '../config/app_config.dart';
 
 /// Classe de serviço responsável pela comunicação com a API para operações de usuário.
 class UsuarioService {
-
   final String _baseUrl = AppConfig.apiBaseUrl;
 
   /// Busca uma lista de todos os usuários do backend.
   /// Requer um [token] de autenticação de um usuário admin.
+  ///
+  /// ATUALIZADO: Esta função agora trata a paginação do endpoint /usuario.
   Future<List<UserModel>> buscarTodosUsuarios(String token) async {
-    final Uri url = Uri.parse('$_baseUrl/usuarios');
+    List<UserModel> todosUsuarios = [];
+    int paginaAtual = 1;
+    bool haMaisPaginas = true;
+    const int limitePorPagina = 50; // Vamos buscar de 50 em 50 para eficiência.
+
+    final String endpointBase = '$_baseUrl/usuario';
 
     try {
-      final response = await http.get(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          // O token é enviado no cabeçalho para autorizar a requisição.
-          'Authorization': 'Bearer $token',
-        },
-      );
+      // Loop para buscar todas as páginas de usuários
+      while (haMaisPaginas) {
+        // 2. CORREÇÃO: Adicionamos os parâmetros de query 'page' e 'limit'
+        final Uri url = Uri.parse('$endpointBase?page=$paginaAtual&limit=$limitePorPagina');
 
-      if (response.statusCode == 200) {
-        // Decodifica a resposta JSON, que deve ser uma lista de objetos.
-        final List<dynamic> responseData = jsonDecode(response.body);
-        // Converte cada objeto da lista em um UserModel.
-        return responseData.map((data) => UserModel.fromJson(data)).toList();
-      } else {
-        // Se o servidor retornou um erro, lança uma exceção com a mensagem.
-        throw Exception('Falha ao carregar usuários: ${response.body}');
+        final response = await http.get(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final List<dynamic> responseData = jsonDecode(response.body);
+
+          // Se a lista retornada estiver vazia, paramos o loop
+          if (responseData.isEmpty) {
+            haMaisPaginas = false;
+          } else {
+            // Adiciona os usuários desta página à lista total
+            todosUsuarios.addAll(responseData.map((data) => UserModel.fromJson(data)).toList());
+            // Prepara para buscar a próxima página
+            paginaAtual++;
+          }
+        } else {
+          // Se falhar em qualquer página, lança um erro
+          throw Exception('Falha ao carregar usuários (página $paginaAtual): ${response.body}');
+        }
       }
+      
+      // Retorna a lista completa com usuários de todas as páginas
+      return todosUsuarios;
+
     } catch (e) {
       // Captura erros de rede ou outras exceções.
       throw Exception('Erro de rede ao buscar usuários: $e');
@@ -41,7 +63,8 @@ class UsuarioService {
   /// Cadastra um novo usuário no backend.
   /// Requer os [dadosNovoUsuario] em formato de Map e um [token] de autenticação.
   Future<UserModel> cadastrarUsuario(Map<String, dynamic> dadosNovoUsuario, String token) async {
-    final Uri url = Uri.parse('$_baseUrl/usuarios');
+    // 3. CORREÇÃO: Garantir que o endpoint de POST também está correto
+    final Uri url = Uri.parse('$_baseUrl/usuario'); // Singular
 
     try {
       final response = await http.post(
@@ -50,12 +73,10 @@ class UsuarioService {
           'Content-Type': 'application/json; charset=UTF-8',
           'Authorization': 'Bearer $token',
         },
-        // Envia os dados do novo usuário no corpo da requisição.
         body: jsonEncode(dadosNovoUsuario),
       );
 
-      if (response.statusCode == 201) { // 201 Created é o status de sucesso para POST
-        // Se o backend retornar o usuário criado, o decodificamos e retornamos.
+      if (response.statusCode == 201) {
         return UserModel.fromJson(jsonDecode(response.body));
       } else {
         throw Exception('Falha ao cadastrar usuário: ${response.body}');
@@ -66,12 +87,12 @@ class UsuarioService {
   }
 
   /// Atualiza os dados de um usuário existente.
-  /// Requer o [id] do usuário, os [dadosAtualizados] e o [token] de autenticação.
   Future<void> atualizarUsuario(String id, Map<String, dynamic> dadosAtualizados, String token) async {
-    final Uri url = Uri.parse('$_baseUrl/usuarios/$id');
+    // 4. CORREÇÃO: Garantir que o endpoint de PUT também está correto
+    final Uri url = Uri.parse('$_baseUrl/usuario/$id'); // Singular
 
     try {
-      final response = await http.put( // ou http.patch, dependendo da sua API
+      final response = await http.put(
         url,
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',
@@ -89,9 +110,9 @@ class UsuarioService {
   }
 
   /// Deleta um usuário do sistema.
-  /// Requer o [id] do usuário a ser deletado e o [token] de autenticação.
   Future<void> deletarUsuario(String id, String token) async {
-    final Uri url = Uri.parse('$_baseUrl/usuarios/$id');
+    // 5. CORREÇÃO: Garantir que o endpoint de DELETE também está correto
+    final Uri url = Uri.parse('$_baseUrl/usuario/$id'); // Singular
 
     try {
       final response = await http.delete(
@@ -101,7 +122,7 @@ class UsuarioService {
         },
       );
 
-      if (response.statusCode != 204) { // 204 No Content é um status de sucesso comum para DELETE
+      if (response.statusCode != 204) {
         throw Exception('Falha ao deletar usuário: ${response.body}');
       }
     } catch (e) {

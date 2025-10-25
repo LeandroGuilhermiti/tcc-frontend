@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:html' as html; // Necessário para web
+import 'package:intl/date_symbol_data_local.dart';
 
 //controllers, providers, models
 import 'providers/auth_controller.dart';
@@ -10,6 +11,7 @@ import 'providers/periodo_provider.dart';
 import 'providers/agendamento_provider.dart';
 import 'providers/bloqueio_provider.dart';
 import 'providers/agenda_provider.dart';
+import 'providers/user_provider.dart'; 
 import 'models/user_model.dart';
 
 //telas
@@ -27,6 +29,7 @@ Future<void> main() async {
   //Garantir que o Flutter está pronto e carregar as variáveis de ambiente
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
+  await initializeDateFormatting('pt_BR', null);
 
   UserModel? initialUser;
   final authService = AuthService(); // Instancia o serviço diretamente
@@ -74,6 +77,10 @@ class MyApp extends StatelessWidget {
           create: (_) => BloqueioProvider(null),
           update: (_, auth, previousProvider) =>
               previousProvider!..updateAuth(auth),
+        ),
+        ChangeNotifierProxyProvider<AuthController, UsuarioProvider>(
+          create: (_) => UsuarioProvider(null), 
+          update: (_, auth, previousProvider) => UsuarioProvider(auth),
         ),
       ],
       child: MaterialApp(

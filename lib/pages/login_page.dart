@@ -34,15 +34,14 @@ class LoginPage extends StatelessWidget {
                       // Chama o método de login do seu AuthController,
                       // que por sua vez deve chamar o auth_service.loginComHostedUI()
                       await auth.loginComHostedUI();
-
                       // A lógica de navegação permanece a mesma
-                      // if (auth.isLogado) {
-                      //   if (auth.tipoUsuario == UserRole.admin) {
-                      //     Navigator.pushReplacementNamed(context, '/admin');
-                      //   } else {
-                      //     Navigator.pushReplacementNamed(context, '/cliente');
-                      //   }
-                      // }
+                      if (auth.isLogado) {
+                        if (auth.tipoUsuario == UserRole.admin) {
+                          Navigator.pushReplacementNamed(context, '/admin');
+                        } else {
+                          Navigator.pushReplacementNamed(context, '/cliente');
+                        }
+                      }
                     },
               child: auth.isLoading
                   ? const CircularProgressIndicator(color: Colors.white)

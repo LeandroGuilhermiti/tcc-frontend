@@ -87,27 +87,31 @@ class AuthService {
   // --- MÉTODOS PRIVADOS ESPECÍFICOS DE CADA PLATAFORMA ---
 
   // Lógica de login para Android e iOS usando flutter_appauth.
-  // Future<UserModel> _loginMobile() async {
-  //   try {
-  //     final result = await _appAuth.authorizeAndExchangeCode(
-  //       AuthorizationTokenRequest(
-  //         _clientId,
-  //         _mobileCallbackUrl,
-  //         discoveryUrl: _discoveryUrl,
-  //         scopes: ['openid', 'email'],
-  //       ),
-  //     );
+  Future<UserModel> _loginMobile() async {
+    try {
+      final result = await _appAuth.authorizeAndExchangeCode(
+        AuthorizationTokenRequest(
+          _clientId,
+          _mobileCallbackUrl,
+          discoveryUrl: _discoveryUrl,
+          scopes: ['openid', 'email'],
+        ),
+      );
 
-  //     if (result != null && result.idToken != null) {
-  //       return await _processAndStoreTokens(result.idToken!, result.accessToken, result.refreshToken);
-  //     } else {
-  //       throw Exception("Falha ao obter resposta de autorização.");
-  //     }
-  //   } catch (e) {
-  //     print('Erro no login mobile: $e');
-  //     throw Exception("Ocorreu um erro durante o login.");
-  //   }
-  // }
+      if (result != null && result.idToken != null) {
+        return await _processAndStoreTokens(
+          result.idToken!,
+          result.accessToken ?? '',
+          result.refreshToken,
+        );
+      } else {
+        throw Exception("Falha ao obter resposta de autorização.");
+      }
+    } catch (e) {
+      print('Erro no login mobile: $e');
+      throw Exception("Ocorreu um erro durante o login.");
+    }
+  }
 
   // Lógica de login para Web usando redirecionamento.
   Future<void> _loginWithRedirect() async {
