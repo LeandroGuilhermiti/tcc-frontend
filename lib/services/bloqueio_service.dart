@@ -13,7 +13,7 @@ class BloqueioService {
 
   Future<List<Bloqueio>> getBloqueios(String idAgenda, String token) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/bloqueios/agenda/$idAgenda'),
+      Uri.parse('$baseUrl/bloqueio/$idAgenda'),
       headers: _getHeaders(token),
     );
 
@@ -27,7 +27,7 @@ class BloqueioService {
 
   Future<Bloqueio> criarBloqueio(Bloqueio bloqueio, String token) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/bloqueios'),
+      Uri.parse('$baseUrl/bloqueio'),
       headers: _getHeaders(token),
       body: jsonEncode(bloqueio.toJson()),
     );
@@ -43,7 +43,7 @@ class BloqueioService {
     if (bloqueio.id == null) throw Exception('ID do bloqueio não informado.');
 
     final response = await http.patch(
-      Uri.parse('$baseUrl/bloqueios/${bloqueio.id}'),
+      Uri.parse('$baseUrl/bloqueio/${bloqueio.id}'),
       headers: _getHeaders(token),
       body: jsonEncode(bloqueio.toJson()),
     );
@@ -55,7 +55,7 @@ class BloqueioService {
 
   Future<void> deletarBloqueio(String id, String token) async {
     final response = await http.delete(
-      Uri.parse('$baseUrl/bloqueios/$id'),
+      Uri.parse('$baseUrl/bloqueio/$id'),
       headers: _getHeaders(token),
     );
 

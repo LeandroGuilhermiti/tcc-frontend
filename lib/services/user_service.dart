@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/user_model.dart';
 import '../config/app_config.dart';
@@ -7,72 +8,76 @@ import '../config/app_config.dart';
 class UsuarioService {
   final String _baseUrl = AppConfig.apiBaseUrl;
 
-  /// Busca uma lista de todos os usuários do backend.
-  /// Requer um [token] de autenticação de um usuário admin.
-  ///
-  /// ATUALIZADO: Esta função agora trata a paginação do endpoint /usuario.
-  Future<List<UserModel>> buscarTodosUsuarios(String token) async {
-    List<UserModel> todosUsuarios = [];
-    int paginaAtual = 1;
-    bool haMaisPaginas = true;
-    const int limitePorPagina = 50; // Vamos buscar de 50 em 50 para eficiência.
+  // Monta os cabeçalhos padrão com o Bearer Token
+  Map<String, String> _getHeaders(String token) => {
+    'Content-Type': 'application/json; charset=UTF-8',
+    'Authorization': 'Bearer $token',
+  };
 
-    final String endpointBase = '$_baseUrl/usuario';
+  /// Busca uma lista de todos os usuários do backend.
+  Future<List<UserModel>> buscarTodosUsuarios(String token) async {
+    final Uri url = Uri.parse('$_baseUrl/usuario/buscar');
+    debugPrint("[UsuarioService] Buscando usuários em: ${url.toString()}");
 
     try {
-      // Loop para buscar todas as páginas de usuários
-      while (haMaisPaginas) {
-        // 2. CORREÇÃO: Adicionamos os parâmetros de query 'page' e 'limit'
-        final Uri url = Uri.parse('$endpointBase?page=$paginaAtual&limit=$limitePorPagina');
+      final response = await http.get(url, headers: _getHeaders(token));
 
-        final response = await http.get(
-          url,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-        );
+      if (response.statusCode == 200) {
+        // --- ESTA É A CORREÇÃO ---
+        // O backend retorna um Objeto (Map) e não uma Lista.
+        // Primeiro, fazemos o parse para um Map.
+        final Map<String, dynamic> responseObject = jsonDecode(response.body);
 
-        if (response.statusCode == 200) {
-          final List<dynamic> responseData = jsonDecode(response.body);
+        // Depois, pegamos a lista que está dentro da chave "data".
+        // Se a chave "data" não existir, usamos uma lista vazia como fallback.
+        final List<dynamic> responseData =
+            responseObject['data'] as List<dynamic>? ?? [];
+        // --- FIM DA CORREÇÃO ---
 
-          // Se a lista retornada estiver vazia, paramos o loop
-          if (responseData.isEmpty) {
-            haMaisPaginas = false;
-          } else {
-            // Adiciona os usuários desta página à lista total
-            todosUsuarios.addAll(responseData.map((data) => UserModel.fromJson(data)).toList());
-            // Prepara para buscar a próxima página
-            paginaAtual++;
-          }
-        } else {
-          // Se falhar em qualquer página, lança um erro
-          throw Exception('Falha ao carregar usuários (página $paginaAtual): ${response.body}');
+        if (responseData.isEmpty) {
+          debugPrint(
+            "[UsuarioService] Sucesso, mas a chave 'data' no backend /usuario/buscar está vazia.",
+          );
+          return [];
         }
-      }
-      
-      // Retorna a lista completa com usuários de todas as páginas
-      return todosUsuarios;
 
+        final usuarios = responseData
+            .map((data) => UserModel.fromJson(data))
+            .toList();
+        debugPrint(
+          "[UsuarioService] ${usuarios.length} usuários carregados com sucesso.",
+        );
+        return usuarios;
+      } else {
+        debugPrint(
+          "[UsuarioService] Falha ao carregar usuários. Status: ${response.statusCode}, Body: ${response.body}",
+        );
+        throw Exception(
+          'Falha ao carregar usuários do Cognito: ${response.body}',
+        );
+      }
     } catch (e) {
-      // Captura erros de rede ou outras exceções.
-      throw Exception('Erro de rede ao buscar usuários: $e');
+      debugPrint(
+        "[UsuarioService] Erro de rede ou parse ao buscar usuários: $e",
+      );
+      // O erro 'TypeError' que você viu vai aparecer aqui.
+      throw Exception(
+        'Erro de rede ou formato de resposta ao buscar usuários: $e',
+      );
     }
   }
 
   /// Cadastra um novo usuário no backend.
-  /// Requer os [dadosNovoUsuario] em formato de Map e um [token] de autenticação.
-  Future<UserModel> cadastrarUsuario(Map<String, dynamic> dadosNovoUsuario, String token) async {
-    // 3. CORREÇÃO: Garantir que o endpoint de POST também está correto
-    final Uri url = Uri.parse('$_baseUrl/usuario'); // Singular
+  Future<UserModel> cadastrarUsuario(
+    Map<String, dynamic> dadosNovoUsuario,
+    String token,
+  ) async {
+    final Uri url = Uri.parse('$_baseUrl/usuario');
 
     try {
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization': 'Bearer $token',
-        },
+        headers: _getHeaders(token),
         body: jsonEncode(dadosNovoUsuario),
       );
 
@@ -86,43 +91,14 @@ class UsuarioService {
     }
   }
 
-  /// Atualiza os dados de um usuário existente.
-  Future<void> atualizarUsuario(String id, Map<String, dynamic> dadosAtualizados, String token) async {
-    // 4. CORREÇÃO: Garantir que o endpoint de PUT também está correto
-    final Uri url = Uri.parse('$_baseUrl/usuario/$id'); // Singular
-
-    try {
-      final response = await http.put(
-        url,
-        headers: {
-          'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(dadosAtualizados),
-      );
-
-      if (response.statusCode != 200) {
-        throw Exception('Falha ao atualizar usuário: ${response.body}');
-      }
-    } catch (e) {
-      throw Exception('Erro de rede ao atualizar usuário: $e');
-    }
-  }
-
   /// Deleta um usuário do sistema.
   Future<void> deletarUsuario(String id, String token) async {
-    // 5. CORREÇÃO: Garantir que o endpoint de DELETE também está correto
-    final Uri url = Uri.parse('$_baseUrl/usuario/$id'); // Singular
+    final Uri url = Uri.parse('$_baseUrl/usuario/$id');
 
     try {
-      final response = await http.delete(
-        url,
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final response = await http.delete(url, headers: _getHeaders(token));
 
-      if (response.statusCode != 204) {
+      if (response.statusCode != 204 && response.statusCode != 200) {
         throw Exception('Falha ao deletar usuário: ${response.body}');
       }
     } catch (e) {

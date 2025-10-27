@@ -59,7 +59,9 @@ class AgendamentoService {
   Future<Agendamento> criarAgendamento(Agendamento agendamento, String token) async {
     
     // CORREÇÃO 2: O endpoint de criação é /agendamento (método POST)
-    final Uri uri = Uri.parse('$baseUrl/agendamento');
+    final Uri uri = Uri.parse('$baseUrl/agendamento/criar');
+
+    print(jsonEncode(agendamento.toJson()));
 
     final response = await http.post(
       uri,
@@ -114,8 +116,6 @@ class AgendamentoService {
     
     final Uri uri = Uri.parse('$baseUrl/agendamento'); // Método DELETE
 
-    // CORREÇÃO 4 (CRÍTICA): O seu backend de DELETE (segundo index.mjs)
-    // NÃO espera um `{"id": "uuid"}`, ele espera a chave composta.
     final body = jsonEncode({
       'idAgenda': agendamento.idAgenda,
       'idUsuario': agendamento.idUsuario,

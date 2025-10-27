@@ -13,7 +13,7 @@ class PeriodoService {
 
   Future<List<Periodo>> getPeriodos(String idAgenda, String token) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/periodos/agenda/$idAgenda'),
+      Uri.parse('$baseUrl/periodo/$idAgenda'),
       headers: _getHeaders(token),
     );
 
@@ -27,7 +27,7 @@ class PeriodoService {
 
   Future<Periodo> criarPeriodo(Periodo periodo, String token) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/periodos'),
+      Uri.parse('$baseUrl/periodo'),
       headers: _getHeaders(token),
       body: jsonEncode(periodo.toJson()),
     );
@@ -43,7 +43,7 @@ class PeriodoService {
     if (periodo.id == null) throw Exception('ID do período não informado.');
 
     final response = await http.patch(
-      Uri.parse('$baseUrl/periodos/${periodo.id}'),
+      Uri.parse('$baseUrl/periodo/${periodo.id}'),
       headers: _getHeaders(token),
       body: jsonEncode(periodo.toJson()),
     );
@@ -55,7 +55,7 @@ class PeriodoService {
 
   Future<void> deletarPeriodo(String id, String token) async {
     final response = await http.delete(
-      Uri.parse('$baseUrl/periodos/$id'),
+      Uri.parse('$baseUrl/periodo/$id'),
       headers: _getHeaders(token),
     );
 
