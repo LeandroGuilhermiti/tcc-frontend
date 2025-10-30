@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/agendamento_model.dart';
 import '../services/agendamento_service.dart';
 import 'auth_controller.dart';
@@ -18,13 +19,20 @@ class AgendamentoProvider extends ChangeNotifier {
   String? get error => _error;
 
   void updateAuth(AuthController newAuth) {
+    // Se o usuário mudou, limpa os agendamentos antigos
+    if (_auth?.usuario?.id != newAuth.usuario?.id) {
+      _agendamentos = [];
+      _error = null;
+      _isLoading = false;
+    }
     _auth = newAuth;
   }
 
+  // --- MÉTODO ATUALIZADO PARA ACEITAR FILTROS ---
   Future<void> carregarAgendamentos({
     required String idAgenda,
-    String? idUsuario,
-    DateTime? dataHora,
+    String? idUsuario, // Parâmetro opcional para filtrar por usuário
+    DateTime? dataHora, // Parâmetro opcional para filtrar por data/hora
   }) async {
     final token = _auth?.usuario?.idToken;
     if (token == null || token.isEmpty) {
@@ -32,10 +40,13 @@ class AgendamentoProvider extends ChangeNotifier {
       notifyListeners();
       return;
     }
+
     _error = null;
     _isLoading = true;
     notifyListeners();
+
     try {
+      // Passa todos os filtros para o serviço.
       _agendamentos = await _service.getAgendamentos(
         idAgenda: idAgenda,
         idUsuario: idUsuario,
@@ -43,59 +54,68 @@ class AgendamentoProvider extends ChangeNotifier {
         token: token,
       );
     } catch (e) {
-      _error = 'Erro ao carregar agendamentos: ${e.toString()}';
+      debugPrint('[AgendamentoProvider] Erro ao carregar: ${e.toString()}');
+      _error = e.toString().replaceFirst("Exception: ", "");
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
+  // --- ALTERAÇÃO AQUI ---
   Future<void> adicionarAgendamento(Agendamento agendamento) async {
     final token = _auth?.usuario?.idToken;
     if (token == null) throw Exception("Autenticação necessária.");
+
     try {
-      final novoAgendamento = await _service.criarAgendamento(
-        agendamento,
-        token,
-      );
-      _agendamentos.add(novoAgendamento);
-      notifyListeners();
+      // 1. Chama o serviço para criar o agendamento no banco
+      await _service.criarAgendamento(agendamento, token);
+      
+      // 2. Em vez de adicionar localmente, recarrega a lista inteira
+      //    chamando a função 'carregarAgendamentos'.
+      //    Isto garante que a UI será "recarregada" com os dados do servidor.
+      await carregarAgendamentos(idAgenda: agendamento.idAgenda);
+      
+      // 'carregarAgendamentos' já chama notifyListeners(), 
+      // então não precisamos de outro aqui.
+
     } catch (e) {
-      rethrow;
+      rethrow; // O 'dialogo_agendamento_service' irá tratar de mostrar o erro
     }
   }
 
   Future<void> atualizarAgendamento(Agendamento agendamento) async {
     final token = _auth?.usuario?.idToken;
     if (token == null) throw Exception("Autenticação necessária.");
+
     try {
       await _service.atualizarAgendamento(agendamento, token);
-      final index = _agendamentos.indexWhere((a) => a.id == agendamento.id);
-      if (index != -1) {
-        _agendamentos[index] = agendamento;
-        notifyListeners();
-      }
+
+      // --- ALTERAÇÃO AQUI TAMBÉM (para consistência) ---
+      // Recarrega a lista inteira após atualizar.
+      await carregarAgendamentos(idAgenda: agendamento.idAgenda);
+
     } catch (e) {
       rethrow;
     }
   }
 
-  // --- CORREÇÃO AQUI ---
-  // A função agora espera o objeto Agendamento completo,
-  // pois o serviço precisa da chave composta (idAgenda, idUsuario, dataHora).
+  // --- ALTERAÇÃO AQUI ---
   Future<void> removerAgendamento(Agendamento agendamento) async {
     final token = _auth?.usuario?.idToken;
     if (token == null) throw Exception("Autenticação necessária.");
 
     try {
-      // Chama o serviço com o objeto completo
+      // 1. Chama o serviço para apagar do banco de dados
       await _service.deletarAgendamento(agendamento, token);
 
-      // Remove da lista local pelo ID
-      _agendamentos.removeWhere((a) => a.id == agendamento.id);
-      notifyListeners();
+      // 2. Em vez de remover localmente, recarrega a lista inteira
+      //    Isto corrige o bug de "desaparecer" e garante a atualização.
+      await carregarAgendamentos(idAgenda: agendamento.idAgenda);
+
     } catch (e) {
       rethrow;
     }
   }
 }
+

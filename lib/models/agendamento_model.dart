@@ -20,7 +20,7 @@ class Agendamento {
     return Agendamento(
       // O backend pode retornar o ID como `id` ou `_id`
       id: json['id'] ?? json['_id'],
-      idAgenda: json['idAgenda'],
+      idAgenda: (json['idAgenda'] ?? 0).toString(),
       idUsuario: json['idUsuario'],
       // Converte a string de data que vem da API para um objeto DateTime do Dart
       dataHora: DateTime.parse(json['dataHora']),
