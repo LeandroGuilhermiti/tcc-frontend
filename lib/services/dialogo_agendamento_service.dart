@@ -28,8 +28,13 @@ class DialogoAgendamentoService {
 
     // --- ALTERAÇÃO --- Pré-preenche os dados se estiver editando
     DateTime dataHoraAgendamento =
-    agendamentoExistente?.dataHora ?? dataInicial;
+        agendamentoExistente?.dataHora ?? dataInicial;
     String? idUsuarioSelecionado = agendamentoExistente?.idUsuario;
+    
+    // --- NOVO CAMPO DE DURAÇÃO ---
+    // Pré-preenche com a duração existente ou define o padrão como 1
+    int duracaoSelecionada = agendamentoExistente?.duracao ?? 1;
+    // --- FIM DA ALTERAÇÃO ---
 
     // ALERTA: Se a lista estiver vazia, o Autocomplete não funciona
     final usuariosDisponiveis = Provider.of<UsuarioProvider>(
@@ -61,8 +66,8 @@ class DialogoAgendamentoService {
       }
     }
 
-    // --- ALTERAÇÃO --- Cria o controller FORA do builder para pré-preencher
-    final fieldController = TextEditingController(text: nomeInicialPaciente);
+    // --- CORREÇÃO: Controller externo REMOVIDO ---
+    // final fieldController = TextEditingController(text: nomeInicialPaciente);
 
     showDialog(
       context: context,
@@ -136,6 +141,8 @@ class DialogoAgendamentoService {
                     const SizedBox(height: 16),
                     // ... (Autocomplete e outros campos) ...
                     Autocomplete<UserModel>(
+                      // --- CORREÇÃO: Usando initialValue para pré-preencher ---
+                      initialValue: TextEditingValue(text: nomeInicialPaciente),
                       displayStringForOption: (UserModel option) =>
                           '${option.primeiroNome} ${option.sobrenome ?? ''}',
                       optionsBuilder: (TextEditingValue textEditingValue) {
@@ -156,23 +163,23 @@ class DialogoAgendamentoService {
                           'Usuário selecionado ID: $idUsuarioSelecionado',
                         );
                       },
-                      // --- ALTERAÇÃO NO FIELD VIEW BUILDER ---
+                      // --- CORREÇÃO: FIELD VIEW BUILDER ---
                       fieldViewBuilder: (
                         BuildContext context,
-                        // O controller interno não é mais usado diretamente
+                        // Este é o controller INTERNO do Autocomplete
                         TextEditingController internalController, 
                         FocusNode fieldFocusNode,
                         VoidCallback onFieldSubmitted,
                       ) {
-                        // Ouve o controller externo para limpar o ID se o texto for apagado
-                        fieldController.addListener(() {
-                          if (fieldController.text.isEmpty) {
+                        // Ouve o controller INTERNO para limpar o ID
+                        internalController.addListener(() { // <-- CORRIGIDO
+                          if (internalController.text.isEmpty) { // <-- CORRIGIDO
                             idUsuarioSelecionado = null;
                           }
                         });
 
                         return TextFormField(
-                          controller: fieldController, // <-- USA O CONTROLLER EXTERNO
+                          controller: internalController, // <-- CORRIGIDO
                           focusNode: fieldFocusNode,
                           decoration: const InputDecoration(
                             labelText: 'Nome do Paciente',
@@ -182,6 +189,7 @@ class DialogoAgendamentoService {
                             if (value == null || value.trim().isEmpty) {
                               return 'Informe o nome do paciente.';
                             }
+                            // Validação se o ID foi selecionado
                             if (idUsuarioSelecionado == null) {
                               return 'Selecione um paciente válido da lista.';
                             }
@@ -189,7 +197,7 @@ class DialogoAgendamentoService {
                           },
                         );
                       },
-                      // --- FIM DA ALTERAÇÃO ---
+                      // --- FIM DA CORREÇÃO ---
                       optionsViewBuilder: (context, onSelected, options) {
                         return Align(
                           alignment: Alignment.topLeft,
@@ -221,6 +229,37 @@ class DialogoAgendamentoService {
                         );
                       },
                     ),
+
+                    // --- NOVO WIDGET (DROPDOWN DE DURAÇÃO) ---
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<int>(
+                      value: duracaoSelecionada,
+                      decoration: const InputDecoration(
+                        labelText: 'Períodos (Duração)',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.layers_outlined),
+                      ),
+                      // Gera os itens de 1 a 4
+                      items: [1, 2, 3, 4].map((int valor) {
+                        return DropdownMenuItem<int>(
+                          value: valor,
+                          child: Text(
+                            '$valor período${valor > 1 ? 's' : ''} (${valor * duracaoDaAgenda} min)',
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (int? novoValor) {
+                        if (novoValor != null) {
+                          // Atualiza o estado do diálogo
+                          setDialogState(() {
+                            duracaoSelecionada = novoValor;
+                          });
+                        }
+                      },
+                      validator: (value) => value == null ? 'Selecione a duração' : null,
+                    ),
+                    // --- FIM DO NOVO WIDGET ---
+
                   ],
                 ),
               ),
@@ -237,36 +276,27 @@ class DialogoAgendamentoService {
                             setDialogState(() => isSaving = true);
 
                             try {
-                              // --- ALTERAÇÃO PRINCIPAL (LÓGICA DE SALVAR) ---
+                              // --- ALTERAÇÃO NA LÓGICA DE SALVAR ---
                               final provider = Provider.of<AgendamentoProvider>(
                                 context,
                                 listen: false,
                               );
 
+                              // Criamos um único objeto Agendamento com os dados finais
+                              final agendamentoParaSalvar = Agendamento(
+                                id: isEditing ? agendamentoExistente!.id : null, // Mantém o ID
+                                idAgenda: idAgenda,
+                                idUsuario: idUsuarioSelecionado!,
+                                dataHora: dataHoraAgendamento,
+                                duracao: duracaoSelecionada, // <-- USA O VALOR DO DROPDOWN
+                              );
+                              
                               if (isEditing) {
-                                // MODO DE ATUALIZAÇÃO
-                                // Recriamos o objeto mantendo o ID original
-                                final agendamentoAtualizado = Agendamento(
-                                  id: agendamentoExistente!.id, // Mantém o ID
-                                  idAgenda: idAgenda,
-                                  idUsuario: idUsuarioSelecionado!,
-                                  dataHora: dataHoraAgendamento,
-                                  duracao: 1, // Mantém a lógica de duração
-                                );
-                                
                                 // Chama o provider de ATUALIZAÇÃO
-                                await provider.atualizarAgendamento(agendamentoAtualizado);
-
+                                await provider.atualizarAgendamento(agendamentoParaSalvar);
                               } else {
-                                // MODO DE CRIAÇÃO (Lógica original)
-                                final novoAgendamento = Agendamento(
-                                  idAgenda: idAgenda,
-                                  idUsuario: idUsuarioSelecionado!,
-                                  dataHora: dataHoraAgendamento,
-                                  duracao: 1, 
-                                );
                                 // Chama o provider de ADIÇÃO
-                                await provider.adicionarAgendamento(novoAgendamento);
+                                await provider.adicionarAgendamento(agendamentoParaSalvar);
                               }
                               // --- FIM DA ALTERAÇÃO ---
 
@@ -352,6 +382,11 @@ class DialogoAgendamentoService {
               Text(
                 'Horário: ${DateFormat('dd/MM/yyyy HH:mm').format(appointment.startTime)}',
               ),
+              // --- NOVO CAMPO DE DETALHE ---
+              Text(
+                'Duração: ${agendamento.duracao} período${agendamento.duracao > 1 ? 's' : ''}',
+              ),
+              // --- FIM DO NOVO CAMPO ---
             ],
           ),
           // --- ALTERAÇÃO NOS BOTÕES ---
