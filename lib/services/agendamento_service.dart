@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
@@ -7,11 +8,24 @@ import '../models/agendamento_model.dart';
 class AgendamentoService {
   final String baseUrl = dotenv.env['API_BASE_URL']!;
 
-  // CORREÇÃO 1: Adicionado "Bearer " ao token
   Map<String, String> _getHeaders(String token) => {
         'Content-Type': 'application/json; charset=UTF-8',
         'Authorization': 'Bearer $token',
       };
+
+  /// Lança uma exceção padronizada a partir da resposta HTTP.
+  void _handleError(http.Response response) {
+    // Tenta decodificar o corpo do erro
+    try {
+      final errorBody = jsonDecode(response.body);
+      // Extrai a 'message' específica do backend, se existir
+      final String message = errorBody['message'] ?? response.body;
+      throw Exception(message);
+    } catch (e) {
+      // Se o corpo não for um JSON válido, lança o status code
+      throw Exception('Erro ${response.statusCode}: ${response.reasonPhrase}');
+    }
+  }
 
   /// ROTA (GET)
   /// Busca agendamentos.
@@ -28,110 +42,176 @@ class AgendamentoService {
       queryParameters['idUsuario'] = idUsuario;
     }
     if (dataHora != null) {
-      queryParameters['dataHora'] = DateFormat('yyyy-MM-dd HH:mm:ss').format(dataHora);
+      queryParameters['dataHora'] =
+          DateFormat('yyyy-MM-dd HH:mm:ss').format(dataHora);
     }
 
-    // O endpoint é /agendamento
-    final uri = Uri.parse('$baseUrl/agendamento').replace(queryParameters: queryParameters);
+    final uri =
+        Uri.parse('$baseUrl/agendamento').replace(queryParameters: queryParameters);
 
-    final response = await http.get(uri, headers: _getHeaders(token));
+    debugPrint('[AgendamentoService] Buscando em: ${uri.toString()}');
 
-    if (response.statusCode == 200) {
-      // O seu backend retorna um objeto { data: [...] }
-      final Map<String, dynamic> body = jsonDecode(response.body);
-      
-      // Verificamos se 'data' existe e é uma lista
-      if (body.containsKey('data') && body['data'] is List) {
-         final List<dynamic> data = body['data'];
-         return data.map((item) => Agendamento.fromJson(item)).toList();
+    try {
+      final response = await http.get(uri, headers: _getHeaders(token));
+
+      if (response.statusCode == 200) {
+        // --- CORREÇÃO: Tratar ambos os formatos de resposta ---
+        final dynamic body = jsonDecode(response.body);
+        List<dynamic> dataList;
+
+        if (body is Map<String, dynamic> &&
+            body.containsKey('data') &&
+            body['data'] is List) {
+          // Formato: { "data": [...] }
+          dataList = body['data'];
+        } else if (body is List) {
+          // Formato: [ ... ]
+          dataList = body;
+        } else {
+          // Formato inesperado
+          debugPrint(
+              '[AgendamentoService] Resposta 200, mas formato inesperado.');
+          dataList = [];
+        }
+        // --- FIM DA CORREÇÃO ---
+
+        final agendamentos =
+            dataList.map((item) => Agendamento.fromJson(item)).toList();
+        debugPrint(
+            '[AgendamentoService] ${agendamentos.length} agendamentos carregados.');
+        return agendamentos;
       } else {
-        // Se a resposta for 200 mas não tiver 'data' (ex: busca vazia)
-        return [];
+        // Se a resposta não for 200, é um erro
+        debugPrint(
+            '[AgendamentoService] Erro ${response.statusCode} ao buscar: ${response.body}');
+        _handleError(response);
+        return []; // Nunca será atingido
       }
-    } else {
-      final errorBody = jsonDecode(response.body);
-      throw Exception(errorBody['message'] ?? 'Erro ao carregar agendamentos');
+    } catch (e) {
+      // Erro de rede ou de parsing
+      debugPrint('[AgendamentoService] Exceção ao buscar: ${e.toString()}');
+      rethrow; // Lança a exceção para o provider
     }
   }
 
   /// ROTA (POST)
   /// Cria um novo agendamento.
-  Future<Agendamento> criarAgendamento(Agendamento agendamento, String token) async {
-    
-    // CORREÇÃO 2: O endpoint de criação é /agendamento (método POST)
+  Future<Agendamento> criarAgendamento(
+      Agendamento agendamento, String token) async {
+    // O seu template.yaml usa /agendamento/criar para a orquestração
     final Uri uri = Uri.parse('$baseUrl/agendamento/criar');
+    final String body = jsonEncode(agendamento.toJson());
 
-    print(jsonEncode(agendamento.toJson()));
+    debugPrint('[AgendamentoService] Criando agendamento em: ${uri.toString()}');
+    debugPrint('[AgendamentoService] Body: $body');
 
-    final response = await http.post(
-      uri,
-      headers: _getHeaders(token),
-      body: jsonEncode(agendamento.toJson()),
-    );
+    try {
+      final response = await http.post(
+        uri,
+        headers: _getHeaders(token),
+        body: body,
+      );
 
-    // O seu backend Orquestrador (index.mjs) retorna 201 (Created)
-    if (response.statusCode == 201) {
-      // O seu backend (Orquestrador) já retorna o objeto { data: [agendamento], ... }
-      final Map<String, dynamic> body = jsonDecode(response.body);
-      final agendamentoCriado = Agendamento.fromJson(body['data'][0]);
-      return agendamentoCriado;
-    } else {
-      // Captura a mensagem de erro específica do backend
-      final errorBody = jsonDecode(response.body);
-      throw Exception(errorBody['message'] ?? 'Erro ao criar agendamento');
+      // --- CORREÇÃO PRINCIPAL AQUI ---
+      // O seu backend (Orquestrador) retorna 201 (Created) em caso de sucesso.
+      if (response.statusCode == 201) {
+        debugPrint('[AgendamentoService] Sucesso 201: ${response.body}');
+        
+        // O backend confirma a criação, mas não retorna o objeto 'Agendamento'.
+        // Portanto, retornamos o mesmo objeto 'agendamento' que enviamos,
+        // pois ele é a representação do que foi salvo.
+        return agendamento;
+
+      } else {
+        // Se não for 201, é um erro (ex: 400 Bad Request)
+        debugPrint(
+            '[AgendamentoService] Erro ${response.statusCode}: ${response.body}');
+        _handleError(response);
+        throw Exception(
+            'Falha ao criar agendamento'); // Nunca será atingido
+      }
+    } catch (e) {
+      // Erro de rede ou o _handleError
+      debugPrint(
+          '[AgendamentoService] Exceção ao criar: ${e.toString()}');
+      rethrow; // Lança a exceção para o provider
     }
   }
 
-  /// ROTA (PUT)
+  /// ROTA (PATCH)
   /// Atualiza um agendamento.
-  Future<void> atualizarAgendamento(Agendamento agendamento, String token) async {
+  Future<void> atualizarAgendamento(
+      Agendamento agendamento, String token) async {
+    // O seu template.yaml usa PATCH /agendamento
+    final Uri uri = Uri.parse('$baseUrl/agendamento');
     
-    final Uri uri = Uri.parse('$baseUrl/agendamento'); // Método PUT
+    // --- ESTA É A CORREÇÃO ---
+    // Em vez de montar um JSON manual, usamos o método .toJson()
+    // que já existe no seu AgendamentoModel e que inclui o 'id'.
+    final String body = jsonEncode(agendamento.toJson());
+    // --- FIM DA CORREÇÃO ---
 
-    // CORREÇÃO 3: O seu backend de UPDATE (terceiro index.mjs)
-    // espera a chave (idAgenda, idUsuario, dataHora) E
-    // a propriedade a ser mudada ("duracao").
-    final body = jsonEncode({
-      'idAgenda': agendamento.idAgenda,
-      'idUsuario': agendamento.idUsuario,
-      'dataHora': agendamento.dataHora.toIso8601String(),
-      'duracao': agendamento.duracao, // O único campo que o seu backend permite
-    });
+    debugPrint('[AgendamentoService] Atualizando em: ${uri.toString()}');
+    debugPrint('[AgendamentoService] Body: $body'); // <-- Agora o 'id' deve aparecer aqui
 
-    final response = await http.put(
-      uri,
-      headers: _getHeaders(token),
-      body: body,
-    );
+    try {
+      final response = await http.patch(
+        uri,
+        headers: _getHeaders(token),
+        body: body,
+      );
 
-    if (response.statusCode != 200) {
-      final errorBody = jsonDecode(response.body);
-      throw Exception(errorBody['message'] ?? 'Erro ao atualizar agendamento');
+      // O seu backend de PATCH retorna 200
+      if (response.statusCode != 200) {
+        debugPrint(
+            '[AgendamentoService] Erro ${response.statusCode} ao atualizar: ${response.body}');
+        _handleError(response);
+      } else {
+        debugPrint(
+            '[AgendamentoService] Sucesso 200 ao atualizar: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint(
+          '[AgendamentoService] Exceção ao atualizar: ${e.toString()}');
+      rethrow;
     }
   }
 
   /// ROTA (DELETE)
   /// Exclui um agendamento.
-  Future<void> deletarAgendamento(Agendamento agendamento, String token) async {
-    
-    final Uri uri = Uri.parse('$baseUrl/agendamento'); // Método DELETE
-
+  Future<void> deletarAgendamento(
+      Agendamento agendamento, String token) async {
+    // O seu template.yaml usa DELETE /agendamento
+    final Uri uri = Uri.parse('$baseUrl/agendamento');
     final body = jsonEncode({
       'idAgenda': agendamento.idAgenda,
       'idUsuario': agendamento.idUsuario,
       'dataHora': agendamento.dataHora.toIso8601String(),
     });
 
-    final response = await http.delete(
-      uri,
-      headers: _getHeaders(token),
-      body: body,
-    );
+    debugPrint('[AgendamentoService] Deletando em: ${uri.toString()}');
+    debugPrint('[AgendamentoService] Body: $body');
 
-    if (response.statusCode != 200) {
-      final errorBody = jsonDecode(response.body);
-      throw Exception(errorBody['message'] ?? 'Erro ao excluir agendamento');
+    try {
+      final response = await http.delete(
+        uri,
+        headers: _getHeaders(token),
+        body: body,
+      );
+
+      // O seu backend de DELETE retorna 200
+      if (response.statusCode != 200) {
+        debugPrint(
+            '[AgendamentoService] Erro ${response.statusCode} ao deletar: ${response.body}');
+        _handleError(response);
+      } else {
+        debugPrint(
+            '[AgendamentoService] Sucesso 200 ao deletar: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint(
+          '[AgendamentoService] Exceção ao deletar: ${e.toString()}');
+      rethrow;
     }
   }
 }
-
