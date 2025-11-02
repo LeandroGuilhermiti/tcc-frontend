@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart'; // Importar para debugPrint
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/agenda_model.dart';
@@ -21,22 +22,46 @@ class AgendaService {
     'Authorization': 'Bearer $token', // Assumindo autenticação via Bearer Token
   };
 
-  /// Busca todas as agendas.
-  /// NOTA: O endpoint foi ajustado para GET /agenda. A lógica de filtrar por profissional deve ser feita no backend ou, temporariamente, no frontend.
-  Future<List<Agenda>> buscarAgendasPorProfissional(
-    String profissionalId,
-    String token,
-  ) async {
+  // --- ALTERAÇÃO AQUI ---
+  /// Busca TODAS as agendas (removido o filtro de profissional).
+  Future<List<Agenda>> buscarTodasAgendas(String token) async {
+  // --- FIM DA ALTERAÇÃO ---
+    
+    // A rota GET /agenda já busca todas as agendas (ou todas as que o token permite)
+    final uri = Uri.parse('$_baseUrl/agenda');
+    debugPrint('[AgendaService] Buscando em: ${uri.toString()}');
+
     final response = await http.get(
-      Uri.parse('$_baseUrl/agenda'),
+      uri, // Usa a URI
       headers: _getHeaders(token),
     );
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      // Aqui pode ser necessário filtrar as agendas pelo profissionalId no frontend se o backend não o fizer.
-      return data.map((item) => Agenda.fromJson(item)).toList();
+
+      // --- CORREÇÃO PRINCIPAL (Como no UsuarioService) ---
+      // 1. A API retorna um Objeto (Map) e não uma Lista.
+      final Map<String, dynamic> responseObject = jsonDecode(response.body);
+
+      // 2. Pegamos a lista que está dentro da chave "data".
+      //    Se a chave "data" não existir, usamos uma lista vazia.
+      final List<dynamic> dataList =
+          responseObject['data'] as List<dynamic>? ?? [];
+      // --- FIM DA CORREÇÃO ---
+
+      if (dataList.isEmpty) {
+        debugPrint(
+          "[AgendaService] Sucesso, mas a chave 'data' no backend /agenda está vazia ou não existe.",
+        );
+        return [];
+      }
+      
+      // 3. Mapeia a lista de dados para a lista de Agendas
+      final agendas = dataList.map((item) => Agenda.fromJson(item)).toList();
+      debugPrint("[AgendaService] ${agendas.length} agendas carregadas.");
+      return agendas;
+
     } else {
+      debugPrint('[AgendaService] Erro ao carregar agendas: ${response.body}');
       throw Exception('Erro ao carregar agendas: ${response.body}');
     }
   }
@@ -46,18 +71,52 @@ class AgendaService {
     String agendaId,
     String token,
   ) async {
-    // Assumindo que a rota para isto seja /periodo/{idAgenda}
-    // Verifique se este endpoint existe no seu API Gateway.
-    final response = await http.get(
-      Uri.parse('$_baseUrl/periodo/$agendaId'), // Verifique esta rota
-      headers: _getHeaders(token),
-    );
+    final uri = Uri.parse('$_baseUrl/periodo/$agendaId');
+    debugPrint('[AgendaService] BuscarPeriodosPorAgenda em: ${uri.toString()}');
 
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((item) => Periodo.fromJson(item)).toList();
-    } else {
+    final response = await http.get(uri, headers: _getHeaders(token));
+
+    if (response.statusCode != 200) {
+      debugPrint('[AgendaService] Erro ao carregar períodos: ${response.statusCode} -> ${response.body}');
       throw Exception('Erro ao carregar períodos: ${response.body}');
+    }
+
+    try {
+      final parsed = jsonDecode(response.body);
+      debugPrint('[AgendaService] parsed.runtimeType: ${parsed.runtimeType}');
+
+      List<dynamic> dataList;
+      if (parsed is List) {
+        dataList = parsed;
+      } else if (parsed is Map<String, dynamic>) {
+        final dynamic dataField = parsed['data'];
+        if (dataField is List) {
+          dataList = dataField;
+        } else if (dataField is Map) {
+          dataList = [dataField];
+        } else {
+          dataList = [];
+        }
+      } else {
+        dataList = [];
+      }
+
+      final List<Periodo> periodos = [];
+      for (var item in dataList) {
+        try {
+          final Map<String, dynamic> mapItem = item is Map<String, dynamic>
+              ? item
+              : Map<String, dynamic>.from(item as Map);
+          periodos.add(Periodo.fromJson(mapItem));
+        } catch (e, st) {
+          debugPrint('[AgendaService] Ignorando item inválido de período: $e\n$item\n$st');
+        }
+      }
+
+      return periodos;
+    } catch (e, st) {
+      debugPrint('[AgendaService] Erro ao decodificar/transformar JSON: $e\n$st');
+      throw Exception('Resposta inválida do servidor ao buscar períodos');
     }
   }
 
@@ -106,3 +165,4 @@ class AgendaService {
     }
   }
 }
+

@@ -1,12 +1,22 @@
 import 'package:flutter/material.dart';
 
-// Converte uma string no formato "HH:mm:ss" para um objeto TimeOfDay.
-TimeOfDay _timeOfDayFromString(String timeString) {
-  final parts = timeString.split(':');
-  final hour = int.parse(parts[0]);
-  final minute = int.parse(parts[1]);
-  return TimeOfDay(hour: hour, minute: minute);
+// --- Função auxiliar para converter String para TimeOfDay ---
+TimeOfDay _timeOfDayFromString(String? timeString) { 
+  if (timeString == null || timeString.isEmpty) {
+    debugPrint("Erro: timeString nula ou vazia. Usando 00:00.");
+    return const TimeOfDay(hour: 0, minute: 0);
+  }
+  try {
+    final parts = timeString.split(':');
+    final hour = int.parse(parts[0]);
+    final minute = int.parse(parts[1]);
+    return TimeOfDay(hour: hour, minute: minute);
+  } catch (e) {
+    debugPrint("Erro ao converter string para TimeOfDay: '$timeString'. Usando 00:00.");
+    return const TimeOfDay(hour: 0, minute: 0); // Retorno seguro
+  }
 }
+// --- FIM DA FUNÇÃO ---
 
 // Formata um objeto TimeOfDay para uma string no formato "HH:mm:ss".
 String _stringFromTimeOfDay(TimeOfDay time) {
@@ -30,27 +40,42 @@ class Periodo {
     required this.fim,
   });
 
-  // Cria um Periodo a partir de um JSON vindo da API.
+  /// Construtor de fábrica: Cria um Periodo a partir de um JSON vindo da API.
+  /// AGORA ESPERA chaves em camelCase (ex: 'idAgenda', 'diaDaSemana').
   factory Periodo.fromJson(Map<String, dynamic> json) {
     return Periodo(
-      id: json['id']?.toString(), // Converte para String por segurança
-      idAgenda: json['id_agenda'].toString(),
-      diaDaSemana: json['dia_da_semana'],
-      // Usa a função auxiliar para converter a string de tempo em TimeOfDay
+      id: json['id']?.toString(), 
+      
+      // --- ALTERAÇÃO AQUI ---
+      // Lê a chave 'idAgenda' diretamente.
+      idAgenda: json['idAgenda']?.toString() ?? '', 
+      
+      // --- ALTERAÇÃO AQUI ---
+      // Lê a chave 'diaDaSemana' diretamente.
+      diaDaSemana: json['diaDaSemana'] ?? 0,
+      // --- FIM DA ALTERAÇÃO ---
+      
       inicio: _timeOfDayFromString(json['inicio']),
       fim: _timeOfDayFromString(json['fim']),
     );
   }
 
-  // Converte um Periodo para um JSON para enviar à API.
+  /// Converte um Periodo para um JSON para enviar à API.
+  /// AGORA GERA chaves em camelCase (ex: 'idAgenda', 'diaDaSemana').
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
-      'id_agenda': idAgenda,
-      'dia_da_semana': diaDaSemana,
-      // Usa a função auxiliar para formatar o TimeOfDay de volta para string
+      
+      // --- ALTERAÇÃO AQUI ---
+      'idAgenda': idAgenda,
+      
+      // --- ALTERAÇÃO AQUI ---
+      'diaDaSemana': diaDaSemana,
+      // --- FIM DA ALTERAÇÃO ---
+
       'inicio': _stringFromTimeOfDay(inicio),
       'fim': _stringFromTimeOfDay(fim),
     };
   }
 }
+

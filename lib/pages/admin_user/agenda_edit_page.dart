@@ -41,17 +41,18 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
     6: 'Sáb',
   };
   final List<String> diasSemana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-  final Map<String, bool> diasSelecionados = {
-    for (var dia in ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']) dia: false,
-  };
-
+  
+  // --- ALTERAÇÃO: Inicializa os mapas vazios ---
+  final Map<String, bool> diasSelecionados = {};
   final Map<String, List<TimeRange>> periodosPorDia = {};
+  // --- FIM DA ALTERAÇÃO ---
+
   final Map<String, String?> _errosDeHorario = {};
 
   String? duracaoConsulta;
   final List<String> opcoesDuracao = ['15 min', '30 min', '45 min', '60 min'];
   bool _isSaving = false;
-  bool _isLoadingPeriods = true;
+  bool _isLoadingPeriods = true; // Inicia como true
 
   @override
   void initState() {
@@ -60,33 +61,84 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
     _describeController = TextEditingController(text: widget.agenda.descricao);
     duracaoConsulta = '${widget.agenda.duracao} min';
 
+    // Inicializa o mapa 'diasSelecionados' com todos os dias como 'false'
+    for (var dia in diasSemana) {
+      diasSelecionados[dia] = false;
+    }
+
+    // Chama a função para carregar os períodos assim que a tela for construída
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _carregarPeriodos();
     });
   }
 
+  // --- EXPLICAÇÃO DA FUNÇÃO DE CARREGAMENTO ---
+  // Esta é a função que busca os dados na API e atualiza a tela.
   Future<void> _carregarPeriodos() async {
+    // Garante que o estado de loading está ativo no início
+    if (!_isLoadingPeriods) {
+      setState(() {
+        _isLoadingPeriods = true;
+      });
+    }
+
     try {
       final provider = Provider.of<AgendaProvider>(context, listen: false);
+      // 1. BUSCA OS DADOS: Chama o provider (que chama o service)
       final periodosExistentes = await provider.buscarPeriodosDaAgenda(
         widget.agenda.id!,
       );
 
+      // 2. PREPARA OS DADOS NOVOS:
+      // Mapas temporários para construir o novo estado
+      final Map<String, List<TimeRange>> periodosNovos = {};
+      // Começa com todos os dias desmarcados
+      final Map<String, bool> diasNovos = {
+        for (var dia in diasSemana) dia: false
+      };
+
+      // Itera sobre os períodos buscados da API (ex: diaDaSemana: 1)
       for (var periodo in periodosExistentes) {
+        // Converte o número no nome do dia (ex: 1 -> "Seg")
         final diaString = diasSemanaMapInverso[periodo.diaDaSemana];
-        if (diaString != null) {
-          diasSelecionados[diaString] = true;
+        
+        if (diaString != null && diasNovos.containsKey(diaString)) {
+          // 3. ATUALIZA OS MAPAS TEMPORÁRIOS
+          // Marca o dia como selecionado (ex: diasNovos["Seg"] = true)
+          diasNovos[diaString] = true;
           final timeRange = TimeRange(inicio: periodo.inicio, fim: periodo.fim);
-          periodosPorDia.putIfAbsent(diaString, () => []).add(timeRange);
+          periodosNovos.putIfAbsent(diaString, () => []).add(timeRange);
         }
       }
-      periodosPorDia.forEach((_, ranges) {
+
+      // Ordena os períodos de cada dia por hora de início
+      periodosNovos.forEach((dia, ranges) {
         ranges.sort(
-          (a, b) => _timeOfDayToDouble(
-            a.inicio,
-          ).compareTo(_timeOfDayToDouble(b.inicio)),
+          (a, b) => _timeOfDayToDouble(a.inicio).compareTo(_timeOfDayToDouble(b.inicio)),
         );
       });
+
+      // --- PONTO CRÍTICO QUE CORRIGE O BUG DA IMAGEM ---
+      // 4. ATUALIZA O ESTADO DA TELA (setState)
+      // O 'setState' informa ao Flutter que os dados mudaram e que a tela
+      // precisa ser redesenhada. Sem isto, os dados seriam carregados,
+      // mas a UI (os ChoiceChips) nunca mudaria.
+      setState(() {
+        // Limpa os dados antigos...
+        periodosPorDia.clear();
+        diasSelecionados.clear(); 
+        
+        // ...e adiciona os novos dados que acabaram de ser carregados e preparados.
+        periodosPorDia.addAll(periodosNovos); 
+        diasSelecionados.addAll(diasNovos); 
+        
+        // 5. TERMINA O LOADING
+        // Isto faz com que o CircularProgressIndicator desapareça e o 
+        // formulário apareça.
+        _isLoadingPeriods = false; 
+      });
+      // --- FIM DA CORREÇÃO ---
+
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -95,20 +147,22 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
             backgroundColor: Colors.red,
           ),
         );
-      }
-    } finally {
-      if (mounted) {
+        // Para o loading mesmo se der erro
         setState(() {
           _isLoadingPeriods = false;
         });
       }
     }
   }
+  // --- FIM DA FUNÇÃO DE CARREGAMENTO ---
+
 
   double _timeOfDayToDouble(TimeOfDay time) => time.hour + time.minute / 60.0;
 
   void _validateDia(String dia) {
     setState(() {
+// ... (o resto do seu arquivo 'agenda_edit_page.dart' continua daqui) ...
+// ... (não há mais alterações no resto do arquivo) ...
       final periodos = periodosPorDia[dia] ?? [];
       if (periodos.isEmpty) {
         _errosDeHorario[dia] = null;
@@ -218,6 +272,7 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
       descricao: _describeController.text.trim(),
       duracao: int.parse(duracaoConsulta!.replaceAll(' min', '')),
       principal: definirComoPrincipal,
+      avisoAgendamento: widget.agenda.avisoAgendamento, // Mantém o aviso
     );
 
     final List<Periodo> periodosParaSalvar = [];
@@ -269,7 +324,7 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
 
   void _adicionarPeriodo(String dia) {
     setState(() {
-      final periodosDoDia = periodosPorDia[dia]!;
+      final periodosDoDia = periodosPorDia.putIfAbsent(dia, () => []);
       if (periodosDoDia.length < 4) {
         if (periodosDoDia.isEmpty) {
           periodosDoDia.add(
@@ -334,8 +389,12 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Editar: ${widget.agenda.nome}')),
+      // --- MUDANÇA AQUI ---
+      // O 'body' agora verifica se está a carregar os períodos primeiro
       body: _isLoadingPeriods
+          // Se estiver a carregar, mostra um indicador de progresso
           ? const Center(child: CircularProgressIndicator())
+          // Se não, mostra o formulário (que agora terá os dados)
           : Padding(
               padding: const EdgeInsets.all(16),
               child: Form(
@@ -379,6 +438,8 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
                       children: diasSemana.map((dia) {
                         return ChoiceChip(
                           label: Text(dia),
+                          // AQUI: O 'selected' agora virá do mapa
+                          // que foi preenchido pelo _carregarPeriodos
                           selected: diasSelecionados[dia]!,
                           onSelected: (bool selecionado) {
                             setState(() {
@@ -405,9 +466,11 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
                       }).toList(),
                     ),
                     const SizedBox(height: 20),
+                    // AQUI: Esta coluna só irá mostrar os dias em que
+                    // 'diasSelecionados[dia]' for 'true'.
                     Column(
                       children: diasSelecionados.entries
-                          .where((e) => e.value)
+                          .where((e) => e.value) // Mostra apenas os dias selecionados
                           .map((entry) {
                             final dia = entry.key;
                             final periodos = periodosPorDia[dia] ?? [];

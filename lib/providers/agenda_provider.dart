@@ -26,7 +26,10 @@ class AgendaProvider with ChangeNotifier {
     _auth = newAuth;
   }
 
-  Future<void> buscarAgendasDoProfissional(String profissionalId) async {
+  // --- ALTERAÇÃO AQUI ---
+  // 1. A função foi renomeada
+  // 2. O parâmetro 'profissionalId' foi removido
+  Future<void> buscarTodasAgendas() async {
     final token = _auth?.usuario?.idToken;
     if (token == null || token.isEmpty) {
       _erro = "Autenticação necessária.";
@@ -37,7 +40,8 @@ class AgendaProvider with ChangeNotifier {
     _erro = null;
     notifyListeners();
     try {
-      _agendas = await _service.buscarAgendasPorProfissional(profissionalId, token);
+      // 3. A chamada ao serviço foi atualizada
+      _agendas = await _service.buscarTodasAgendas(token);
     } catch (e) {
       _erro = e.toString();
     } finally {
@@ -45,6 +49,7 @@ class AgendaProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+  // --- FIM DA ALTERAÇÃO ---
 
   /// NOVO: Busca os períodos de uma agenda específica. Retorna a lista de períodos.
   Future<List<Periodo>> buscarPeriodosDaAgenda(String agendaId) async {
@@ -67,4 +72,3 @@ class AgendaProvider with ChangeNotifier {
     await _service.atualizarAgendaCompleta(agenda, periodos, token);
   }
 }
-
