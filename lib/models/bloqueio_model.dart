@@ -17,9 +17,9 @@ class Bloqueio {
   factory Bloqueio.fromJson(Map<String, dynamic> json) {
     return Bloqueio(
       id: json['id'] ?? json['_id'],
-      idAgenda: json['id_agenda'],
+      idAgenda: json['idAgenda'],
       // Converte a string de data que vem da API para um objeto DateTime do Dart
-      dataHora: DateTime.parse(json['data_hora']),
+      dataHora: DateTime.parse(json['dataHora']),
       duracao: json['duracao'],
       descricao: json['descricao'],
     );
@@ -29,9 +29,9 @@ class Bloqueio {
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
-      'id_agenda': idAgenda,
+      'idAgenda': idAgenda,
       // Converte o objeto DateTime para uma string no formato padrão ISO 8601
-      'data_hora': dataHora.toIso8601String(),
+      'dataHora': dataHora.toIso8601String(),
       'duracao': duracao,
       'descricao': descricao,
     };
