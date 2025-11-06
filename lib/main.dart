@@ -17,10 +17,11 @@ import 'models/user_model.dart';
 //telas
 import 'pages/login_page.dart';
 import 'pages/admin_user/agenda_list_page.dart';
-import 'pages/client_user/home_page_client.dart';
+import 'pages/client_user/home_page_cliente.dart';
 import 'pages/admin_user/home_page_admin.dart';
 import 'pages/admin_user/agenda_create_page.dart';
 import 'pages/admin_user/register_page_admin.dart';
+import 'pages/client_user/selecao_agenda_page.dart';
 
 // Service
 import 'services/auth_service.dart';
@@ -92,7 +93,7 @@ class MyApp extends StatelessWidget {
             if (auth.isLogado) {
               return auth.tipoUsuario == UserRole.admin
                   ? const HomePageAdmin()
-                  : const HomePageClient();
+                  : const SelecaoAgendaPage();
             } else {
               return const LoginPage();
             }
@@ -101,10 +102,10 @@ class MyApp extends StatelessWidget {
         routes: {
           '/login': (_) => const LoginPage(),
           '/admin': (_) => const HomePageAdmin(),
-          '/cliente': (_) => const HomePageClient(),
           '/create': (_) => const AgendaCreatePage(),
           '/cadastro': (_) => const RegisterPageAdmin(),
           '/agendas': (_) => const AgendaListPage(), 
+          '/selecao_cliente': (_) => const SelecaoAgendaPage(),
         },
       ),
     );
