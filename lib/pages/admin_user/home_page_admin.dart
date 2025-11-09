@@ -5,11 +5,11 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 
 import 'package:tcc_frontend/theme/app_colors.dart';
-
+import '../../widgets/menu_letral_admin.dart';
 import 'package:tcc_frontend/models/agendamento_model.dart';
 import 'package:tcc_frontend/models/bloqueio_model.dart';
 import 'package:tcc_frontend/models/periodo_model.dart';
-import 'package:tcc_frontend/models/user_model.dart'; 
+import 'package:tcc_frontend/models/user_model.dart';
 
 import 'package:tcc_frontend/providers/agendamento_provider.dart';
 import 'package:tcc_frontend/providers/bloqueio_provider.dart';
@@ -18,8 +18,16 @@ import 'package:tcc_frontend/providers/user_provider.dart';
 
 import 'package:tcc_frontend/services/dialogo_agendamento_service.dart';
 
+// A página "exige" saber qual é o ID da agenda e a sua duração.
 class HomePageAdmin extends StatefulWidget {
-  const HomePageAdmin({super.key});
+  final String idAgenda;
+  final int duracaoAgenda;
+
+  const HomePageAdmin({
+    super.key,
+    required this.idAgenda,
+    required this.duracaoAgenda,
+  });
 
   @override
   State<HomePageAdmin> createState() => _HomePageAdminState();
@@ -30,62 +38,72 @@ class _HomePageAdminState extends State<HomePageAdmin> {
   DateTime? _selectedDay;
   bool _isMonthView = true;
 
-  // ALTERAÇÃO 1: ID e duração fixa para testes
-  final String idAgenda = "6";
-  final int duracaoPadraoParaTeste = 30;
-
-  // ALTERAÇÃO 2: Remoção das variáveis de estado complexas (_agendaSelecionada, _isAgendaLoading)
-
   @override
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
-    // ALTERAÇÃO 3: Voltamos a chamar a função de carregamento simples diretamente.
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _carregarDadosIniciais(),
     );
   }
 
-  /// ALTERAÇÃO 4: A função de carregamento agora é simples e direta.
   void _carregarDadosIniciais() {
-    // Carrega todos os dados necessários de uma vez
-    Provider.of<PeriodoProvider>(
-      context,
-      listen: false,
-    ).carregarPeriodos(idAgenda);
-    Provider.of<AgendamentoProvider>(
-      context,
-      listen: false,
-    ).carregarAgendamentos(idAgenda: idAgenda);
+    // Adiciona este log para sabermos que a função foi chamada
+    debugPrint(
+      "[HomePageAdmin] Iniciando carregamento de dados para Agenda ID: ${widget.idAgenda}",
+    );
+
+    // Chama todos os teus providers.
+    // O teu BloqueioProvider está perfeito e vai funcionar bem aqui.
     Provider.of<BloqueioProvider>(
       context,
       listen: false,
-    ).carregarBloqueios(idAgenda);
+    ).carregarBloqueios(widget.idAgenda);
+
+    Provider.of<PeriodoProvider>(
+      context,
+      listen: false,
+    ).carregarPeriodos(widget.idAgenda);
+    Provider.of<AgendamentoProvider>(
+      context,
+      listen: false,
+    ).carregarAgendamentos(idAgenda: widget.idAgenda);
     Provider.of<UsuarioProvider>(context, listen: false).buscarUsuarios();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Observa todos os providers necessários
     final periodoProvider = context.watch<PeriodoProvider>();
     final agendamentoProvider = context.watch<AgendamentoProvider>();
     final bloqueioProvider = context.watch<BloqueioProvider>();
-    // Precisamos do provider de usuários para buscar os nomes
     final usuarioProvider = context.watch<UsuarioProvider>();
 
-    final bool isLoading =
-        periodoProvider.isLoading ||
+    // --- LÓGICA DE LOADING CORRETA ---
+    // (O teu teste "Forçando isLoading = false" foi removido)
+    // O teu BloqueioProvider vai gerir o seu estado aqui corretamente.
+    final bool isLoading = periodoProvider.isLoading ||
         agendamentoProvider.isLoading ||
         bloqueioProvider.isLoading ||
         usuarioProvider.isLoading;
 
-    // Criamos a lista de usuários aqui para passar para os métodos de build
+    // --- A CORREÇÃO CRÍTICA (PROGRAMAÇÃO DEFENSIVA) ---
+    // Mesmo que 'widget.duracaoAgenda' venha da API como 0,
+    // 'duracaoSegura' será 30, prevenindo o "crash" do calendário.
+    final int duracaoSegura =
+        (widget.duracaoAgenda > 0) ? widget.duracaoAgenda : 30;
+    // --- FIM DA CORREÇÃO ---
+
+    // Log de debug para vermos o que está a acontecer
+    print(
+      "[HomePageAdmin Build] ID: ${widget.idAgenda}, Duração Original: ${widget.duracaoAgenda}, Duração Segura: $duracaoSegura, isLoading: $isLoading",
+    );
+
     final List<UserModel> usuarios = usuarioProvider.usuarios;
-    // Criamos o data source combinado aqui
     final dataSource = _getDataSourceCombinado(
       agendamentoProvider.agendamentos,
       bloqueioProvider.bloqueios,
-      usuarios, // Passa a lista de usuários
+      usuarios,
+      duracaoSegura, // <-- Passa a duração segura
     );
 
     return Scaffold(
@@ -97,69 +115,25 @@ class _HomePageAdminState extends State<HomePageAdmin> {
             icon: const Icon(Icons.refresh),
             onPressed: _carregarDadosIniciais,
           ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
-          ),
         ],
       ),
-      drawer: _buildDrawer(),
+      drawer: const AdminDrawer(), // Usar o Menu reutilizável
       body: Column(
         children: [
-          _buildViewToggler(),
+          _buildViewToggler(), // O teu Toggler
           const SizedBox(height: 8),
           Expanded(
             child: isLoading
+                // Se estiver carregando, mostra o indicador
                 ? const Center(child: CircularProgressIndicator())
+                // Se não, mostra a visualização (mês ou semana)
                 : _isMonthView
-                ? _buildMonthView(dataSource) // Passa o dataSource
-                : _buildWeekView(
-                    periodoProvider.periodos,
-                    dataSource,
-                  ), // Passa o dataSource
-          ),
-        ],
-      ),
-    );
-  }
-
-  // O resto dos widgets de construção (_buildDrawer, _buildViewToggler, etc.)
-  // permanecem os mesmos, mas agora usarão o `idAgenda` fixo quando necessário.
-
-  Widget _buildDrawer() {
-    return Drawer(
-      child: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 12),
-        children: [
-          const Text(
-            'Menu',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
-          ListTile(
-            leading: const Icon(Icons.home),
-            title: const Text('Home'),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.edit_calendar),
-            title: const Text('Criar agenda'),
-            onTap: () => Navigator.pushNamed(context, '/create'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.edit_calendar),
-            title: const Text('Editar agenda'),
-            onTap: () => Navigator.pushNamed(context, '/agendas'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.schedule),
-            title: const Text('Cadastrar usuários'),
-            onTap: () => Navigator.pushNamed(context, '/cadastro'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.people),
-            title: const Text('Consultar pacientes'),
-            onTap: () => Navigator.pushNamed(context, '/pacientes'),
+                    ? _buildMonthView(dataSource, duracaoSegura)
+                    : _buildWeekView(
+                        periodoProvider.periodos,
+                        dataSource,
+                        duracaoSegura, // <-- Passa a duração segura
+                      ),
           ),
         ],
       ),
@@ -189,7 +163,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     );
   }
 
-  Widget _buildMonthView(MeetingDataSource dataSource) {
+  Widget _buildMonthView(MeetingDataSource dataSource, int duracaoDaAgenda) {
     return Column(
       children: [
         TableCalendar(
@@ -198,16 +172,12 @@ class _HomePageAdminState extends State<HomePageAdmin> {
           firstDay: DateTime.utc(2022),
           lastDay: DateTime.utc(2035),
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-          // --- ALTERAÇÃO AQUI ---
-          // O clique no dia agora apenas atualiza o estado,
-          // não chama mais o _mostrarOpcoesDoDia
           onDaySelected: (selectedDay, focusedDay) {
             setState(() {
               _selectedDay = selectedDay;
               _focusedDay = focusedDay;
             });
           },
-          // --- FIM DA ALTERAÇÃO ---
           eventLoader: (day) => dataSource.getEventsForDay(day),
           calendarStyle: CalendarStyle(
             todayDecoration: BoxDecoration(
@@ -223,64 +193,53 @@ class _HomePageAdminState extends State<HomePageAdmin> {
           availableGestures: AvailableGestures.horizontalSwipe,
         ),
         const Divider(),
-        // --- ALTERAÇÃO AQUI: Lista de agendamentos e botão flutuante ---
         Expanded(
           child: _selectedDay == null
               ? const Center(
                   child: Text("Selecione um dia para ver os detalhes."),
                 )
               : Stack(
-                  // Usamos um Stack para sobrepor o botão à lista
                   children: [
-                    // A Lista de Agendamentos
                     ListView.builder(
                       padding: const EdgeInsets.only(
                         bottom: 80.0,
-                      ), // Garante espaço para o botão não sobrepor o último item
-                      itemCount: dataSource
-                          .getEventsForDay(_selectedDay!)
-                          .length,
-                      itemBuilder: (context, index) {
-                        final appointment = dataSource.getEventsForDay(
-                          _selectedDay!,
-                        )[index];
-                        return ListTile(
-                          leading: Icon(
-                            Icons.circle,
-                            color: appointment.color,
-                            size: 12,
-                          ),
-                          title: Text(appointment.subject), // Mostra o nome
-                          subtitle: Text(
-                            DateFormat('HH:mm').format(appointment.startTime),
-                          ),
-                          onTap: () {
-                            // --- ALTERAÇÃO AQUI ---
-                            // Permite editar/excluir ao clicar no item da lista
-                            DialogoAgendamentoService.mostrarDialogoEdicaoAgendamento(
-                              context: context,
-                              appointment: appointment,
-                              duracaoDaAgenda: duracaoPadraoParaTeste, // <-- ADICIONADO
-                            );
-                            // --- FIM DA ALTERAÇÃO ---
-                          },
-                        );
-                      },
+                      ),
+                    itemCount:
+                        dataSource.getEventsForDay(_selectedDay!).length,
+                    itemBuilder: (context, index) {
+                      final appointment =
+                          dataSource.getEventsForDay(_selectedDay!)[index];
+                      return ListTile(
+                        leading: Icon(
+                          Icons.circle,
+                          color: appointment.color,
+                          size: 12,
+                        ),
+                        title: Text(appointment.subject),
+                        subtitle: Text(
+                          DateFormat('HH:mm').format(appointment.startTime),
+                        ),
+                        onTap: () {
+                          DialogoAgendamentoService
+                              .mostrarDialogoEdicaoAgendamento(
+                            context: context,
+                            appointment: appointment,
+                            duracaoDaAgenda: duracaoDaAgenda, // <-- Usa a segura
+                          );
+                        },
+                      );
+                    },
                     ),
-
-                    // O Botão Flutuante
                     Positioned(
                       bottom: 16,
                       right: 16,
                       child: FloatingActionButton(
                         onPressed: () {
-                          // Chama a criação de agendamento para o dia selecionado
                           DialogoAgendamentoService.mostrarDialogoApenasHora(
                             context: context,
                             diaSelecionado: _selectedDay!,
-                            idAgenda: idAgenda, // Usa o ID fixo
-                            duracaoDaAgenda:
-                                duracaoPadraoParaTeste, // duração fixa
+                            idAgenda: widget.idAgenda,
+                            duracaoDaAgenda: duracaoDaAgenda, // <-- Usa a segura
                           );
                         },
                         tooltip: 'Novo Agendamento',
@@ -290,42 +249,44 @@ class _HomePageAdminState extends State<HomePageAdmin> {
                   ],
                 ),
         ),
-        // --- FIM DA ALTERAÇÃO ---
       ],
     );
   }
 
-  Widget _buildWeekView(List<Periodo> periodos, MeetingDataSource dataSource) {
+  Widget _buildWeekView(
+    List<Periodo> periodos,
+    MeetingDataSource dataSource,
+    int duracaoDaAgenda, // <-- Recebe a segura
+  ) {
     // final horarios = _getHorariosParaDia(_focusedDay, periodos);
 
     return SfCalendar(
       view: CalendarView.week,
       dataSource: dataSource,
       firstDayOfWeek: 1, // Segunda-feira
-      timeSlotViewSettings: const TimeSlotViewSettings(
-        startHour: 7, // Exemplo, pode ser dinâmico
+      timeSlotViewSettings: TimeSlotViewSettings(
+        startHour: 7,
         endHour: 22,
+        // --- USA A DURAÇÃO SEGURA AQUI ---
         timeInterval: Duration(
-          minutes: 15,
-        ), // Exemplo para 15 min, pode ser dinâmico
+          minutes: duracaoDaAgenda,
+        ),
         timeFormat: 'HH:mm',
       ),
       onTap: (details) {
         if (details.targetElement == CalendarElement.appointment &&
             details.appointments!.isNotEmpty) {
-          // --- ALTERAÇÃO AQUI ---
           DialogoAgendamentoService.mostrarDialogoEdicaoAgendamento(
             context: context,
             appointment: details.appointments!.first,
-            duracaoDaAgenda: duracaoPadraoParaTeste, // <-- ADICIONADO
+            duracaoDaAgenda: duracaoDaAgenda, // <-- Usa a segura
           );
-          // --- FIM DA ALTERAÇÃO ---
         } else if (details.targetElement == CalendarElement.calendarCell) {
           DialogoAgendamentoService.mostrarDialogoNovoAgendamento(
             context: context,
             dataInicial: details.date!,
-            idAgenda: idAgenda, // Usa o ID fixo
-            duracaoDaAgenda: duracaoPadraoParaTeste, // duração fixa
+            idAgenda: widget.idAgenda,
+            duracaoDaAgenda: duracaoDaAgenda, // <-- Usa a segura
           );
         }
       },
@@ -335,28 +296,26 @@ class _HomePageAdminState extends State<HomePageAdmin> {
   MeetingDataSource _getDataSourceCombinado(
     List<Agendamento> agendamentos,
     List<Bloqueio> bloqueios,
-    List<UserModel> usuarios, // Recebe a lista de usuários
+    List<UserModel> usuarios,
+    int duracaoDaAgenda, // <-- Recebe a segura
   ) {
     final List<Appointment> appointments = [];
-
-    // Mapeia IDs de usuário para nomes para consulta rápida
     final mapaUsuarios = {for (var u in usuarios) u.id: u.primeiroNome};
 
     for (final agendamento in agendamentos) {
-      // Procura o nome do usuário. Se não encontrar, usa o ID.
       final nomePaciente =
           mapaUsuarios[agendamento.idUsuario] ?? 'ID: ${agendamento.idUsuario}';
 
       appointments.add(
         Appointment(
           startTime: agendamento.dataHora,
+          // --- USA A DURAÇÃO SEGURA AQUI ---
           endTime: agendamento.dataHora.add(
-            Duration(minutes: agendamento.duracao * duracaoPadraoParaTeste),
-          ), // Ajuste na duracao
-          subject: 'Agendado: $nomePaciente', // Mostra o nome do paciente
+            Duration(minutes: agendamento.duracao * duracaoDaAgenda),
+          ),
+          subject: 'Agendado: $nomePaciente',
           color: AppColors.primary,
-          // Armazena o objeto Agendamento COMPLETO para facilitar a exclusão
-          resourceIds: [agendamento], //armazena o objeto Agendamento
+          resourceIds: [agendamento],
         ),
       );
     }
@@ -367,7 +326,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
           endTime: bloqueio.dataHora.add(Duration(minutes: bloqueio.duracao)),
           subject: bloqueio.descricao,
           color: Colors.grey.shade400,
-          resourceIds: [bloqueio], // Armazena o objeto Bloqueio
+          resourceIds: [bloqueio],
         ),
       );
     }
@@ -408,18 +367,12 @@ class MeetingDataSource extends CalendarDataSource {
     appointments = source;
   }
   List<Appointment> getEventsForDay(DateTime day) {
-    // 1. Filtra os eventos para o dia selecionado
-    final eventsToday =
-        appointments
+    final eventsToday = appointments
             ?.where((appt) => isSameDay(appt.startTime, day))
             .toList()
             .cast<Appointment>() ??
         [];
-
-    // 2. ORGANIZA (SORT) a lista pela hora de início
     eventsToday.sort((a, b) => a.startTime.compareTo(b.startTime));
-
-    // 3. Retorna a lista organizada
     return eventsToday;
   }
 }

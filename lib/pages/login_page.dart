@@ -37,7 +37,7 @@ class LoginPage extends StatelessWidget {
                       // A lógica de navegação permanece a mesma
                       if (auth.isLogado) {
                         if (auth.tipoUsuario == UserRole.admin) {
-                          Navigator.pushReplacementNamed(context, '/admin');
+                          Navigator.pushReplacementNamed(context, '/agendas');
                         } else {
                           Navigator.pushReplacementNamed(context, '/cliente');
                         }
