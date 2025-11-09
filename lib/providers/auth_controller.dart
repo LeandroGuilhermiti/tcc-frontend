@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
-// AuthController gerencia o estado de autenticação do usuário na aplicação.
-// Este controlador usa a Hosted UI do Cognito através do AuthService, simplificando a lógica e removendo a necessidade de gerenciar cadastro e confirmação de usuário diretamente no app.
 class AuthController with ChangeNotifier {
   final AuthService _authService = AuthService();
 
@@ -13,26 +11,22 @@ class AuthController with ChangeNotifier {
 
   AuthController(this._usuario);
 
-  // Getters para a UI acessar o estado de forma segura e reativa.
   bool get isLogado => _usuario != null;
   UserModel? get usuario => _usuario;
   UserRole? get tipoUsuario => _usuario?.role;
   String? get erro => _erro;
   bool get isLoading => _isLoading;
 
-  // Inicia o processo de login usando a Hosted UI do Cognito.
-  // Este método irá abrir um navegador para o usuário realizar a autenticação de forma segura. Após o sucesso, o estado do controlador é atualizado com as informações do usuário.
   Future<void> loginComHostedUI() async {
+    // ... (código existente sem alterações) ...
     _isLoading = true;
     _erro = null;
     notifyListeners();
 
     try {
-      // Chama o método de login do nosso novo AuthService
       final user = await _authService.login();
       // _usuario = user;
     } catch (e) {
-      // Captura qualquer erro que possa ocorrer durante o fluxo de autenticação
       _erro = e.toString().replaceFirst('Exception: ', '');
     } finally {
       _isLoading = false;
@@ -40,12 +34,44 @@ class AuthController with ChangeNotifier {
     }
   }
 
-  // Realiza o logout do usuário.
-  // Limpa a sessão no Cognito e redefine o estado de autenticação local no app.
   Future<void> logout() async {
     await _authService.logout();
     _usuario = null;
     _erro = null;
+    notifyListeners();
+  }
+
+  /// ATUALIZA o UserModel local com novos dados, PRESERVANDO OS TOKENS.
+
+  void atualizarDadosLocais(Map<String, dynamic> novosDados) {
+    if (_usuario == null) return; // Não deve acontecer se estiver logado
+
+    // Cria um novo UserModel baseado no ANTIGO, mas atualiza
+    // os campos que vieram no mapa 'novosDados'.
+    _usuario = UserModel(
+      id: _usuario!.id,
+      idToken: _usuario!.idToken, // <-- O TOKEN É PRESERVADO
+      accessToken: _usuario!.accessToken, // <-- O TOKEN É PRESERVADO
+      refreshToken: _usuario!.refreshToken, // <-- O TOKEN É PRESERVADO
+      
+      // Dados antigos
+      primeiroNome: _usuario!.primeiroNome,
+      sobrenome: _usuario!.sobrenome,
+      email: _usuario!.email,
+      cpf: _usuario!.cpf,
+      role: _usuario!.role,
+
+      // Dados novos (que podem ter sido atualizados)
+      // O 'novosDados.containsKey' garante que só atualizamos o que veio no mapa
+      cep: novosDados.containsKey('cep')
+          ? novosDados['cep']
+          : _usuario!.cep,
+      telefone: novosDados.containsKey('telefone')
+          ? novosDados['telefone']
+          : _usuario!.telefone,
+    );
+    
+    // Notifica a aplicação (ex: a PerfilClientePage) que os dados mudaram
     notifyListeners();
   }
 }

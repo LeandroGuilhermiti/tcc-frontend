@@ -21,8 +21,6 @@ import '../../services/dialogo_agendamento_cliente.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/menu_lateral_cliente.dart'; // <-- 1. IMPORTA O NOVO WIDGET
 
-// (Não precisamos mais deste import, o Drawer trata disso)
-// import 'selecao_agenda_page.dart';
 
 class HomePageCliente extends StatefulWidget {
   final Agenda agenda;

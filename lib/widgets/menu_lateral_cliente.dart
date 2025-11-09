@@ -4,18 +4,14 @@ import 'package:provider/provider.dart';
 // Importa as páginas para onde o menu vai navegar
 import '../pages/client_user/selecao_agenda_page.dart';
 import '../providers/auth_controller.dart';
+import '../pages/client_user/editar_dados_cliente.dart';
 
-// --- NOVO (Passo 1) ---
-// Criamos um enum para identificar as páginas
+// enum para identificar as páginas
 // Isto ajuda o Drawer a saber qual item deve destacar
 enum AppDrawerPage { agendas, perfil }
 
-///
-/// Este é o seu novo Widget de Menu Lateral (Drawer) reutilizável.
-///
 class AppDrawerCliente extends StatelessWidget {
-  // --- NOVO (Passo 2) ---
-  // Adicionamos uma variável para saber qual é a página atual
+  // variável para saber qual é a página atual
   final AppDrawerPage? currentPage;
 
   const AppDrawerCliente({
@@ -98,14 +94,7 @@ class AppDrawerCliente extends StatelessWidget {
                       ? () => Navigator.pop(context) // Já está na página
                       : () {
                           Navigator.pop(context);
-                          // TODO: Navegar para a página de perfil
-                          // Navigator.of(context).pushReplacementNamed('/editar_perfil');
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content:
-                                  Text('Página "Editar dados" não implementada.'),
-                            ),
-                          );
+                          Navigator.of(context).pushReplacementNamed('/editar_dados_cliente');
                         },
                 ),
               ],

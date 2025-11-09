@@ -150,7 +150,7 @@ class AgendaService {
   ) async {
     if (agenda.id == null) throw Exception('ID da agenda não informado.');
 
-    // ROTA AJUSTADA: De PUT /agendas/completa/{id} para PATCH /agenda/{id}
+    // PATCH /agenda/{id}
     final response = await http.patch(
       Uri.parse('$_baseUrl/agenda/${agenda.id}'),
       headers: _getHeaders(token),

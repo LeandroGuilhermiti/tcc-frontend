@@ -10,9 +10,9 @@ class UsuarioService {
 
   // Monta os cabeçalhos padrão com o Bearer Token
   Map<String, String> _getHeaders(String token) => {
-    'Content-Type': 'application/json; charset=UTF-8',
-    'Authorization': 'Bearer $token',
-  };
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Bearer $token',
+      };
 
   /// Busca uma lista de todos os usuários do backend.
   Future<List<UserModel>> buscarTodosUsuarios(String token) async {
@@ -23,16 +23,9 @@ class UsuarioService {
       final response = await http.get(url, headers: _getHeaders(token));
 
       if (response.statusCode == 200) {
-        // --- ESTA É A CORREÇÃO ---
-        // O backend retorna um Objeto (Map) e não uma Lista.
-        // Primeiro, fazemos o parse para um Map.
         final Map<String, dynamic> responseObject = jsonDecode(response.body);
-
-        // Depois, pegamos a lista que está dentro da chave "data".
-        // Se a chave "data" não existir, usamos uma lista vazia como fallback.
         final List<dynamic> responseData =
             responseObject['data'] as List<dynamic>? ?? [];
-        // --- FIM DA CORREÇÃO ---
 
         if (responseData.isEmpty) {
           debugPrint(
@@ -41,9 +34,8 @@ class UsuarioService {
           return [];
         }
 
-        final usuarios = responseData
-            .map((data) => UserModel.fromJson(data))
-            .toList();
+        final usuarios =
+            responseData.map((data) => UserModel.fromJson(data)).toList();
         debugPrint(
           "[UsuarioService] ${usuarios.length} usuários carregados com sucesso.",
         );
@@ -60,7 +52,6 @@ class UsuarioService {
       debugPrint(
         "[UsuarioService] Erro de rede ou parse ao buscar usuários: $e",
       );
-      // O erro 'TypeError' que você viu vai aparecer aqui.
       throw Exception(
         'Erro de rede ou formato de resposta ao buscar usuários: $e',
       );
@@ -72,6 +63,7 @@ class UsuarioService {
     Map<String, dynamic> dadosNovoUsuario,
     String token,
   ) async {
+    // ... (código existente sem alterações) ...
     final Uri url = Uri.parse('$_baseUrl/usuario');
 
     try {
@@ -93,6 +85,7 @@ class UsuarioService {
 
   /// Deleta um usuário do sistema.
   Future<void> deletarUsuario(String id, String token) async {
+    // ... (código existente sem alterações) ...
     final Uri url = Uri.parse('$_baseUrl/usuario/$id');
 
     try {
@@ -103,6 +96,37 @@ class UsuarioService {
       }
     } catch (e) {
       throw Exception('Erro de rede ao deletar usuário: $e');
+    }
+  }
+
+  /// Atualiza os dados de um usuário existente.
+  Future<void> atualizarUsuario(
+    String id,
+    Map<String, dynamic> dadosAtualizados,
+    String token,
+  ) async {
+    final Uri url = Uri.parse('$_baseUrl/usuario/$id');
+    debugPrint("[UsuarioService] Dados: ${jsonEncode(dadosAtualizados)}");
+    debugPrint("[UsuarioService] Atualizando usuário em: ${url.toString()}");
+
+    try {
+      final response = await http.patch(
+        url,
+        headers: _getHeaders(token),
+        body: jsonEncode(dadosAtualizados),
+      );
+
+      if (response.statusCode != 200) {
+        debugPrint(
+            "[UsuarioService] Erro ao atualizar: ${response.statusCode} -> ${response.body}");
+        throw Exception('Falha ao atualizar dados: ${response.body}');
+      }
+
+      debugPrint("[UsuarioService] Sucesso ao atualizar.");
+
+    } catch (e) {
+      debugPrint("[UsuarioService] Erro de rede ao atualizar: $e");
+      throw Exception('Erro de rede ao atualizar usuário: $e');
     }
   }
 }
