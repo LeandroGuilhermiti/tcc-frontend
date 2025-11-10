@@ -15,7 +15,7 @@ class UsuarioProvider with ChangeNotifier {
 
   List<UserModel> get usuarios => _usuarios;
   bool get isLoading => _isLoading;
-  String? get erro => _erro;
+  String? get error => _erro;
 
   Future<void> buscarUsuarios() async {
     final token = _auth?.usuario?.idToken;

@@ -2,15 +2,16 @@ enum UserRole { admin, cliente }
 
 class UserModel {
   final String id;
-  final String? idToken;       
-  final String? accessToken;   
-  final String? refreshToken;  
-  final String primeiroNome;
+  final String? idToken;
+  final String? accessToken;
+  final String? refreshToken;
+  
+  final String? primeiroNome;
   final String? sobrenome;
-  final String? email;         
-  final String? cpf;           
-  final String? cep;          
-  final String? telefone;      
+  final String? email;
+  final String? cpf;
+  final String? cep;
+  final String? telefone;
   final UserRole role;
 
   UserModel({
@@ -18,36 +19,37 @@ class UserModel {
     this.idToken,
     this.accessToken,
     this.refreshToken,
-    required this.primeiroNome,
+    this.primeiroNome,
     this.sobrenome,
-    this.email, 
+    this.email,
     this.cpf,
     this.cep,
     this.telefone,
     required this.role,
   });
 
-  /// Construtor 
-  /// lida perfeitamente com dados completos (do login)
-  /// ou dados parciais (da lista de usuários do Cognito).
+  /// Construtor
+  /// Lida com dados completos (login) ou parciais (lista de usuários).
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      // Campos que sempre existem (do Cognito ou do seu banco)
-      id: json['id'] ?? json['Username'] ?? '', // 'Username' é o ID na lista do Cognito
+      // Campos que sempre existem
+      id: json['id'] ?? json['Username'] ?? '',
       
-      // Procura 'givenName' (do Cognito), 'primeiroNome', e 'nome'.
-      primeiroNome: json['givenName'] ?? json['primeiroNome'] ?? json['nome'] ?? '',
-      
+      // --- LÓGICA DE TRADUÇÃO DE NOME ---
+      // Lê 'givenName' (do Cognito) ou 'primeiroNome' (do teu backend).
+      // armazena 'null' corretamente se ambos forem nulos.
+      primeiroNome: json['givenName'] ?? json['primeiroNome'] ?? json['nome'],
       sobrenome: json['familyName'] ?? json['sobrenome'],
-      email: json['email'], 
+      
+      email: json['email'],
 
-      // Converte o 'tipo' (que virá como 0 ou 1 do backend) para o enum.
-      // Usa 'custom:role' se vier do Cognito, ou 'tipo' se vier do seu banco.
-      role: (json['tipo'] == 1 || json['custom:role'] == '1') 
-            ? UserRole.admin 
-            : UserRole.cliente,
+      // --- LÓGICA DE ROLE SIMPLIFICADA ---
+      // Se não for '1' (admin), assume-se que é 'cliente'.
+      role: (json['tipo'] == 1 || json['custom:role'] == '1')
+          ? UserRole.admin
+          : UserRole.cliente,
 
-      // Campos que SÓ existem no login ou no banco (serão nulos na lista)
+      // Campos que podem ser nulos
       idToken: json['idToken'],
       accessToken: json['access_token'],
       refreshToken: json['refresh_token'],
@@ -62,15 +64,15 @@ class UserModel {
     return {
       'id': id,
       'idToken': idToken,
-      'acessToken': accessToken,
+      'accessToken': accessToken, 
       'refreshToken': refreshToken,
       'givenName': primeiroNome, 
-      'familyName': sobrenome, 
+      'familyName': sobrenome,
       'email': email,
       'cpf': cpf,
       'cep': cep,
       'telefone': telefone,
-      'tipo': role == UserRole.admin ? 1 : 0, 
+      'tipo': role == UserRole.admin ? 1 : 0,
     };
   }
 }

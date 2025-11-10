@@ -39,6 +39,12 @@ class UsuarioService {
         debugPrint(
           "[UsuarioService] ${usuarios.length} usuários carregados com sucesso.",
         );
+        try {
+          debugPrint("[UsuarioService] Todos os usuários (JSON): ${jsonEncode(usuarios.map((u) => u.toJson()).toList())}");
+        } catch (_) {
+          debugPrint("[UsuarioService] Todos os usuários (toString): $usuarios");
+        }
+  
         return usuarios;
       } else {
         debugPrint(

@@ -106,7 +106,7 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
         );
       } else if (mounted) {
         // Se der erro, o provider terá a mensagem
-        final erro = Provider.of<UsuarioProvider>(context, listen: false).erro;
+        final erro = Provider.of<UsuarioProvider>(context, listen: false).error;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erro ao atualizar: $erro'),

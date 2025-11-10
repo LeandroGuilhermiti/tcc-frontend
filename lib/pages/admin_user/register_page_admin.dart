@@ -309,7 +309,7 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
         );
         Navigator.pop(context);
       } else if (mounted) {
-        final erro = Provider.of<UsuarioProvider>(context, listen: false).erro;
+        final erro = Provider.of<UsuarioProvider>(context, listen: false).error;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Falha ao cadastrar: $erro"),
