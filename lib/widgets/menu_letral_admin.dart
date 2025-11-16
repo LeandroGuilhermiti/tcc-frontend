@@ -35,7 +35,7 @@ class AdminDrawer extends StatelessWidget {
 
           ListTile(
             leading: const Icon(Icons.apps), // Ícone de "grelha"
-            title: const Text('Minhas Agendas'),
+            title: const Text('Agendas'),
             onTap: () {
               Navigator.pop(context);
               //'pushReplacementNamed' para não empilhar páginas

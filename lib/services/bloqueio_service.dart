@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/bloqueio_model.dart';
+import 'package:flutter/foundation.dart'; // Para debugPrint
 
 class BloqueioService {
   final String baseUrl = dotenv.env['API_BASE_URL']!;
@@ -12,15 +13,30 @@ class BloqueioService {
       };
 
   Future<List<Bloqueio>> getBloqueios(String idAgenda, String token) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/bloqueio/$idAgenda'),
-      headers: _getHeaders(token),
-    );
+    final uri = Uri.parse('$baseUrl/bloqueio/$idAgenda');
+    debugPrint('[BloqueioService] Buscando em: ${uri.toString()}');
+
+    final response = await http.get(uri, headers: _getHeaders(token));
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((item) => Bloqueio.fromJson(item)).toList();
+      // 1. Faz o parse da resposta para um Map (Objeto)
+      final Map<String, dynamic> body = jsonDecode(response.body);
+
+      // 2. Procura a lista de bloqueios dentro da chave "data"
+      final List<dynamic> dataList = body['data'] as List<dynamic>? ?? [];
+
+      debugPrint('[BloqueioService] ${dataList.length} bloqueios recebidos da API.');
+      
+      try {
+         return dataList.map((item) => Bloqueio.fromJson(item)).toList();
+      } catch (e) {
+        debugPrint('[BloqueioService] Erro ao fazer parse de um item de bloqueio: $e');
+        debugPrint('[BloqueioService] Item que falhou: $dataList');
+        return []; // Retorna lista vazia em caso de erro de parse
+      }
+      
     } else {
+      debugPrint('[BloqueioService] Erro ao carregar bloqueios: ${response.body}');
       throw Exception('Erro ao carregar bloqueios: ${response.body}');
     }
   }

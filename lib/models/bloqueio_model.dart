@@ -1,9 +1,9 @@
 class Bloqueio {
   final String? id; // O ID único do bloqueio (pode ser nulo ao criar um novo)
-  final String idAgenda; 
-  final DateTime dataHora; 
-  final int duracao; 
-  final String descricao; // Motivo do bloqueio (ex: "Folga", "Férias")
+  final String idAgenda;
+  final DateTime dataHora;
+  final int duracao;
+  final String descricao; 
 
   Bloqueio({
     this.id,
@@ -13,15 +13,22 @@ class Bloqueio {
     required this.descricao,
   });
 
-  /// Construtor de fábrica para criar um Bloqueio a partir de um mapa JSON (vindo da API)
+  /// Construtor para criar um Bloqueio a partir de um mapa JSON (vindo da API)
   factory Bloqueio.fromJson(Map<String, dynamic> json) {
+    
+    final idValue = json['id'] ?? json['_id'];
+    final idAgendaValue = json['idAgenda'];
+
+    if (json['dataHora'] == null) {
+      throw Exception("Erro de parsing do Bloqueio: 'dataHora' está nulo.");
+    }
+
     return Bloqueio(
-      id: json['id'] ?? json['_id'],
-      idAgenda: json['idAgenda'],
-      // Converte a string de data que vem da API para um objeto DateTime do Dart
+      id: idValue?.toString(), // Converte int para String
+      idAgenda: idAgendaValue?.toString() ?? '', // Converte int para String
       dataHora: DateTime.parse(json['dataHora']),
       duracao: json['duracao'],
-      descricao: json['descricao'],
+      descricao: json['descricao'] ?? '',
     );
   }
 
@@ -30,7 +37,6 @@ class Bloqueio {
     return {
       if (id != null) 'id': id,
       'idAgenda': idAgenda,
-      // Converte o objeto DateTime para uma string no formato padrão ISO 8601
       'dataHora': dataHora.toIso8601String(),
       'duracao': duracao,
       'descricao': descricao,

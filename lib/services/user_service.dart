@@ -112,8 +112,8 @@ class UsuarioService {
     String token,
   ) async {
     final Uri url = Uri.parse('$_baseUrl/usuario/$id');
-    debugPrint("[UsuarioService] Dados: ${jsonEncode(dadosAtualizados)}");
-    debugPrint("[UsuarioService] Atualizando usuário em: ${url.toString()}");
+    // debugPrint("[UsuarioService] Dados: ${jsonEncode(dadosAtualizados)}");
+    // debugPrint("[UsuarioService] Atualizando usuário em: ${url.toString()}");
 
     try {
       final response = await http.patch(
@@ -128,7 +128,7 @@ class UsuarioService {
         throw Exception('Falha ao atualizar dados: ${response.body}');
       }
 
-      debugPrint("[UsuarioService] Sucesso ao atualizar.");
+      // debugPrint("[UsuarioService] Sucesso ao atualizar.");
 
     } catch (e) {
       debugPrint("[UsuarioService] Erro de rede ao atualizar: $e");
