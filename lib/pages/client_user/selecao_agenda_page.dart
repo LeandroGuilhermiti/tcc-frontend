@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import '../../models/agenda_model.dart';
 import '../../providers/agenda_provider.dart';
 import 'home_page_cliente.dart';
-// --- 1. IMPORTA O NOVO WIDGET ---
 import '../../widgets/menu_lateral_cliente.dart';
+import '../../theme/app_theme.dart';
 
 class SelecaoAgendaPage extends StatefulWidget {
   const SelecaoAgendaPage({super.key});
@@ -15,14 +15,12 @@ class SelecaoAgendaPage extends StatefulWidget {
 
 class _SelecaoAgendaPageState extends State<SelecaoAgendaPage> {
   final List<Color> _cardColors = [
-    Colors.pink.shade300,
-    Colors.purple.shade300,
-    Colors.orange.shade300,
-    Colors.teal.shade300,
-    Colors.blue.shade300,
-    Colors.red.shade300,
-    Colors.indigo.shade300,
-    Colors.green.shade300,
+    NnkColors.azulProfundo,
+    NnkColors.verde,
+    NnkColors.dourado.withOpacity(0.9),
+    NnkColors.marromEscuro.withOpacity(0.8),
+    NnkColors.azulProfundo.withOpacity(0.7),
+    NnkColors.verde.withOpacity(0.7),
   ];
 
   @override
@@ -36,19 +34,13 @@ class _SelecaoAgendaPageState extends State<SelecaoAgendaPage> {
     });
   }
 
-  // --- O WIDGET _buildDrawer NÃO é necessário aqui ---
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Escolha um Profissional'),
       ),
-      // --- 2. CHAMA O NOVO WIDGET ---
-      // Passamos `AppDrawerPage.agendas` para que o menu saiba
-      // que este é o item "ativo".
       drawer: const AppDrawerCliente(currentPage: AppDrawerPage.agendas),
-      // --- FIM DA ALTERAÇÃO ---
       body: Consumer<AgendaProvider>(
         builder: (context, agendaProvider, child) {
           if (agendaProvider.isLoading) {
@@ -62,7 +54,7 @@ class _SelecaoAgendaPageState extends State<SelecaoAgendaPage> {
                 child: Text(
                   'Ocorreu um erro ao buscar as agendas:\n${agendaProvider.erro}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
             );
@@ -95,7 +87,7 @@ class _SelecaoAgendaPageState extends State<SelecaoAgendaPage> {
                 agenda: agenda,
                 cor: cor,
                 onTap: () {
-                  Navigator.of(context).pushReplacement( // <-- Mudei para Replacement
+                  Navigator.of(context).pushReplacement( 
                     MaterialPageRoute(
                       builder: (context) => HomePageCliente(
                         agenda: agenda,
@@ -112,7 +104,6 @@ class _SelecaoAgendaPageState extends State<SelecaoAgendaPage> {
   }
 }
 
-// ... (O widget _AgendaCard não mudou) ...
 class _AgendaCard extends StatelessWidget {
   final Agenda agenda;
   final Color cor;

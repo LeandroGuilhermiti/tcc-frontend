@@ -18,8 +18,9 @@ import '../../providers/auth_controller.dart';
 
 // Serviços e Widgets
 import '../../services/dialogo_agendamento_cliente.dart';
-import '../../theme/app_colors.dart';
-import '../../widgets/menu_lateral_cliente.dart'; // <-- 1. IMPORTA O NOVO WIDGET
+import '../../theme/app_theme.dart'; 
+import '../../widgets/menu_lateral_cliente.dart'; 
+
 
 
 class HomePageCliente extends StatefulWidget {
@@ -66,13 +67,9 @@ class _HomePageClienteState extends State<HomePageCliente> {
     Provider.of<UsuarioProvider>(context, listen: false).buscarUsuarios();
   }
 
-  // ---
-  // --- O WIDGET _buildDrawer FOI REMOVIDO DAQUI ---
-  // ---
 
   @override
   Widget build(BuildContext context) {
-    // ... (nenhuma alteração nos providers) ...
     final periodoProvider = context.watch<PeriodoProvider>();
     final agendamentoProvider = context.watch<AgendamentoProvider>();
     final bloqueioProvider = context.watch<BloqueioProvider>();
@@ -91,7 +88,6 @@ class _HomePageClienteState extends State<HomePageCliente> {
     );
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
         title: Text(widget.agenda.nome),
         actions: [
@@ -101,10 +97,7 @@ class _HomePageClienteState extends State<HomePageCliente> {
           ),
         ],
       ),
-      // --- 2. CHAMA O NOVO WIDGET ---
-      // Passamos `null` porque esta *não* é a página "Agendas"
       drawer: const AppDrawerCliente(currentPage: null),
-      // --- FIM DA ALTERAÇÃO ---
       body: Column(
         children: [
           _buildViewToggler(),
@@ -125,16 +118,10 @@ class _HomePageClienteState extends State<HomePageCliente> {
     );
   }
 
-  // ... (O resto do arquivo _buildViewToggler, _buildMonthView, etc., não mudou) ...
   Widget _buildViewToggler() {
     return ToggleButtons(
       isSelected: [_isMonthView, !_isMonthView],
       onPressed: (index) => setState(() => _isMonthView = index == 0),
-      color: AppColors.details,
-      selectedColor: Colors.white,
-      fillColor: AppColors.details,
-      borderColor: Colors.blueGrey,
-      selectedBorderColor: AppColors.details,
       borderRadius: const BorderRadius.all(Radius.circular(8)),
       children: const [
         Padding(
@@ -167,11 +154,11 @@ class _HomePageClienteState extends State<HomePageCliente> {
           eventLoader: (day) => dataSource.getEventsForDay(day),
           calendarStyle: CalendarStyle(
             todayDecoration: BoxDecoration(
-              color: Colors.blue.shade200,
+              color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
               shape: BoxShape.circle,
             ),
             selectedDecoration: BoxDecoration(
-              color: AppColors.primary,
+              color: Theme.of(context).primaryColor,
               shape: BoxShape.circle,
             ),
           ),
@@ -253,7 +240,7 @@ class _HomePageClienteState extends State<HomePageCliente> {
         startHour: 7,
         endHour: 22,
         timeInterval: Duration(
-            minutes: 15),
+            minutes: 15), 
         timeFormat: 'HH:mm',
       ),
       onTap: (details) {
@@ -296,7 +283,7 @@ class _HomePageClienteState extends State<HomePageCliente> {
             Duration(minutes: agendamento.duracao * _duracaoDaAgenda),
           ),
           subject: 'Agendado: $nomePaciente',
-          color: AppColors.primary,
+          color: Theme.of(context).primaryColor,
           resourceIds: [agendamento],
         ),
       );
@@ -307,7 +294,7 @@ class _HomePageClienteState extends State<HomePageCliente> {
           startTime: bloqueio.dataHora,
           endTime: bloqueio.dataHora.add(Duration(minutes: bloqueio.duracao)),
           subject: bloqueio.descricao,
-          color: Colors.grey.shade400,
+          color: NnkColors.cinzaSuave,
           resourceIds: [bloqueio],
         ),
       );
@@ -330,4 +317,3 @@ class MeetingDataSource extends CalendarDataSource {
     return eventsToday;
   }
 }
-

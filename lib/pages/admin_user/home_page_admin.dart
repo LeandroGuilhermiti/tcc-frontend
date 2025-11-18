@@ -5,7 +5,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'dart:math'; // Para min/max
 
-import 'package:tcc_frontend/theme/app_colors.dart';
+import 'package:tcc_frontend/theme/app_theme.dart';
 import '../../widgets/menu_letral_admin.dart';
 import 'package:tcc_frontend/models/agendamento_model.dart';
 import 'package:tcc_frontend/models/bloqueio_model.dart';
@@ -18,6 +18,7 @@ import 'package:tcc_frontend/providers/periodo_provider.dart';
 import 'package:tcc_frontend/providers/user_provider.dart';
 
 import 'package:tcc_frontend/services/dialogo_agendamento_service.dart';
+
 
 // A página "exige" saber qual é o ID da agenda e a sua duração.
 class HomePageAdmin extends StatefulWidget {
@@ -69,11 +70,8 @@ class _HomePageAdminState extends State<HomePageAdmin> {
 
   // --- FUNÇÃO AUXILIAR 1: DIAS DE ATENDIMENTO ---
   Set<int> _getDiasDeAtendimento(List<Periodo> periodos) {
-    // Assumindo que seu modelo 'periodo_model' usa 1=Seg, 2=Ter, ..., 7=Dom
-    // O TableCalendar usa 1=Seg, 7=Dom. Está compatível.
     return periodos.map((p) => p.diaDaSemana).toSet();
   }
-  // --- FIM DA FUNÇÃO ---
 
   // --- FUNÇÃO AUXILIAR 2: HORÁRIOS DE ATENDIMENTO ---
   ({double startHour, double endHour}) _getHorariosDeAtendimento(
@@ -94,7 +92,6 @@ class _HomePageAdminState extends State<HomePageAdmin> {
       endHour: (maxEndHour).ceilToDouble(),
     );
   }
-  // --- FIM DA FUNÇÃO ---
 
   @override
   Widget build(BuildContext context) {
@@ -103,46 +100,42 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     final bloqueioProvider = context.watch<BloqueioProvider>();
     final usuarioProvider = context.watch<UsuarioProvider>();
 
-    final bool isLoading = periodoProvider.isLoading ||
+    final bool isLoading =
+        periodoProvider.isLoading ||
         agendamentoProvider.isLoading ||
         bloqueioProvider.isLoading ||
         usuarioProvider.isLoading;
 
-    final int duracaoSegura =
-        (widget.duracaoAgenda > 0) ? widget.duracaoAgenda : 30;
+    final int duracaoSegura = (widget.duracaoAgenda > 0)
+        ? widget.duracaoAgenda
+        : 30;
 
-    // --- LÓGICA DE BLOQUEIO (AGORA FUNCIONA) ---
     final List<Periodo> periodos = periodoProvider.periodos;
-    final List<Bloqueio> bloqueios =
-        bloqueioProvider.bloqueios; // <-- Esta lista agora terá dados
+    final List<Bloqueio> bloqueios = bloqueioProvider.bloqueios;
 
     debugPrint(
-        "[HomePageAdmin Build] Periodos: ${periodos.length}, Bloqueios: ${bloqueios.length}");
+      "[HomePageAdmin Build] Periodos: ${periodos.length}, Bloqueios: ${bloqueios.length}",
+    );
 
     final Set<int> diasDeAtendimento = _getDiasDeAtendimento(periodos);
     final horarios = _getHorariosDeAtendimento(periodos);
 
-    // Cria um Set de datas (Strings) que estão totalmente bloqueadas
     final Set<String> datasBloqueadas = {};
     for (final bloqueio in bloqueios) {
-      // Assumindo que a 'duracao' do bloqueio no DB está em HORAS.
       if (bloqueio.duracao >= 8) {
-        // Adiciona a data no formato YYYY-MM-DD
         datasBloqueadas.add(DateFormat('yyyy-MM-dd').format(bloqueio.dataHora));
       }
     }
-    // --- FIM DA LÓGICA DE BLOQUEIO ---
 
     final List<UserModel> usuarios = usuarioProvider.usuarios;
     final dataSource = _getDataSourceCombinado(
       agendamentoProvider.agendamentos,
-      bloqueios, // Passa a lista de bloqueios
+      bloqueios,
       usuarios,
       duracaoSegura,
     );
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
         title: const Text('Agenda do Profissional'),
         actions: [
@@ -161,19 +154,19 @@ class _HomePageAdminState extends State<HomePageAdmin> {
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _isMonthView
-                    ? _buildMonthView(
-                        dataSource,
-                        duracaoSegura,
-                        diasDeAtendimento,
-                        datasBloqueadas, // Passa os dias bloqueados
-                      )
-                    : _buildWeekView(
-                        dataSource,
-                        duracaoSegura,
-                        diasDeAtendimento,
-                        datasBloqueadas, // Passa os dias bloqueados
-                        horarios,
-                      ),
+                ? _buildMonthView(
+                    dataSource,
+                    duracaoSegura,
+                    diasDeAtendimento,
+                    datasBloqueadas,
+                  )
+                : _buildWeekView(
+                    dataSource,
+                    duracaoSegura,
+                    diasDeAtendimento,
+                    datasBloqueadas,
+                    horarios,
+                  ),
           ),
         ],
       ),
@@ -184,11 +177,6 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     return ToggleButtons(
       isSelected: [_isMonthView, !_isMonthView],
       onPressed: (index) => setState(() => _isMonthView = index == 0),
-      color: AppColors.details,
-      selectedColor: Colors.white,
-      fillColor: AppColors.details,
-      borderColor: Colors.blueGrey,
-      selectedBorderColor: AppColors.details,
       borderRadius: const BorderRadius.all(Radius.circular(8)),
       children: const [
         Padding(
@@ -203,12 +191,11 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     );
   }
 
-  // --- MÉTODO ATUALIZADO PARA VERIFICAR BLOQUEIOS ---
   Widget _buildMonthView(
     MeetingDataSource dataSource,
     int duracaoDaAgenda,
     Set<int> diasDeAtendimento,
-    Set<String> datasBloqueadas, // <-- Recebe os dias
+    Set<String> datasBloqueadas,
   ) {
     return Column(
       children: [
@@ -218,33 +205,32 @@ class _HomePageAdminState extends State<HomePageAdmin> {
           firstDay: DateTime.utc(2022),
           lastDay: DateTime.utc(2035),
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-          
-          // Desativa dias de folga E dias bloqueados
+
           enabledDayPredicate: (day) {
-            // 1. Verifica se o dia da semana é um dia de atendimento
-            final bool isDiaDeAtendimento =
-                diasDeAtendimento.contains(day.weekday);
+            final bool isDiaDeAtendimento = diasDeAtendimento.contains(
+              day.weekday,
+            );
             if (!isDiaDeAtendimento) {
-              return false; // É um dia de folga (ex: Domingo)
+              return false;
             }
-
-            // 2. Verifica se a data específica está na lista de bloqueio
             final String dataFormatada = DateFormat('yyyy-MM-dd').format(day);
-            final bool isDataBloqueada =
-                datasBloqueadas.contains(dataFormatada);
+            final bool isDataBloqueada = datasBloqueadas.contains(
+              dataFormatada,
+            );
             if (isDataBloqueada) {
-              return false; // É um feriado/bloqueio de dia inteiro
+              return false;
             }
-
-            return true; // O dia está ativo
+            return true;
           },
-          
+
           calendarBuilders: CalendarBuilders(
             disabledBuilder: (context, day, focusedDay) {
               return Center(
                 child: Text(
                   day.day.toString(),
-                  style: TextStyle(color: Colors.grey.shade400),
+                  style: TextStyle(
+                    color: NnkColors.cinzaSuave.withOpacity(0.5),
+                  ),
                 ),
               );
             },
@@ -252,21 +238,23 @@ class _HomePageAdminState extends State<HomePageAdmin> {
               return Center(
                 child: Text(
                   day.day.toString(),
-                  style: TextStyle(color: Colors.grey.shade400),
+                  style: TextStyle(
+                    color: NnkColors.cinzaSuave.withOpacity(0.5),
+                  ),
                 ),
               );
             },
           ),
-          
+
           onDaySelected: (selectedDay, focusedDay) {
-            // Trava de segurança
-            final String dataFormatada =
-                DateFormat('yyyy-MM-dd').format(selectedDay);
+            final String dataFormatada = DateFormat(
+              'yyyy-MM-dd',
+            ).format(selectedDay);
             if (!diasDeAtendimento.contains(selectedDay.weekday) ||
                 datasBloqueadas.contains(dataFormatada)) {
-              return; // Não faz nada se o dia clicado estiver desativado
+              return;
             }
-            
+
             setState(() {
               _selectedDay = selectedDay;
               _focusedDay = focusedDay;
@@ -275,14 +263,16 @@ class _HomePageAdminState extends State<HomePageAdmin> {
           eventLoader: (day) => dataSource.getEventsForDay(day),
           calendarStyle: CalendarStyle(
             todayDecoration: BoxDecoration(
-              color: Colors.blue.shade200,
+              color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
               shape: BoxShape.circle,
             ),
             selectedDecoration: BoxDecoration(
-              color: AppColors.primary,
+              color: Theme.of(context).primaryColor,
               shape: BoxShape.circle,
             ),
-            disabledTextStyle: TextStyle(color: Colors.grey.shade400),
+            disabledTextStyle: TextStyle(
+              color: NnkColors.cinzaSuave.withOpacity(0.5),
+            ),
           ),
           calendarFormat: CalendarFormat.month,
           availableGestures: AvailableGestures.horizontalSwipe,
@@ -296,14 +286,14 @@ class _HomePageAdminState extends State<HomePageAdmin> {
               : Stack(
                   children: [
                     ListView.builder(
-                      padding: const EdgeInsets.only(
-                        bottom: 80.0,
-                      ),
-                      itemCount:
-                          dataSource.getEventsForDay(_selectedDay!).length,
+                      padding: const EdgeInsets.only(bottom: 80.0),
+                      itemCount: dataSource
+                          .getEventsForDay(_selectedDay!)
+                          .length,
                       itemBuilder: (context, index) {
-                        final appointment =
-                            dataSource.getEventsForDay(_selectedDay!)[index];
+                        final appointment = dataSource.getEventsForDay(
+                          _selectedDay!,
+                        )[index];
                         return ListTile(
                           leading: Icon(
                             Icons.circle,
@@ -315,8 +305,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
                             DateFormat('HH:mm').format(appointment.startTime),
                           ),
                           onTap: () {
-                            DialogoAgendamentoService
-                                .mostrarDialogoEdicaoAgendamento(
+                            DialogoAgendamentoService.mostrarDialogoEdicaoAgendamento(
                               context: context,
                               appointment: appointment,
                               duracaoDaAgenda: duracaoDaAgenda,
@@ -348,12 +337,11 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     );
   }
 
-  // --- MÉTODO ATUALIZADO PARA VERIFICAR BLOQUEIOS ---
   Widget _buildWeekView(
     MeetingDataSource dataSource,
     int duracaoDaAgenda,
     Set<int> diasDeAtendimento,
-    Set<String> datasBloqueadas, // <-- Recebe os dias
+    Set<String> datasBloqueadas,
     ({double startHour, double endHour}) horarios,
   ) {
     final List<int> diasDeDescanso = [];
@@ -371,16 +359,14 @@ class _HomePageAdminState extends State<HomePageAdmin> {
         startHour: horarios.startHour,
         endHour: horarios.endHour,
         nonWorkingDays: diasDeDescanso,
-        timeInterval: Duration(
-          minutes: duracaoDaAgenda,
-        ),
+        timeInterval: Duration(minutes: duracaoDaAgenda),
         timeFormat: 'HH:mm',
       ),
       onTap: (details) {
-        // Trava de segurança
         if (details.date != null) {
-          final String dataFormatada =
-              DateFormat('yyyy-MM-dd').format(details.date!);
+          final String dataFormatada = DateFormat(
+            'yyyy-MM-dd',
+          ).format(details.date!);
           if (!diasDeAtendimento.contains(details.date!.weekday) ||
               datasBloqueadas.contains(dataFormatada)) {
             return;
@@ -425,23 +411,20 @@ class _HomePageAdminState extends State<HomePageAdmin> {
             Duration(minutes: agendamento.duracao * duracaoDaAgenda),
           ),
           subject: 'Agendado: $nomePaciente',
-          color: AppColors.primary,
+          color: Theme.of(context).primaryColor,
           resourceIds: [agendamento],
         ),
       );
     }
     for (final bloqueio in bloqueios) {
-      // --- CORREÇÃO DO BUG (HORAS vs MINUTOS) ---
-      // O seu DB envia '10' para 10 horas, não minutos.
       final Duration duracaoBloqueio = Duration(hours: bloqueio.duracao);
-      // --- FIM DA CORREÇÃO ---
 
       appointments.add(
         Appointment(
           startTime: bloqueio.dataHora,
           endTime: bloqueio.dataHora.add(duracaoBloqueio),
           subject: bloqueio.descricao,
-          color: Colors.grey.shade400,
+          color: NnkColors.cinzaSuave,
           resourceIds: [bloqueio],
         ),
       );
@@ -455,7 +438,8 @@ class MeetingDataSource extends CalendarDataSource {
     appointments = source;
   }
   List<Appointment> getEventsForDay(DateTime day) {
-    final eventsToday = appointments
+    final eventsToday =
+        appointments
             ?.where((appt) => isSameDay(appt.startTime, day))
             .toList()
             .cast<Appointment>() ??

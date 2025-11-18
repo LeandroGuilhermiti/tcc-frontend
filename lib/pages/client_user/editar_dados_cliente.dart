@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/user_model.dart';
 import '../../providers/auth_controller.dart';
 import '../../providers/user_provider.dart';
-import '../../widgets/menu_lateral_cliente.dart'; // Importa o menu lateral
+import '../../widgets/menu_lateral_cliente.dart'; 
 
 class EditarDadosCliente extends StatefulWidget {
   const EditarDadosCliente({super.key});
@@ -42,16 +42,13 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
   @override
   void initState() {
     super.initState();
-    // Carrega os dados do usuário logado assim que a página inicia
     _carregarDadosUsuario();
   }
 
   void _carregarDadosUsuario() {
-    // Pega o AuthController sem 'ouvir' (listen: false)
     final auth = Provider.of<AuthController>(context, listen: false);
     final UserModel? usuario = auth.usuario;
 
-    // Inicializa os controladores com os dados do usuário
     _nomeController =
         TextEditingController(text: usuario?.primeiroNome ?? '');
     _sobrenomeController =
@@ -67,33 +64,26 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
 
   Future<void> _salvarPerfil() async {
     if (!_formKey.currentState!.validate()) {
-      return; // Se o formulário for inválido, não faz nada
+      return; 
     }
 
     setState(() {
       _isSaving = true;
     });
-    //pegando o texto mascarado de dentro dos controllers
     final String telefoneMascarado = _telefoneController.text;
     final String cepMascarado = _cepController.text;
 
-    //Remove manualmente as máscaras, sempre que editar ou não
     final String telefoneSemMascara =
         telefoneMascarado.replaceAll(RegExp(r'[^0-9]'), '');
     final String cepSemMascara =
         cepMascarado.replaceAll(RegExp(r'[^0-9]'), '');
 
-    // Monta o mapa SÓ com os dados que podem ser alterados
     final Map<String, dynamic> dadosAtualizados = {
-      // 'primeiroNome': _nomeController.text.trim(),
-      // 'sobrenome': _sobrenomeController.text.trim(),
       'telefone': telefoneSemMascara,
       'cep': cepSemMascara,
-      // Nota: Não enviamos email ou cpf, pois são imutáveis
     };
 
     try {
-      // Chama o provider para salvar os dados
       final sucesso = await Provider.of<UsuarioProvider>(context, listen: false)
           .atualizarUsuario(dadosAtualizados);
 
@@ -101,16 +91,15 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Perfil atualizado com sucesso!'),
-            backgroundColor: Colors.green,
+            backgroundColor: Colors.green, // Manter verde para sucesso OK
           ),
         );
       } else if (mounted) {
-        // Se der erro, o provider terá a mensagem
         final erro = Provider.of<UsuarioProvider>(context, listen: false).error;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erro ao atualizar: $erro'),
-            backgroundColor: Colors.red,
+            backgroundColor: Colors.red, // Manter vermelho para erro OK
           ),
         );
       }
@@ -138,7 +127,6 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
       appBar: AppBar(
         title: const Text('Editar Meus Dados'),
       ),
-      // Adiciona o menu lateral, marcando 'perfil' como página atual
       drawer: const AppDrawerCliente(currentPage: AppDrawerPage.perfil),
       body: Form(
         key: _formKey,
@@ -147,8 +135,8 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
           children: [
             // --- Card de Informações Pessoais ---
             Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
+              elevation: 2, 
+              shape: RoundedRectangleBorder( 
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Padding(
@@ -161,7 +149,6 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 20),
-                    // Nome e Sobrenome (só leitura)
                     Row(
                       children: [
                         Expanded(
@@ -170,7 +157,6 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
                             readOnly: true,
                             decoration: const InputDecoration(
                               labelText: 'Nome',
-                              border: OutlineInputBorder(),
                             ),
                             validator: (value) =>
                                 value == null || value.trim().isEmpty
@@ -185,37 +171,32 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
                             readOnly: true,
                             decoration: const InputDecoration(
                               labelText: 'Sobrenome',
-                              border: OutlineInputBorder(),
                             ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // E-mail (Não Editável)
                     TextFormField(
                       controller: _emailController,
-                      readOnly: true, // Bloqueado
-                      decoration: const InputDecoration(
+                      readOnly: true, 
+                      decoration: InputDecoration(
                         labelText: 'Email (não pode ser alterado)',
                         prefixIcon: Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(),
                         filled: true,
-                        fillColor: Color.fromARGB(255, 235, 235, 235),
+                        fillColor: Theme.of(context).disabledColor.withOpacity(0.1), 
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // CPF (Não Editável)
                     TextFormField(
                       controller: _cpfController,
-                      readOnly: true, // Bloqueado
+                      readOnly: true, 
                       inputFormatters: [_cpfFormatter],
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'CPF (não pode ser alterado)',
                         prefixIcon: Icon(Icons.badge_outlined),
-                        border: OutlineInputBorder(),
                         filled: true,
-                        fillColor: Color.fromARGB(255, 235, 235, 235),
+                        fillColor: Theme.of(context).disabledColor.withOpacity(0.1),
                       ),
                     ),
                   ],
@@ -245,7 +226,6 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
                       decoration: const InputDecoration(
                         labelText: 'Telefone',
                         prefixIcon: Icon(Icons.phone_outlined),
-                        border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.phone,
                       inputFormatters: [_telefoneFormatter],
@@ -259,7 +239,6 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
                       decoration: const InputDecoration(
                         labelText: 'CEP',
                         prefixIcon: Icon(Icons.location_on_outlined),
-                        border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.number,
                       inputFormatters: [_cepFormatter],
@@ -279,16 +258,6 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
                 onPressed: _isSaving ? null : _salvarPerfil,
                 child: _isSaving
                     ? const SizedBox(
