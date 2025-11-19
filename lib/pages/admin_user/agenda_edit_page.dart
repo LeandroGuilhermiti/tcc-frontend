@@ -4,11 +4,12 @@ import '../../models/agenda_model.dart';
 import '../../models/periodo_model.dart';
 import '../../providers/agenda_provider.dart';
 
-// Classe auxiliar para gerir os intervalos de tempo no estado da página.
+// Classe auxiliar atualizada para rastrear IDs
 class TimeRange {
+  String? id; // ID do período (null se for novo)
   TimeOfDay inicio;
   TimeOfDay fim;
-  TimeRange({required this.inicio, required this.fim});
+  TimeRange({this.id, required this.inicio, required this.fim});
 }
 
 class AgendaEditPage extends StatefulWidget {
@@ -23,6 +24,7 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _profissionalController;
   late TextEditingController _describeController;
+  late TextEditingController _avisoController;
 
   final Map<String, int> diasSemanaMap = {
     'Seg': 1,
@@ -41,128 +43,107 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
     6: 'Sáb',
   };
   final List<String> diasSemana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-  
-  // --- ALTERAÇÃO: Inicializa os mapas vazios ---
+
   final Map<String, bool> diasSelecionados = {};
   final Map<String, List<TimeRange>> periodosPorDia = {};
-  // --- FIM DA ALTERAÇÃO ---
+
+  // --- LISTA DE EXCLUSÃO ---
+  // Guarda os IDs dos períodos que foram removidos da tela
+  final List<String> _idsParaExcluir = [];
 
   final Map<String, String?> _errosDeHorario = {};
 
   String? duracaoConsulta;
   final List<String> opcoesDuracao = ['15 min', '30 min', '45 min', '60 min'];
   bool _isSaving = false;
-  bool _isLoadingPeriods = true; // Inicia como true
+  bool _isLoadingPeriods = true;
 
   @override
   void initState() {
     super.initState();
     _profissionalController = TextEditingController(text: widget.agenda.nome);
     _describeController = TextEditingController(text: widget.agenda.descricao);
+    _avisoController = TextEditingController(
+      text: widget.agenda.avisoAgendamento ?? '',
+    );
     duracaoConsulta = '${widget.agenda.duracao} min';
 
-    // Inicializa o mapa 'diasSelecionados' com todos os dias como 'false'
     for (var dia in diasSemana) {
       diasSelecionados[dia] = false;
     }
 
-    // Chama a função para carregar os períodos assim que a tela for construída
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _carregarPeriodos();
     });
   }
 
-  // --- EXPLICAÇÃO DA FUNÇÃO DE CARREGAMENTO ---
-  // Esta é a função que busca os dados na API e atualiza a tela.
   Future<void> _carregarPeriodos() async {
-    // Garante que o estado de loading está ativo no início
-    if (!_isLoadingPeriods) {
-      setState(() {
-        _isLoadingPeriods = true;
-      });
-    }
+    if (!_isLoadingPeriods) setState(() => _isLoadingPeriods = true);
 
     try {
       final provider = Provider.of<AgendaProvider>(context, listen: false);
-      // 1. BUSCA OS DADOS: Chama o provider (que chama o service)
       final periodosExistentes = await provider.buscarPeriodosDaAgenda(
         widget.agenda.id!,
       );
 
-      // 2. PREPARA OS DADOS NOVOS:
-      // Mapas temporários para construir o novo estado
       final Map<String, List<TimeRange>> periodosNovos = {};
-      // Começa com todos os dias desmarcados
       final Map<String, bool> diasNovos = {
-        for (var dia in diasSemana) dia: false
+        for (var dia in diasSemana) dia: false,
       };
 
-      // Itera sobre os períodos buscados da API (ex: diaDaSemana: 1)
       for (var periodo in periodosExistentes) {
-        // Converte o número no nome do dia (ex: 1 -> "Seg")
         final diaString = diasSemanaMapInverso[periodo.diaDaSemana];
-        
-        if (diaString != null && diasNovos.containsKey(diaString)) {
-          // 3. ATUALIZA OS MAPAS TEMPORÁRIOS
-          // Marca o dia como selecionado (ex: diasNovos["Seg"] = true)
+
+        if (diaString != null) {
           diasNovos[diaString] = true;
-          final timeRange = TimeRange(inicio: periodo.inicio, fim: periodo.fim);
+          final timeRange = TimeRange(
+            id: periodo.id, // <--- IMPORTANTE: Guardar o ID original
+            inicio: periodo.inicio,
+            fim: periodo.fim,
+          );
           periodosNovos.putIfAbsent(diaString, () => []).add(timeRange);
         }
       }
 
-      // Ordena os períodos de cada dia por hora de início
       periodosNovos.forEach((dia, ranges) {
         ranges.sort(
-          (a, b) => _timeOfDayToDouble(a.inicio).compareTo(_timeOfDayToDouble(b.inicio)),
+          (a, b) => _timeOfDayToDouble(
+            a.inicio,
+          ).compareTo(_timeOfDayToDouble(b.inicio)),
         );
       });
 
-      // --- PONTO CRÍTICO QUE CORRIGE O BUG DA IMAGEM ---
-      // 4. ATUALIZA O ESTADO DA TELA (setState)
-      // O 'setState' informa ao Flutter que os dados mudaram e que a tela
-      // precisa ser redesenhada. Sem isto, os dados seriam carregados,
-      // mas a UI (os ChoiceChips) nunca mudaria.
       setState(() {
-        // Limpa os dados antigos...
         periodosPorDia.clear();
-        diasSelecionados.clear(); 
-        
-        // ...e adiciona os novos dados que acabaram de ser carregados e preparados.
-        periodosPorDia.addAll(periodosNovos); 
-        diasSelecionados.addAll(diasNovos); 
-        
-        // 5. TERMINA O LOADING
-        // Isto faz com que o CircularProgressIndicator desapareça e o 
-        // formulário apareça.
-        _isLoadingPeriods = false; 
+        diasSelecionados.clear();
+        periodosPorDia.addAll(periodosNovos);
+        diasSelecionados.addAll(diasNovos);
+        _isLoadingPeriods = false;
       });
-      // --- FIM DA CORREÇÃO ---
-
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao carregar períodos: $e'),
+            content: Text('Erro ao carregar: $e'),
             backgroundColor: Colors.red,
           ),
         );
-        // Para o loading mesmo se der erro
-        setState(() {
-          _isLoadingPeriods = false;
-        });
+        setState(() => _isLoadingPeriods = false);
       }
     }
   }
-  // --- FIM DA FUNÇÃO DE CARREGAMENTO ---
-
 
   double _timeOfDayToDouble(TimeOfDay time) => time.hour + time.minute / 60.0;
 
+  String _formatTime(TimeOfDay time) {
+    final h = time.hour.toString().padLeft(2, '0');
+    final m = time.minute.toString().padLeft(2, '0');
+    return "$h:$m:00";
+  }
+
+  // --- LÓGICA DE VALIDAÇÃO
   void _validateDia(String dia) {
     setState(() {
-// ... (o resto do seu arquivo 'agenda_edit_page.dart' continua daqui) ...
-// ... (não há mais alterações no resto do arquivo) ...
       final periodos = periodosPorDia[dia] ?? [];
       if (periodos.isEmpty) {
         _errosDeHorario[dia] = null;
@@ -176,15 +157,14 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
       for (int i = 0; i < periodos.length; i++) {
         final atual = periodos[i];
         if (_timeOfDayToDouble(atual.fim) <= _timeOfDayToDouble(atual.inicio)) {
-          _errosDeHorario[dia] = "Período ${i + 1} é inválido (fim ≤ início).";
+          _errosDeHorario[dia] = "Fim deve ser maior que o início.";
           return;
         }
         if (i < periodos.length - 1) {
           final proximo = periodos[i + 1];
           if (_timeOfDayToDouble(proximo.inicio) <
               _timeOfDayToDouble(atual.fim)) {
-            _errosDeHorario[dia] =
-                "Período ${i + 2} está sobreposto ao anterior.";
+            _errosDeHorario[dia] = "Sobreposição de horários.";
             return;
           }
         }
@@ -206,6 +186,8 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
 
   Future<void> _showConfirmDialog() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    // Verifica se tem algum dia selecionado
     if (!diasSelecionados.values.any((s) => s)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -215,6 +197,7 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
       );
       return;
     }
+
     if (!_validateTodosOsHorarios()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -225,6 +208,7 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
       return;
     }
 
+    // Se a agenda já for principal, apenas salva. Se não, pergunta.
     if (widget.agenda.principal) {
       _executarAtualizacao(true);
       return;
@@ -234,13 +218,9 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Definir como Agenda Principal'),
-          content: const Text('Deseja que esta seja a sua agenda principal?'),
+          title: const Text('Agenda Principal'),
+          content: const Text('Definir esta como a agenda principal?'),
           actions: <Widget>[
-            TextButton(
-              child: const Text('Cancelar'),
-              onPressed: () => Navigator.of(dialogContext).pop(),
-            ),
             TextButton(
               child: const Text('Não'),
               onPressed: () {
@@ -261,34 +241,65 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
     );
   }
 
+  // --- O CORAÇÃO DA NOVA LÓGICA DE SALVAMENTO ---
   Future<void> _executarAtualizacao(bool definirComoPrincipal) async {
-    setState(() {
-      _isSaving = true;
-    });
+    setState(() => _isSaving = true);
 
-    final agendaAtualizada = Agenda(
+    // 1. Prepara a Agenda
+    final agendaEditada = Agenda(
       id: widget.agenda.id,
       nome: _profissionalController.text.trim(),
       descricao: _describeController.text.trim(),
       duracao: int.parse(duracaoConsulta!.replaceAll(' min', '')),
+      avisoAgendamento: _avisoController.text.trim(),
       principal: definirComoPrincipal,
-      avisoAgendamento: widget.agenda.avisoAgendamento, // Mantém o aviso
     );
 
-    final List<Periodo> periodosParaSalvar = [];
+    // 2. Prepara as listas: Adicionar, Editar, Excluir
+    final List<Map<String, dynamic>> listaAdicionar = [];
+    final List<Map<String, dynamic>> listaEditar = [];
+    final List<Map<String, dynamic>> listaExcluir = [];
+
+    // A. Processa os Excluídos (que foram removidos via UI)
+    for (var idRemovido in _idsParaExcluir) {
+      listaExcluir.add({"id": int.parse(idRemovido)});
+    }
+
+    // B. Processa os Atuais (Adicionar ou Editar)
     for (var diaEntry in periodosPorDia.entries) {
-      if (diasSelecionados[diaEntry.key] ?? false) {
-        final diaKey = diaEntry.key;
-        final diaNumero = diasSemanaMap[diaKey]!;
+      // Só processa se o dia estiver marcado como "Selecionado"
+      if (diasSelecionados[diaEntry.key] == true) {
+        final diaNumero = diasSemanaMap[diaEntry.key]!;
+
         for (var timeRange in diaEntry.value) {
-          periodosParaSalvar.add(
-            Periodo(
-              idAgenda: widget.agenda.id!,
-              diaDaSemana: diaNumero,
-              inicio: timeRange.inicio,
-              fim: timeRange.fim,
-            ),
-          );
+          if (timeRange.id == null) {
+            // SEM ID = NOVO (ADICIONAR)
+            listaAdicionar.add({
+              "diaDaSemana": diaNumero.toString(), // Back pede string? "3"
+              "inicio": _formatTime(timeRange.inicio),
+              "fim": _formatTime(timeRange.fim),
+            });
+          } else {
+            // COM ID = EXISTENTE (EDITAR)
+            // Nota: Mesmo que não tenha mudado, enviamos no editar para garantir consistência
+            // ou pode adicionar lógica para verificar se mudou.
+            // Pelo seu requisito, mandamos tudo o que sobrou como editar.
+            listaEditar.add({
+              "id": int.parse(timeRange.id!),
+              "diaDaSemana": diaNumero.toString(),
+              "inicio": _formatTime(timeRange.inicio),
+              "fim": _formatTime(timeRange.fim),
+            });
+          }
+        }
+      } else {
+        // Se o dia foi desmarcado, todos os seus períodos originais (que tinham ID) devem ser movidos para a lista de EXCLUIR, se ainda não estiverem lá.
+        // Mas a lógica de _removerPeriodo já deve ter tratado disso se o usuário clicou no "-".
+        // Caso o usuário apenas desmarcou o Checkbox do dia, precisa tratar aqui:
+        for (var timeRange in diaEntry.value) {
+          if (timeRange.id != null && !_idsParaExcluir.contains(timeRange.id)) {
+            listaExcluir.add({"id": int.parse(timeRange.id!)});
+          }
         }
       }
     }
@@ -298,42 +309,53 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
         context,
         listen: false,
       );
-      await agendaProvider.atualizarAgendaCompleta(
-        agendaAtualizada,
-        periodosParaSalvar,
+
+      await agendaProvider.salvarEdicaoInteligente(
+        agenda: agendaEditada,
+        adicionar: listaAdicionar,
+        editar: listaEditar,
+        excluir: listaExcluir,
       );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Agenda atualizada com sucesso!')),
+          const SnackBar(
+            content: Text('Salvo com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao atualizar agenda: ${e.toString()}')),
+          SnackBar(
+            content: Text('Erro ao salvar: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
-      if (mounted)
-        setState(() {
-          _isSaving = false;
-        });
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
+  // --- MANIPULAÇÃO DA UI ---
   void _adicionarPeriodo(String dia) {
     setState(() {
       final periodosDoDia = periodosPorDia.putIfAbsent(dia, () => []);
       if (periodosDoDia.length < 4) {
         if (periodosDoDia.isEmpty) {
+          // Novo período sem ID
           periodosDoDia.add(
             TimeRange(
+              id: null,
               inicio: const TimeOfDay(hour: 8, minute: 0),
               fim: const TimeOfDay(hour: 9, minute: 0),
             ),
           );
         } else {
+          // Lógica para sugerir próximo horário
           periodosDoDia.sort(
             (a, b) => _timeOfDayToDouble(
               a.inicio,
@@ -345,7 +367,9 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
             hour: novoInicio.hour + 1,
             minute: novoInicio.minute,
           );
-          periodosDoDia.add(TimeRange(inicio: novoInicio, fim: novoFim));
+          periodosDoDia.add(
+            TimeRange(id: null, inicio: novoInicio, fim: novoFim),
+          );
         }
         _validateDia(dia);
       }
@@ -354,6 +378,13 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
 
   void _removerPeriodo(String dia, int index) {
     setState(() {
+      final periodoRemovido = periodosPorDia[dia]![index];
+
+      // Se tinha ID, vai para a lista de exclusão
+      if (periodoRemovido.id != null) {
+        _idsParaExcluir.add(periodoRemovido.id!);
+      }
+
       periodosPorDia[dia]!.removeAt(index);
       _validateDia(dia);
     });
@@ -369,10 +400,12 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
     final initialTime = isInicio
         ? periodosDoDia[index].inicio
         : periodosDoDia[index].fim;
+
     final TimeOfDay? horaSelecionada = await showTimePicker(
       context: context,
       initialTime: initialTime,
     );
+
     if (horaSelecionada != null) {
       setState(() {
         if (isInicio) {
@@ -387,14 +420,11 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
 
   @override
   Widget build(BuildContext context) {
+    // A UI permanece praticamente a mesma, apenas a lógica interna mudou
     return Scaffold(
       appBar: AppBar(title: Text('Editar: ${widget.agenda.nome}')),
-      // --- MUDANÇA AQUI ---
-      // O 'body' agora verifica se está a carregar os períodos primeiro
       body: _isLoadingPeriods
-          // Se estiver a carregar, mostra um indicador de progresso
           ? const Center(child: CircularProgressIndicator())
-          // Se não, mostra o formulário (que agora terá os dados)
           : Padding(
               padding: const EdgeInsets.all(16),
               child: Form(
@@ -404,27 +434,24 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
                     TextFormField(
                       controller: _profissionalController,
                       decoration: const InputDecoration(
-                        labelText: 'Nome do Profissional ou da Agenda',
+                        labelText: 'Nome',
                         border: OutlineInputBorder(),
                       ),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? 'Por favor, informe o nome.'
-                          : null,
+                      validator: (v) => v!.isEmpty ? 'Informe o nome' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _describeController,
                       decoration: const InputDecoration(
-                        labelText: 'Descrição breve',
+                        labelText: 'Descrição',
                         border: OutlineInputBorder(),
                       ),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? 'Por favor, informe a descrição.'
-                          : null,
+                      validator: (v) =>
+                          v!.isEmpty ? 'Informe a descrição' : null,
                     ),
                     const SizedBox(height: 20),
+
+                    // Seletor de Dias (ChoiceChips)
                     const Text(
                       'Dias de Atendimento',
                       style: TextStyle(
@@ -433,51 +460,57 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
                       ),
                     ),
                     Wrap(
-                      spacing: 8.0,
-                      runSpacing: 4.0,
+                      spacing: 8,
                       children: diasSemana.map((dia) {
                         return ChoiceChip(
                           label: Text(dia),
-                          // AQUI: O 'selected' agora virá do mapa
-                          // que foi preenchido pelo _carregarPeriodos
                           selected: diasSelecionados[dia]!,
-                          onSelected: (bool selecionado) {
+                          onSelected: (selecionado) {
                             setState(() {
                               diasSelecionados[dia] = selecionado;
-                              if (selecionado &&
-                                  (periodosPorDia[dia] == null ||
-                                      periodosPorDia[dia]!.isEmpty)) {
-                                periodosPorDia.putIfAbsent(
-                                  dia,
-                                  () => [
-                                    TimeRange(
-                                      inicio: const TimeOfDay(
-                                        hour: 8,
-                                        minute: 0,
+                              if (selecionado) {
+                                if (periodosPorDia[dia] == null ||
+                                    periodosPorDia[dia]!.isEmpty) {
+                                  // Adiciona padrão se vazio
+                                  periodosPorDia.putIfAbsent(
+                                    dia,
+                                    () => [
+                                      TimeRange(
+                                        id: null,
+                                        inicio: const TimeOfDay(
+                                          hour: 8,
+                                          minute: 0,
+                                        ),
+                                        fim: const TimeOfDay(
+                                          hour: 12,
+                                          minute: 0,
+                                        ),
                                       ),
-                                      fim: const TimeOfDay(hour: 9, minute: 0),
-                                    ),
-                                  ],
-                                );
+                                    ],
+                                  );
+                                }
+                              } else {
+                                // SE DESMARCAR O DIA, devemos considerar todos os períodos desse dia como removidos?
+                                //manter os dados em 'periodosPorDia' caso ele remarque,
+                                // mas na hora de salvar (_executarAtualizacao), nós verifica 'diasSelecionados'.
                               }
                             });
                           },
                         );
                       }).toList(),
                     ),
+
                     const SizedBox(height: 20),
-                    // AQUI: Esta coluna só irá mostrar os dias em que
-                    // 'diasSelecionados[dia]' for 'true'.
+
+                    // Lista de horários por dia
                     Column(
                       children: diasSelecionados.entries
-                          .where((e) => e.value) // Mostra apenas os dias selecionados
+                          .where((e) => e.value)
                           .map((entry) {
                             final dia = entry.key;
                             final periodos = periodosPorDia[dia] ?? [];
                             return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 8.0,
-                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -499,17 +532,16 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Wrap(
-                                          spacing: 6.0,
-                                          runSpacing: 8.0,
+                                          spacing: 6,
+                                          runSpacing: 8,
                                           crossAxisAlignment:
                                               WrapCrossAlignment.center,
                                           children: [
                                             ...periodos.asMap().entries.map((
-                                              periodoEntry,
+                                              pEntry,
                                             ) {
-                                              int index = periodoEntry.key;
-                                              TimeRange range =
-                                                  periodoEntry.value;
+                                              int idx = pEntry.key;
+                                              TimeRange rng = pEntry.value;
                                               return Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
@@ -519,7 +551,7 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
                                                       size: 16,
                                                     ),
                                                     label: Text(
-                                                      range.inicio.format(
+                                                      rng.inicio.format(
                                                         context,
                                                       ),
                                                     ),
@@ -527,52 +559,42 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
                                                         _selecionarHora(
                                                           context,
                                                           dia,
-                                                          index,
+                                                          idx,
                                                           true,
                                                         ),
                                                   ),
-                                                  const Padding(
-                                                    padding:
-                                                        EdgeInsets.symmetric(
-                                                          horizontal: 2.0,
-                                                        ),
-                                                    child: Text('-'),
-                                                  ),
+                                                  const Text(' - '),
                                                   ActionChip(
                                                     avatar: const Icon(
                                                       Icons.access_time,
                                                       size: 16,
                                                     ),
                                                     label: Text(
-                                                      range.fim.format(context),
+                                                      rng.fim.format(context),
                                                     ),
                                                     onPressed: () =>
                                                         _selecionarHora(
                                                           context,
                                                           dia,
-                                                          index,
+                                                          idx,
                                                           false,
                                                         ),
                                                   ),
-                                                  if (periodos.length > 1)
-                                                    IconButton(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                            left: 4,
-                                                          ),
-                                                      constraints:
-                                                          const BoxConstraints(),
-                                                      icon: const Icon(
-                                                        Icons.remove_circle,
-                                                        color: Colors.red,
-                                                        size: 20,
-                                                      ),
-                                                      onPressed: () =>
-                                                          _removerPeriodo(
-                                                            dia,
-                                                            index,
-                                                          ),
+                                                  IconButton(
+                                                    icon: const Icon(
+                                                      Icons.remove_circle,
+                                                      color: Colors.red,
+                                                      size: 20,
                                                     ),
+                                                    onPressed: () =>
+                                                        _removerPeriodo(
+                                                          dia,
+                                                          idx,
+                                                        ),
+                                                    padding: EdgeInsets.zero,
+                                                    constraints:
+                                                        const BoxConstraints(),
+                                                  ),
                                                 ],
                                               );
                                             }),
@@ -584,7 +606,6 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
                                                 ),
                                                 onPressed: () =>
                                                     _adicionarPeriodo(dia),
-                                                tooltip: 'Adicionar período',
                                               ),
                                           ],
                                         ),
@@ -593,10 +614,7 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
                                   ),
                                   if (_errosDeHorario[dia] != null)
                                     Padding(
-                                      padding: const EdgeInsets.only(
-                                        top: 8.0,
-                                        left: 50,
-                                      ),
+                                      padding: const EdgeInsets.only(left: 50),
                                       child: Text(
                                         _errosDeHorario[dia]!,
                                         style: const TextStyle(
@@ -611,43 +629,36 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
                           })
                           .toList(),
                     ),
+
                     const SizedBox(height: 20),
                     DropdownButtonFormField<String>(
                       value: duracaoConsulta,
                       decoration: const InputDecoration(
-                        labelText: 'Duração Padrão da Consulta',
-                        border: OutlineInputBorder(),
+                        labelText: 'Duração Padrão',
                       ),
                       items: opcoesDuracao
                           .map(
-                            (String valor) => DropdownMenuItem<String>(
-                              value: valor,
-                              child: Text(valor),
-                            ),
+                            (e) => DropdownMenuItem(value: e, child: Text(e)),
                           )
                           .toList(),
-                      onChanged: (String? novoValor) => setState(() {
-                        duracaoConsulta = novoValor;
-                      }),
-                      validator: (value) =>
-                          value == null ? 'Selecione a duração.' : null,
+                      onChanged: (v) => setState(() => duracaoConsulta = v),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _avisoController,
+                      decoration: const InputDecoration(
+                        labelText: 'Aviso (opcional)',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                     const SizedBox(height: 30),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        textStyle: const TextStyle(fontSize: 18),
                       ),
                       onPressed: _isSaving ? null : _showConfirmDialog,
                       child: _isSaving
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 3,
-                              ),
-                            )
+                          ? const CircularProgressIndicator(color: Colors.white)
                           : const Text('Salvar Alterações'),
                     ),
                   ],

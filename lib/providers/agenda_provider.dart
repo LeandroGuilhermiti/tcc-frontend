@@ -26,12 +26,9 @@ class AgendaProvider with ChangeNotifier {
     _auth = newAuth;
   }
 
-  // --- ALTERAÇÃO AQUI ---
-  // 1. A função foi renomeada
-  // 2. O parâmetro 'profissionalId' foi removido
   Future<void> buscarTodasAgendas() async {
     final token = _auth?.usuario?.idToken;
-    if (token == null || token.isEmpty) {
+    if (token == null) {
       _erro = "Autenticação necessária.";
       notifyListeners();
       return;
@@ -40,7 +37,6 @@ class AgendaProvider with ChangeNotifier {
     _erro = null;
     notifyListeners();
     try {
-      // 3. A chamada ao serviço foi atualizada
       _agendas = await _service.buscarTodasAgendas(token);
     } catch (e) {
       _erro = e.toString();
@@ -49,26 +45,49 @@ class AgendaProvider with ChangeNotifier {
       notifyListeners();
     }
   }
-  // --- FIM DA ALTERAÇÃO ---
 
-  /// NOVO: Busca os períodos de uma agenda específica. Retorna a lista de períodos.
   Future<List<Periodo>> buscarPeriodosDaAgenda(String agendaId) async {
     final token = _auth?.usuario?.idToken;
-    if (token == null) {
-      throw Exception("Autenticação necessária.");
-    }
+    if (token == null) throw Exception("Autenticação necessária.");
     return await _service.buscarPeriodosPorAgenda(agendaId, token);
   }
 
+  // --- MÉTODOS ANTIGO
   Future<void> adicionarAgendaCompleta(Agenda agenda, List<Periodo> periodos) async {
     final token = _auth?.usuario?.idToken;
-    if (token == null) throw Exception("Ação não permitida. Faça login.");
+    if (token == null) throw Exception("Login necessário.");
     await _service.criarAgendaCompleta(agenda, periodos, token);
   }
 
-  Future<void> atualizarAgendaCompleta(Agenda agenda, List<Periodo> periodos) async {
+  // --- NOVO MÉTODO INTELIGENTE ---
+  Future<void> salvarEdicaoInteligente({
+    required Agenda agenda,
+    required List<Map<String, dynamic>> adicionar,
+    required List<Map<String, dynamic>> editar,
+    required List<Map<String, dynamic>> excluir,
+  }) async {
     final token = _auth?.usuario?.idToken;
-    if (token == null) throw Exception("Ação não permitida. Faça login.");
-    await _service.atualizarAgendaCompleta(agenda, periodos, token);
+    if (token == null) throw Exception("Autenticação necessária.");
+
+    // Prepara os dados da agenda (apenas os campos editáveis)
+    final dadosAgenda = {
+      "id": int.parse(agenda.id!), // Garante que o ID vai como número
+      "nome": agenda.nome,
+      "descricao": agenda.descricao,
+      "duracao": agenda.duracao,
+      "avisoAgendamento": agenda.avisoAgendamento,
+      "principal": agenda.principal,
+    };
+
+    await _service.salvarEdicaoAvancada(
+      dadosAgenda: dadosAgenda,
+      adicionar: adicionar,
+      editar: editar,
+      excluir: excluir,
+      token: token,
+    );
+    
+    // Atualiza a lista local após salvar
+    await buscarTodasAgendas();
   }
 }
