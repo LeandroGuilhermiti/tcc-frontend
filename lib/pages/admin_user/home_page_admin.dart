@@ -5,7 +5,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'dart:math'; // Para min/max
 
-import 'package:tcc_frontend/theme/app_theme.dart';
+import 'package:tcc_frontend/theme/app_theme.dart'; 
 import '../../widgets/menu_letral_admin.dart';
 import 'package:tcc_frontend/models/agendamento_model.dart';
 import 'package:tcc_frontend/models/bloqueio_model.dart';
@@ -19,8 +19,6 @@ import 'package:tcc_frontend/providers/user_provider.dart';
 
 import 'package:tcc_frontend/services/dialogo_agendamento_service.dart';
 
-
-// A página "exige" saber qual é o ID da agenda e a sua duração.
 class HomePageAdmin extends StatefulWidget {
   final String idAgenda;
   final int duracaoAgenda;
@@ -68,12 +66,11 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     Provider.of<UsuarioProvider>(context, listen: false).buscarUsuarios();
   }
 
-  // --- FUNÇÃO AUXILIAR 1: DIAS DE ATENDIMENTO ---
+  // --- FUNÇÕES AUXILIARES ---
   Set<int> _getDiasDeAtendimento(List<Periodo> periodos) {
     return periodos.map((p) => p.diaDaSemana).toSet();
   }
 
-  // --- FUNÇÃO AUXILIAR 2: HORÁRIOS DE ATENDIMENTO ---
   ({double startHour, double endHour}) _getHorariosDeAtendimento(
     List<Periodo> periodos,
   ) {
@@ -91,6 +88,114 @@ class _HomePageAdminState extends State<HomePageAdmin> {
       startHour: (minStartHour).floorToDouble(),
       endHour: (maxEndHour).ceilToDouble(),
     );
+  }
+
+  // --- NOVA LÓGICA LIMPA: APENAS INTERVALOS E FERIADOS ---
+  List<TimeRegion> _getRegionsDeBloqueio(
+    List<Periodo> periodos,
+    List<Bloqueio> bloqueios,
+    double globalStart,
+    double globalEnd,
+  ) {
+    final List<TimeRegion> regions = [];
+
+    // Cor para intervalos (transparente)
+    final Color corIntervalo = NnkColors.cinzaSuave.withOpacity(0.3);
+
+    // Cor para feriados (SÓLIDA/OPACA)
+    final Color corFeriado = const Color(0xFFEEEEEE);
+
+    // 1. INTERVALOS ENTRE PERÍODOS (GAPS) - MANTIDO
+    if (periodos.isNotEmpty) {
+      final Map<int, String> weekDayMap = {
+        1: 'MO',
+        2: 'TU',
+        3: 'WE',
+        4: 'TH',
+        5: 'FR',
+        6: 'SA',
+        7: 'SU',
+      };
+
+      final Map<int, List<Periodo>> periodosPorDia = {};
+      for (var p in periodos) {
+        periodosPorDia.putIfAbsent(p.diaDaSemana, () => []).add(p);
+      }
+
+      double toDouble(TimeOfDay t) => t.hour + t.minute / 60.0;
+
+      periodosPorDia.forEach((dia, lista) {
+        if (lista.isEmpty) return;
+        lista.sort((a, b) => toDouble(a.inicio).compareTo(toDouble(b.inicio)));
+
+        void addGapRegion(double start, double end, String label) {
+          if (start >= end) return;
+          final int dayOffset = dia - 1;
+          final DateTime baseDate = DateTime(
+            2024,
+            1,
+            1,
+          ).add(Duration(days: dayOffset));
+
+          final DateTime startTime = DateTime(
+            baseDate.year,
+            baseDate.month,
+            baseDate.day,
+            start.floor(),
+            ((start % 1) * 60).round(),
+          );
+          final DateTime endTime = DateTime(
+            baseDate.year,
+            baseDate.month,
+            baseDate.day,
+            end.floor(),
+            ((end % 1) * 60).round(),
+          );
+
+          regions.add(
+            TimeRegion(
+              startTime: startTime,
+              endTime: endTime,
+              recurrenceRule: 'FREQ=WEEKLY;BYDAY=${weekDayMap[dia]}',
+              color: corIntervalo,
+              text: label,
+              textStyle: const TextStyle(color: Colors.black54, fontSize: 10),
+              enablePointerInteraction: false,
+            ),
+          );
+        }
+
+        //Bloqueio entre períodos (almoço/intervalo)
+        for (int i = 0; i < lista.length - 1; i++) {
+          double currentEnd = toDouble(lista[i].fim);
+          double nextStart = toDouble(lista[i + 1].inicio);
+          if (nextStart > currentEnd) {
+            addGapRegion(currentEnd, nextStart, "Intervalo");
+          }
+        }
+      });
+    }
+
+    // 2. BLOQUEIOS DE DIA INTEIRO (FERIADOS) 
+    for (var bloqueio in bloqueios) {
+      if (bloqueio.duracao >= 8) {
+        regions.add(
+          TimeRegion(
+            startTime: bloqueio.dataHora,
+            endTime: bloqueio.dataHora.add(const Duration(hours: 24)),
+            color: corFeriado, // Cor sólida
+            text: bloqueio.descricao,
+            textStyle: const TextStyle(
+              color: Colors.black54,
+              fontWeight: FontWeight.bold,
+            ),
+            enablePointerInteraction: false,
+          ),
+        );
+      }
+    }
+
+    return regions;
   }
 
   @override
@@ -113,10 +218,6 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     final List<Periodo> periodos = periodoProvider.periodos;
     final List<Bloqueio> bloqueios = bloqueioProvider.bloqueios;
 
-    debugPrint(
-      "[HomePageAdmin Build] Periodos: ${periodos.length}, Bloqueios: ${bloqueios.length}",
-    );
-
     final Set<int> diasDeAtendimento = _getDiasDeAtendimento(periodos);
     final horarios = _getHorariosDeAtendimento(periodos);
 
@@ -126,6 +227,14 @@ class _HomePageAdminState extends State<HomePageAdmin> {
         datasBloqueadas.add(DateFormat('yyyy-MM-dd').format(bloqueio.dataHora));
       }
     }
+
+    // --- CALCULA AS REGIÕES ESPECIAIS ---
+    final List<TimeRegion> specialRegions = _getRegionsDeBloqueio(
+      periodos,
+      bloqueios,
+      horarios.startHour,
+      horarios.endHour,
+    );
 
     final List<UserModel> usuarios = usuarioProvider.usuarios;
     final dataSource = _getDataSourceCombinado(
@@ -166,6 +275,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
                     diasDeAtendimento,
                     datasBloqueadas,
                     horarios,
+                    specialRegions, // <-- Passa as regiões cinzas
                   ),
           ),
         ],
@@ -210,16 +320,12 @@ class _HomePageAdminState extends State<HomePageAdmin> {
             final bool isDiaDeAtendimento = diasDeAtendimento.contains(
               day.weekday,
             );
-            if (!isDiaDeAtendimento) {
-              return false;
-            }
+            if (!isDiaDeAtendimento) return false;
             final String dataFormatada = DateFormat('yyyy-MM-dd').format(day);
             final bool isDataBloqueada = datasBloqueadas.contains(
               dataFormatada,
             );
-            if (isDataBloqueada) {
-              return false;
-            }
+            if (isDataBloqueada) return false;
             return true;
           },
 
@@ -343,6 +449,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     Set<int> diasDeAtendimento,
     Set<String> datasBloqueadas,
     ({double startHour, double endHour}) horarios,
+    List<TimeRegion> specialRegions,
   ) {
     final List<int> diasDeDescanso = [];
     for (int i = 1; i <= 7; i++) {
@@ -355,6 +462,10 @@ class _HomePageAdminState extends State<HomePageAdmin> {
       view: CalendarView.week,
       dataSource: dataSource,
       firstDayOfWeek: 1,
+
+      // --- APLICAR REGIÕES CINZENTAS ---
+      specialRegions: specialRegions,
+
       timeSlotViewSettings: TimeSlotViewSettings(
         startHour: horarios.startHour,
         endHour: horarios.endHour,
@@ -411,6 +522,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
             Duration(minutes: agendamento.duracao * duracaoDaAgenda),
           ),
           subject: 'Agendado: $nomePaciente',
+          // --- COR DO AGENDAMENTO (TEMA) ---
           color: Theme.of(context).primaryColor,
           resourceIds: [agendamento],
         ),
@@ -424,6 +536,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
           startTime: bloqueio.dataHora,
           endTime: bloqueio.dataHora.add(duracaoBloqueio),
           subject: bloqueio.descricao,
+          // --- COR DO BLOQUEIO (TEMA) ---
           color: NnkColors.cinzaSuave,
           resourceIds: [bloqueio],
         ),

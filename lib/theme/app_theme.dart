@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // =======================================================
-// DOCUMENTAÇÃO: PASSO 1 - A PALETA DE CORES
-// Definimos nossas cores inspiradas no Ni no Kuni aqui.
-// Esta classe substitui o seu antigo 'app_colors.dart'.
+//  PALETA DE CORES
 // =======================================================
 class NnkColors {
   // Azul profundo (UI, botões primários)
@@ -24,7 +22,6 @@ class NnkColors {
 }
 
 // =======================================================
-// DOCUMENTAÇÃO: PASSO 2 - O TEMA COMPLETO
 // Esta função cria o ThemeData que será usado no MaterialApp.
 // =======================================================
 ThemeData getNnkTheme() {
@@ -75,7 +72,6 @@ ThemeData getNnkTheme() {
         ),
 
     // --- ESTILO DA APPBAR ---
-    // (Usada em todas as suas páginas)
     appBarTheme: AppBarTheme(
       backgroundColor: NnkColors.azulProfundo,
       foregroundColor: Colors.white,
