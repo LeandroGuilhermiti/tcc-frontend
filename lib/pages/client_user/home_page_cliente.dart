@@ -1,319 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:syncfusion_flutter_calendar/calendar.dart';
-import 'package:table_calendar/table_calendar.dart';
-import 'package:intl/intl.dart';
-
-// Modelos e Providers
-import '../../models/agendamento_model.dart';
-import '../../models/bloqueio_model.dart';
-import '../../models/periodo_model.dart';
-import '../../models/user_model.dart';
 import '../../models/agenda_model.dart';
-import '../../providers/agendamento_provider.dart';
-import '../../providers/bloqueio_provider.dart';
-import '../../providers/periodo_provider.dart';
-import '../../providers/user_provider.dart';
 import '../../providers/auth_controller.dart';
-
-// Serviços e Widgets
+import '../../widgets/menu_lateral_cliente.dart';
+import '../../widgets/agenda_home_compartilhada.dart'; 
 import '../../services/dialogo_agendamento_cliente.dart';
-import '../../theme/app_theme.dart'; 
-import '../../widgets/menu_lateral_cliente.dart'; 
 
-
-
-class HomePageCliente extends StatefulWidget {
+class HomePageCliente extends StatelessWidget {
   final Agenda agenda;
   const HomePageCliente({super.key, required this.agenda});
 
   @override
-  State<HomePageCliente> createState() => _HomePageClienteState();
-}
-
-class _HomePageClienteState extends State<HomePageCliente> {
-  DateTime _focusedDay = DateTime.now();
-  DateTime? _selectedDay;
-  bool _isMonthView = true;
-
-  late final String _idAgenda;
-  late final int _duracaoDaAgenda;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedDay = _focusedDay;
-    _idAgenda = widget.agenda.id!;
-    _duracaoDaAgenda = widget.agenda.duracao;
-
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _carregarDadosIniciais(),
-    );
-  }
-
-  void _carregarDadosIniciais() {
-    Provider.of<PeriodoProvider>(
-      context,
-      listen: false,
-    ).carregarPeriodos(_idAgenda);
-    Provider.of<AgendamentoProvider>(
-      context,
-      listen: false,
-    ).carregarAgendamentos(idAgenda: _idAgenda);
-    Provider.of<BloqueioProvider>(
-      context,
-      listen: false,
-    ).carregarBloqueios(_idAgenda);
-    Provider.of<UsuarioProvider>(context, listen: false).buscarUsuarios();
-  }
-
-
-  @override
   Widget build(BuildContext context) {
-    final periodoProvider = context.watch<PeriodoProvider>();
-    final agendamentoProvider = context.watch<AgendamentoProvider>();
-    final bloqueioProvider = context.watch<BloqueioProvider>();
-    final usuarioProvider = context.watch<UsuarioProvider>();
     final authProvider = context.watch<AuthController>();
     final String? currentUserId = authProvider.usuario?.id;
-    final bool isLoading = periodoProvider.isLoading ||
-        agendamentoProvider.isLoading ||
-        bloqueioProvider.isLoading ||
-        usuarioProvider.isLoading;
-    final List<UserModel> usuarios = usuarioProvider.usuarios;
-    final dataSource = _getDataSourceCombinado(
-      agendamentoProvider.agendamentos,
-      bloqueioProvider.bloqueios,
-      usuarios,
-    );
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.agenda.nome),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _carregarDadosIniciais,
-          ),
-        ],
+        title: Text(agenda.nome),
       ),
       drawer: const AppDrawerCliente(currentPage: null),
-      body: Column(
-        children: [
-          _buildViewToggler(),
-          const SizedBox(height: 8),
-          Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _isMonthView
-                    ? _buildMonthView(dataSource, currentUserId)
-                    : _buildWeekView(
-                        periodoProvider.periodos,
-                        dataSource,
-                        currentUserId,
-                      ),
-          ),
-        ],
-      ),
-    );
-  }
+      body: SharedAgendaCalendar(
+        agenda: agenda,
 
-  Widget _buildViewToggler() {
-    return ToggleButtons(
-      isSelected: [_isMonthView, !_isMonthView],
-      onPressed: (index) => setState(() => _isMonthView = index == 0),
-      borderRadius: const BorderRadius.all(Radius.circular(8)),
-      children: const [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text('Mês'),
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text('Semana'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMonthView(MeetingDataSource dataSource, String? currentUserId) {
-    return Column(
-      children: [
-        TableCalendar(
-          locale: 'pt_BR',
-          focusedDay: _focusedDay,
-          firstDay: DateTime.utc(2022),
-          lastDay: DateTime.utc(2035),
-          selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-          onDaySelected: (selectedDay, focusedDay) {
-            setState(() {
-              _selectedDay = selectedDay;
-              _focusedDay = focusedDay;
-            });
-          },
-          eventLoader: (day) => dataSource.getEventsForDay(day),
-          calendarStyle: CalendarStyle(
-            todayDecoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
-              shape: BoxShape.circle,
-            ),
-            selectedDecoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-              shape: BoxShape.circle,
-            ),
-          ),
-          calendarFormat: CalendarFormat.month,
-          availableGestures: AvailableGestures.horizontalSwipe,
-        ),
-        const Divider(),
-        Expanded(
-          child: _selectedDay == null
-              ? const Center(
-                  child: Text("Selecione um dia para ver os detalhes."),
-                )
-              : Stack(
-                  children: [
-                    ListView.builder(
-                      padding: const EdgeInsets.only(
-                        bottom: 80.0,
-                      ),
-                      itemCount:
-                          dataSource.getEventsForDay(_selectedDay!).length,
-                      itemBuilder: (context, index) {
-                        final appointment =
-                            dataSource.getEventsForDay(_selectedDay!)[index];
-                        return ListTile(
-                          leading: Icon(
-                            Icons.circle,
-                            color: appointment.color,
-                            size: 12,
-                          ),
-                          title: Text(appointment.subject),
-                          subtitle: Text(
-                            DateFormat('HH:mm').format(appointment.startTime),
-                          ),
-                          onTap: () {
-                            DialogoAgendamentoCliente.mostrarDialogoCliente(
-                              context: context,
-                              appointment: appointment,
-                              currentUserId: currentUserId,
-                              duracaoDaAgenda: _duracaoDaAgenda,
-                            );
-                          },
-                        );
-                      },
-                    ),
-                    Positioned(
-                      bottom: 16,
-                      right: 16,
-                      child: FloatingActionButton(
-                        onPressed: () {
-                          DialogoAgendamentoCliente
-                              .mostrarDialogoApenasHoraCliente(
-                            context: context,
-                            diaSelecionado: _selectedDay!,
-                            idAgenda: _idAgenda,
-                            duracaoDaAgenda: _duracaoDaAgenda,
-                          );
-                        },
-                        tooltip: 'Novo Agendamento',
-                        child: const Icon(Icons.add),
-                      ),
-                    ),
-                  ],
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildWeekView(
-    List<Periodo> periodos,
-    MeetingDataSource dataSource,
-    String? currentUserId,
-  ) {
-    return SfCalendar(
-      view: CalendarView.week,
-      dataSource: dataSource,
-      firstDayOfWeek: 1, // Segunda-feira
-      timeSlotViewSettings: const TimeSlotViewSettings(
-        startHour: 7,
-        endHour: 22,
-        timeInterval: Duration(
-            minutes: 15), 
-        timeFormat: 'HH:mm',
-      ),
-      onTap: (details) {
-        if (details.targetElement == CalendarElement.appointment &&
-            details.appointments!.isNotEmpty) {
+        // AÇÃO DE CLIQUE NO AGENDAMENTO (CLIENTE)
+        onAppointmentTap: (appointment, ctx) {
           DialogoAgendamentoCliente.mostrarDialogoCliente(
-            context: context,
-            appointment: details.appointments!.first,
+            context: ctx,
+            appointment: appointment,
             currentUserId: currentUserId,
-            duracaoDaAgenda: _duracaoDaAgenda,
+            duracaoDaAgenda: agenda.duracao,
           );
-        } else if (details.targetElement == CalendarElement.calendarCell) {
-          DialogoAgendamentoCliente.mostrarDialogoNovoAgendamentoCliente(
-            context: context,
-            dataInicial: details.date!,
-            idAgenda: _idAgenda,
-            duracaoDaAgenda: _duracaoDaAgenda,
-          );
-        }
-      },
+        },
+
+        // AÇÃO DE CLIQUE NO ESPAÇO VAZIO (CLIENTE)
+        onSlotTap: (date, ctx) {
+           if (date.hour == 0 && date.minute == 0) {
+             DialogoAgendamentoCliente.mostrarDialogoApenasHoraCliente(
+              context: ctx,
+              diaSelecionado: date,
+              idAgenda: agenda.id!,
+              duracaoDaAgenda: agenda.duracao,
+            );
+           } else {
+             DialogoAgendamentoCliente.mostrarDialogoNovoAgendamentoCliente(
+              context: ctx,
+              dataInicial: date,
+              idAgenda: agenda.id!,
+              duracaoDaAgenda: agenda.duracao,
+            );
+           }
+        },
+      ),
     );
-  }
-
-  MeetingDataSource _getDataSourceCombinado(
-    List<Agendamento> agendamentos,
-    List<Bloqueio> bloqueios,
-    List<UserModel> usuarios,
-  ) {
-    final List<Appointment> appointments = [];
-    final mapaUsuarios = {for (var u in usuarios) u.id: u.primeiroNome};
-
-    for (final agendamento in agendamentos) {
-      final nomePaciente =
-          mapaUsuarios[agendamento.idUsuario] ?? 'ID: ${agendamento.idUsuario}';
-
-      appointments.add(
-        Appointment(
-          startTime: agendamento.dataHora,
-          endTime: agendamento.dataHora.add(
-            Duration(minutes: agendamento.duracao * _duracaoDaAgenda),
-          ),
-          subject: 'Agendado: $nomePaciente',
-          color: Theme.of(context).primaryColor,
-          resourceIds: [agendamento],
-        ),
-      );
-    }
-    for (final bloqueio in bloqueios) {
-      appointments.add(
-        Appointment(
-          startTime: bloqueio.dataHora,
-          endTime: bloqueio.dataHora.add(Duration(minutes: bloqueio.duracao)),
-          subject: bloqueio.descricao,
-          color: NnkColors.cinzaSuave,
-          resourceIds: [bloqueio],
-        ),
-      );
-    }
-    return MeetingDataSource(appointments);
-  }
-}
-
-class MeetingDataSource extends CalendarDataSource {
-  MeetingDataSource(List<Appointment> source) {
-    appointments = source;
-  }
-  List<Appointment> getEventsForDay(DateTime day) {
-    final eventsToday = appointments
-            ?.where((appt) => isSameDay(appt.startTime, day))
-            .toList()
-            .cast<Appointment>() ??
-        [];
-    eventsToday.sort((a, b) => a.startTime.compareTo(b.startTime));
-    return eventsToday;
   }
 }
