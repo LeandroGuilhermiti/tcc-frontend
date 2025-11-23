@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:html' as html; // Necessário para web
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 //controllers, providers, models
 import 'providers/auth_controller.dart';
@@ -90,6 +91,21 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'App de Agendamento',
         theme: ThemeData.light(),
+        locale: const Locale('pt', 'BR'),
+        
+        // Define os delegates que traduzem os widgets internos do Flutter (calendários, diálogos, etc)
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        
+        // Lista de idiomas suportados pela aplicação
+        supportedLocales: const [
+          Locale('pt', 'BR'),
+          Locale('en', 'US'),
+        ],
+
         home: Consumer<AuthController>(
           builder: (context, auth, child) {
             if (auth.isLogado) {

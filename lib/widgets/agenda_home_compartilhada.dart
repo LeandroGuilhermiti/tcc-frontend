@@ -5,7 +5,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
 
-import '../theme/app_theme.dart'; 
+import '../theme/app_theme.dart';
 import '../models/agendamento_model.dart';
 import '../models/bloqueio_model.dart';
 import '../models/periodo_model.dart';
@@ -20,8 +20,7 @@ import '../providers/auth_controller.dart';
 
 class SharedAgendaCalendar extends StatefulWidget {
   final Agenda agenda;
-  
-  // Callbacks para definir o comportamento ao clicar
+
   final Function(Appointment, BuildContext) onAppointmentTap;
   final Function(DateTime, BuildContext) onSlotTap;
 
@@ -45,43 +44,53 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _carregarDadosIniciais());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _carregarDadosIniciais(),
+    );
   }
 
   void _carregarDadosIniciais() {
     final idAgenda = widget.agenda.id!;
-    debugPrint("[SharedCalendar] Carregando dados para Agenda ID: $idAgenda");
-    
-    Provider.of<BloqueioProvider>(context, listen: false).carregarBloqueios(idAgenda);
-    Provider.of<PeriodoProvider>(context, listen: false).carregarPeriodos(idAgenda);
-    Provider.of<AgendamentoProvider>(context, listen: false).carregarAgendamentos(idAgenda: idAgenda);
+    Provider.of<BloqueioProvider>(
+      context,
+      listen: false,
+    ).carregarBloqueios(idAgenda);
+    Provider.of<PeriodoProvider>(
+      context,
+      listen: false,
+    ).carregarPeriodos(idAgenda);
+    Provider.of<AgendamentoProvider>(
+      context,
+      listen: false,
+    ).carregarAgendamentos(idAgenda: idAgenda);
     Provider.of<UsuarioProvider>(context, listen: false).buscarUsuarios();
   }
-
-  // --- LÓGICA DE NEGÓCIO ---
 
   Set<int> _getDiasDeAtendimento(List<Periodo> periodos) {
     return periodos.map((p) => p.diaDaSemana).toSet();
   }
 
-  ({double startHour, double endHour}) _getHorariosDeAtendimento(List<Periodo> periodos) {
+  ({double startHour, double endHour}) _getHorariosDeAtendimento(
+    List<Periodo> periodos,
+  ) {
     if (periodos.isEmpty) return (startHour: 8, endHour: 18);
-    
+
     double timeToDouble(TimeOfDay time) => time.hour + time.minute / 60.0;
-    
+
     final double minStartHour = periodos
         .map((p) => timeToDouble(p.inicio))
         .reduce((a, b) => min(a, b));
     final double maxEndHour = periodos
         .map((p) => timeToDouble(p.fim))
         .reduce((a, b) => max(a, b));
-        
+
     return (
       startHour: (minStartHour).floorToDouble(),
       endHour: (maxEndHour).ceilToDouble(),
     );
   }
 
+  // --- ALTERAÇÃO: Lógica refatorada para preencher dias vazios e buracos com "Sem Atendimentos" ---
   List<TimeRegion> _getRegionsDeBloqueio(
     List<Periodo> periodos,
     List<Bloqueio> bloqueios,
@@ -89,65 +98,146 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
     double globalEnd,
   ) {
     final List<TimeRegion> regions = [];
-    final Color corIntervalo = NnkColors.cinzaSuave.withOpacity(0.3);
-    final Color corFeriado = const Color(0xFFEEEEEE); 
 
-    // 1. Intervalos (Gaps)
-    if (periodos.isNotEmpty) {
-      final Map<int, String> weekDayMap = {
-        1: 'MO', 2: 'TU', 3: 'WE', 4: 'TH', 5: 'FR', 6: 'SA', 7: 'SU'
-      };
-      final Map<int, List<Periodo>> periodosPorDia = {};
-      for (var p in periodos) {
-        periodosPorDia.putIfAbsent(p.diaDaSemana, () => []).add(p);
-      }
-      double toDouble(TimeOfDay t) => t.hour + t.minute / 60.0;
+    // Cores ajustadas para simular o rascunho
+    final Color corSemAtendimento = const Color(0xFFF5F5F5);
+    final Color corBloqueio = const Color(0xFFE0E0E0);
 
-      periodosPorDia.forEach((dia, lista) {
-        if (lista.isEmpty) return;
-        lista.sort((a, b) => toDouble(a.inicio).compareTo(toDouble(b.inicio)));
+    final Map<int, String> weekDayMap = {
+      1: 'MO',
+      2: 'TU',
+      3: 'WE',
+      4: 'TH',
+      5: 'FR',
+      6: 'SA',
+      7: 'SU',
+    };
 
-        void addGapRegion(double start, double end, String label) {
-          if (start >= end) return;
-          final int dayOffset = dia - 1; 
-          final DateTime baseDate = DateTime(2024, 1, 1).add(Duration(days: dayOffset));
-          
-          regions.add(TimeRegion(
-            startTime: DateTime(baseDate.year, baseDate.month, baseDate.day, start.floor(), ((start % 1) * 60).round()),
-            endTime: DateTime(baseDate.year, baseDate.month, baseDate.day, end.floor(), ((end % 1) * 60).round()),
+    double timeToDouble(TimeOfDay t) => t.hour + t.minute / 60.0;
+
+    // 1. Preenchimento de Horários Vazios (Intervalos e Dias sem expediente)
+    // Percorre de Segunda (1) a Domingo (7)
+    for (int dia = 1; dia <= 7; dia++) {
+      final periodosDoDia = periodos
+          .where((p) => p.diaDaSemana == dia)
+          .toList();
+
+      // Helper para criar a região cinza
+      void addRegion(double start, double end, String label) {
+        if (start >= end) return;
+
+        // Data base para calcular a recorrência correta (2024-01-01 foi Segunda-feira)
+        final DateTime baseDate = DateTime(
+          2024,
+          1,
+          1,
+        ).add(Duration(days: dia - 1));
+
+        regions.add(
+          TimeRegion(
+            startTime: DateTime(
+              baseDate.year,
+              baseDate.month,
+              baseDate.day,
+              start.floor(),
+              ((start % 1) * 60).round(),
+            ),
+            endTime: DateTime(
+              baseDate.year,
+              baseDate.month,
+              baseDate.day,
+              end.floor(),
+              ((end % 1) * 60).round(),
+            ),
             recurrenceRule: 'FREQ=WEEKLY;BYDAY=${weekDayMap[dia]}',
-            color: corIntervalo,
+            color: corSemAtendimento,
             text: label,
-            textStyle: const TextStyle(color: Colors.black54, fontSize: 10),
+            // Estilo avermelhado para destacar "Sem Atendimentos" conforme rascunho
+            textStyle: const TextStyle(
+              color: Color(0xFFD32F2F),
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+            ),
             enablePointerInteraction: false,
-          ));
+          ),
+        );
+      }
+
+      // Se não há períodos no dia (ex: Sexta, Sábado, Domingo), bloqueia o dia todo
+      if (periodosDoDia.isEmpty) {
+        addRegion(globalStart, globalEnd, "Sem Atendimentos");
+      } else {
+        // Se há períodos, preenche os espaços vazios
+        periodosDoDia.sort(
+          (a, b) => timeToDouble(a.inicio).compareTo(timeToDouble(b.inicio)),
+        );
+
+        double currentCursor = globalStart;
+
+        // Espaço antes do primeiro atendimento
+        double primeiroInicio = timeToDouble(periodosDoDia.first.inicio);
+        if (primeiroInicio > currentCursor) {
+          addRegion(currentCursor, primeiroInicio, "Sem Atendimentos");
         }
 
-        for (int i = 0; i < lista.length - 1; i++) {
-          double currentEnd = toDouble(lista[i].fim);
-          double nextStart = toDouble(lista[i+1].inicio);
-          if (nextStart > currentEnd) {
-            addGapRegion(currentEnd, nextStart, "Intervalo");
+        // Espaços entre atendimentos (Almoço/Intervalos)
+        for (var p in periodosDoDia) {
+          double pInicio = timeToDouble(p.inicio);
+          double pFim = timeToDouble(p.fim);
+
+          if (pInicio > currentCursor && currentCursor >= globalStart) {
+            addRegion(currentCursor, pInicio, "Intervalo");
           }
+          currentCursor = max(currentCursor, pFim);
         }
-      });
+
+        // Espaço após o último atendimento até o fim do dia
+        if (currentCursor < globalEnd) {
+          addRegion(currentCursor, globalEnd, "Sem Atendimentos");
+        }
+      }
     }
 
-    // 2. Feriados
+    // 2. Bloqueios Cadastrados (Feriados, etc) - Lógica original mantida
     for (var bloqueio in bloqueios) {
-      if (bloqueio.duracao >= 8) {
-        regions.add(TimeRegion(
-          startTime: bloqueio.dataHora,
-          endTime: bloqueio.dataHora.add(const Duration(hours: 24)),
-          color: corFeriado,
-          text: bloqueio.descricao,
-          textStyle: const TextStyle(color: Colors.black54, fontWeight: FontWeight.bold),
-          enablePointerInteraction: false,
-        ));
+      DateTime raw = bloqueio.dataHora;
+      DateTime startTime = DateTime(
+        raw.year,
+        raw.month,
+        raw.day,
+        raw.hour,
+        raw.minute,
+      );
+      DateTime endTime = startTime.add(Duration(hours: bloqueio.duracao));
+
+      if (bloqueio.duracao >= 24) {
+        startTime = DateTime(
+          startTime.year,
+          startTime.month,
+          startTime.day,
+          0,
+          0,
+        );
+        endTime = startTime.add(const Duration(days: 1));
       }
+
+      regions.add(
+        TimeRegion(
+          startTime: startTime,
+          endTime: endTime,
+          color: corBloqueio,
+          text: bloqueio.descricao,
+          textStyle: const TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.bold,
+          ),
+          enablePointerInteraction: false,
+        ),
+      );
     }
     return regions;
   }
+  // --- FIM DA ALTERAÇÃO ---
 
   @override
   Widget build(BuildContext context) {
@@ -155,17 +245,17 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
     final agendamentoProvider = context.watch<AgendamentoProvider>();
     final bloqueioProvider = context.watch<BloqueioProvider>();
     final usuarioProvider = context.watch<UsuarioProvider>();
-    
-    // --- NOVO: OBTER DADOS DE AUTENTICAÇÃO ---
     final auth = context.watch<AuthController>();
-    // -----------------------------------------
 
-    final bool isLoading = periodoProvider.isLoading ||
+    final bool isLoading =
+        periodoProvider.isLoading ||
         agendamentoProvider.isLoading ||
         bloqueioProvider.isLoading ||
         usuarioProvider.isLoading;
 
-    final int duracaoSegura = (widget.agenda.duracao > 0) ? widget.agenda.duracao : 30;
+    final int duracaoSegura = (widget.agenda.duracao > 0)
+        ? widget.agenda.duracao
+        : 30;
 
     final List<Periodo> periodos = periodoProvider.periodos;
     final List<Bloqueio> bloqueios = bloqueioProvider.bloqueios;
@@ -174,8 +264,10 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
 
     final Set<String> datasBloqueadas = {};
     for (final bloqueio in bloqueios) {
-      if (bloqueio.duracao >= 8) {
-        datasBloqueadas.add(DateFormat('yyyy-MM-dd').format(bloqueio.dataHora));
+      if (bloqueio.duracao >= 24) {
+        DateTime raw = bloqueio.dataHora;
+        DateTime dataLocal = DateTime(raw.year, raw.month, raw.day);
+        datasBloqueadas.add(DateFormat('yyyy-MM-dd').format(dataLocal));
       }
     }
 
@@ -188,10 +280,9 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
 
     final dataSource = _getDataSourceCombinado(
       agendamentoProvider.agendamentos,
-      bloqueios,
       usuarioProvider.usuarios,
       duracaoSegura,
-      auth, // <-- Passamos o auth para a função de dados
+      auth,
     );
 
     return Column(
@@ -202,8 +293,20 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
           child: isLoading
               ? const Center(child: CircularProgressIndicator())
               : _isMonthView
-                  ? _buildMonthView(dataSource, duracaoSegura, diasDeAtendimento, datasBloqueadas)
-                  : _buildWeekView(dataSource, duracaoSegura, diasDeAtendimento, datasBloqueadas, horarios, specialRegions),
+              ? _buildMonthView(
+                  dataSource,
+                  duracaoSegura,
+                  diasDeAtendimento,
+                  datasBloqueadas,
+                )
+              : _buildWeekView(
+                  dataSource,
+                  duracaoSegura,
+                  diasDeAtendimento,
+                  datasBloqueadas,
+                  horarios,
+                  specialRegions,
+                ),
         ),
       ],
     );
@@ -215,13 +318,24 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
       onPressed: (index) => setState(() => _isMonthView = index == 0),
       borderRadius: const BorderRadius.all(Radius.circular(8)),
       children: const [
-        Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('Mês')),
-        Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('Semana')),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Text('Mês'),
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Text('Semana'),
+        ),
       ],
     );
   }
 
-  Widget _buildMonthView(MeetingDataSource dataSource, int duracaoDaAgenda, Set<int> diasDeAtendimento, Set<String> datasBloqueadas) {
+  Widget _buildMonthView(
+    MeetingDataSource dataSource,
+    int duracaoDaAgenda,
+    Set<int> diasDeAtendimento,
+    Set<String> datasBloqueadas,
+  ) {
     return Column(
       children: [
         TableCalendar(
@@ -229,11 +343,11 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
           focusedDay: _focusedDay,
           firstDay: DateTime.utc(2022),
           lastDay: DateTime.utc(2050),
-          daysOfWeekHeight: 40.0,  //espaçamento para cabeçalho dos dias da semana no modo mês
+          daysOfWeekHeight: 40.0,
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
           headerStyle: const HeaderStyle(
-            formatButtonVisible: false, // <-- ESCONDE O BOTÃO 2 weeks
-            titleCentered: true, //Centraliza "novembro de 2025"
+            formatButtonVisible: false,
+            titleCentered: true,
             headerMargin: EdgeInsets.only(bottom: 8.0),
           ),
           daysOfWeekStyle: DaysOfWeekStyle(
@@ -241,18 +355,35 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
             weekendStyle: TextStyle(color: NnkColors.vermelho.withOpacity(0.6)),
           ),
           enabledDayPredicate: (day) {
-            final bool isDiaDeAtendimento = diasDeAtendimento.contains(day.weekday);
+            final bool isDiaDeAtendimento = diasDeAtendimento.contains(
+              day.weekday,
+            );
             if (!isDiaDeAtendimento) return false;
             final String dataFormatada = DateFormat('yyyy-MM-dd').format(day);
-            return !datasBloqueadas.contains(dataFormatada);
+            if (datasBloqueadas.contains(dataFormatada)) return false;
+            return true;
           },
           calendarBuilders: CalendarBuilders(
-            disabledBuilder: (context, day, focusedDay) => Center(child: Text(day.day.toString(), style: TextStyle(color: NnkColors.cinzaSuave.withOpacity(0.5)))),
-            outsideBuilder: (context, day, focusedDay) => Center(child: Text(day.day.toString(), style: TextStyle(color: NnkColors.cinzaSuave.withOpacity(0.5)))),
+            disabledBuilder: (context, day, focusedDay) => Center(
+              child: Text(
+                day.day.toString(),
+                style: TextStyle(color: NnkColors.cinzaSuave.withOpacity(0.5)),
+              ),
+            ),
+            outsideBuilder: (context, day, focusedDay) => Center(
+              child: Text(
+                day.day.toString(),
+                style: TextStyle(color: NnkColors.cinzaSuave.withOpacity(0.5)),
+              ),
+            ),
           ),
           onDaySelected: (selectedDay, focusedDay) {
-            final String dataFormatada = DateFormat('yyyy-MM-dd').format(selectedDay);
-            if (!diasDeAtendimento.contains(selectedDay.weekday) || datasBloqueadas.contains(dataFormatada)) return;
+            final String dataFormatada = DateFormat(
+              'yyyy-MM-dd',
+            ).format(selectedDay);
+            if (!diasDeAtendimento.contains(selectedDay.weekday) ||
+                datasBloqueadas.contains(dataFormatada))
+              return;
             setState(() {
               _selectedDay = selectedDay;
               _focusedDay = focusedDay;
@@ -260,9 +391,17 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
           },
           eventLoader: (day) => dataSource.getEventsForDay(day),
           calendarStyle: CalendarStyle(
-            todayDecoration: BoxDecoration(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5), shape: BoxShape.circle),
-            selectedDecoration: BoxDecoration(color: Theme.of(context).primaryColor, shape: BoxShape.circle),
-            disabledTextStyle: TextStyle(color: NnkColors.cinzaSuave.withOpacity(0.5)),
+            todayDecoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
+              shape: BoxShape.circle,
+            ),
+            selectedDecoration: BoxDecoration(
+              color: Theme.of(context).primaryColor,
+              shape: BoxShape.circle,
+            ),
+            disabledTextStyle: TextStyle(
+              color: NnkColors.cinzaSuave.withOpacity(0.5),
+            ),
           ),
           calendarFormat: CalendarFormat.month,
           availableGestures: AvailableGestures.horizontalSwipe,
@@ -270,22 +409,32 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
         const Divider(),
         Expanded(
           child: _selectedDay == null
-              ? const Center(child: Text("Selecione um dia para ver os detalhes."))
+              ? const Center(
+                  child: Text("Selecione um dia para ver os detalhes."),
+                )
               : Stack(
                   children: [
                     ListView.builder(
                       padding: const EdgeInsets.only(bottom: 80.0),
-                      itemCount: dataSource.getEventsForDay(_selectedDay!).length,
+                      itemCount: dataSource
+                          .getEventsForDay(_selectedDay!)
+                          .length,
                       itemBuilder: (context, index) {
-                        final appointment = dataSource.getEventsForDay(_selectedDay!)[index];
+                        final appointment = dataSource.getEventsForDay(
+                          _selectedDay!,
+                        )[index];
                         return ListTile(
-                          leading: Icon(Icons.circle, color: appointment.color, size: 12),
-                          title: Text(appointment.subject),
-                          // Mostra o intervalo de tempo no subtítulo (ex: 08:00 - 08:30)
-                          subtitle: Text(
-                            '${DateFormat('HH:mm').format(appointment.startTime)} - ${DateFormat('HH:mm').format(appointment.endTime)}'
+                          leading: Icon(
+                            Icons.circle,
+                            color: appointment.color,
+                            size: 12,
                           ),
-                          onTap: () => widget.onAppointmentTap(appointment, context),
+                          title: Text(appointment.subject),
+                          subtitle: Text(
+                            '${DateFormat('HH:mm').format(appointment.startTime)} - ${DateFormat('HH:mm').format(appointment.endTime)}',
+                          ),
+                          onTap: () =>
+                              widget.onAppointmentTap(appointment, context),
                         );
                       },
                     ),
@@ -293,7 +442,8 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
                       bottom: 16,
                       right: 16,
                       child: FloatingActionButton(
-                        onPressed: () => widget.onSlotTap(_selectedDay!, context),
+                        onPressed: () =>
+                            widget.onSlotTap(_selectedDay!, context),
                         tooltip: 'Novo Agendamento',
                         child: const Icon(Icons.add),
                       ),
@@ -305,112 +455,108 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
     );
   }
 
-  Widget _buildWeekView(MeetingDataSource dataSource, int duracaoDaAgenda, Set<int> diasDeAtendimento, Set<String> datasBloqueadas, ({double startHour, double endHour}) horarios, List<TimeRegion> specialRegions) {
-    final List<int> diasDeDescanso = [];
-    for (int i = 1; i <= 7; i++) {
-      if (!diasDeAtendimento.contains(i)) diasDeDescanso.add(i);
-    }
+  // --- ALTERAÇÃO: Removido nonWorkingDays para permitir que as regiões cinzas "Sem Atendimento" apareçam ---
+  Widget _buildWeekView(
+    MeetingDataSource dataSource,
+    int duracaoDaAgenda,
+    Set<int> diasDeAtendimento,
+    Set<String> datasBloqueadas,
+    ({double startHour, double endHour}) horarios,
+    List<TimeRegion> specialRegions,
+  ) {
+    // A lista 'diasDeDescanso' foi removida pois agora controlamos isso via specialRegions.
 
-    return Stack(
-      children: [
-        SfCalendar(
-          view: CalendarView.week,
-          dataSource: dataSource,
-          firstDayOfWeek: 1,
-          specialRegions: specialRegions,
-          timeSlotViewSettings: TimeSlotViewSettings(
-            startHour: horarios.startHour,
-            endHour: horarios.endHour, 
-            nonWorkingDays: diasDeDescanso,
-            timeInterval: Duration(minutes: duracaoDaAgenda),
-            timeFormat: 'HH:mm',
-          ),
+    return SfCalendar(
+      view: CalendarView.week,
+      dataSource: dataSource,
+      firstDayOfWeek: 1,
+      specialRegions: specialRegions,
+      timeSlotViewSettings: TimeSlotViewSettings(
+        startHour: horarios.startHour,
+        endHour: horarios.endHour,
+        // nonWorkingDays REMOVIDO: Isso permite que o sábado/domingo seja renderizado e coberto pela nossa região cinza
+        timeInterval: Duration(minutes: duracaoDaAgenda),
+        timeFormat: 'HH:mm',
+      ),
       onTap: (details) {
         if (details.date != null) {
-          final String dataFormatada = DateFormat('yyyy-MM-dd').format(details.date!);
-          if (!diasDeAtendimento.contains(details.date!.weekday) || datasBloqueadas.contains(dataFormatada)) return;
+          final String dataFormatada = DateFormat(
+            'yyyy-MM-dd',
+          ).format(details.date!);
+          // A lógica de clique continua igual (bloqueia se não for dia de atendimento)
+          if (!diasDeAtendimento.contains(details.date!.weekday) ||
+              datasBloqueadas.contains(dataFormatada))
+            return;
         }
 
-        if (details.targetElement == CalendarElement.appointment && details.appointments!.isNotEmpty) {
-          widget.onAppointmentTap(details.appointments!.first, context); 
+        if (details.targetElement == CalendarElement.appointment &&
+            details.appointments!.isNotEmpty) {
+          widget.onAppointmentTap(details.appointments!.first, context);
         } else if (details.targetElement == CalendarElement.calendarCell) {
-          widget.onSlotTap(details.date!, context); 
+          widget.onSlotTap(details.date!, context);
         }
       },
-
-        ),
-        // Positioned(
-        //   left: 0,
-        //   right: 0,
-        //   bottom: 0,
-        //   height: 60,               // ajustar
-        //   child: Container(
-        //     color: Colors.white,    // cor da margem
-        //   ),
-        // ),
-      ],
     );
   }
+  // --- FIM DA ALTERAÇÃO ---
 
-  // --- LÓGICA DE PRIVACIDADE INCLUÍDA AQUI ---
   MeetingDataSource _getDataSourceCombinado(
-    List<Agendamento> agendamentos, 
-    List<Bloqueio> bloqueios, 
-    List<UserModel> usuarios, 
+    List<Agendamento> agendamentos,
+    List<UserModel> usuarios,
     int duracaoDaAgenda,
-    AuthController auth, // <-- Recebe o AuthController
+    AuthController auth,
   ) {
     final List<Appointment> appointments = [];
     final mapaUsuarios = {for (var u in usuarios) u.id: u.primeiroNome};
 
-    // Verifica quem está vendo a agenda
     final bool isClient = auth.tipoUsuario == UserRole.cliente;
     final String? currentUserId = auth.usuario?.id;
 
     for (final agendamento in agendamentos) {
-      // Determina se o agendamento é do próprio usuário
       final bool isMe = agendamento.idUsuario == currentUserId;
-      
+
       String subjectTexto;
       Color corEvento;
 
       if (isClient && !isMe) {
-        // CASO 1: Sou cliente e o agendamento NÃO é meu -> Oculta dados
         subjectTexto = 'Agendado';
-        corEvento = Colors.grey.withOpacity(0.7); // Cor de "Ocupado"
+        corEvento = Colors.grey.withOpacity(0.7);
       } else {
-        // CASO 2: Sou Admin OU Sou cliente e o agendamento é meu -> Mostra dados
-        final nomePaciente = mapaUsuarios[agendamento.idUsuario] ?? 'ID: ${agendamento.idUsuario}';
+        final nomePaciente =
+            mapaUsuarios[agendamento.idUsuario] ??
+            'ID: ${agendamento.idUsuario}';
         subjectTexto = 'Agendado: $nomePaciente';
         corEvento = Theme.of(context).primaryColor;
       }
 
-      appointments.add(Appointment(
-        startTime: agendamento.dataHora,
-        endTime: agendamento.dataHora.add(Duration(minutes: agendamento.duracao * duracaoDaAgenda)),
-        subject: subjectTexto,
-        color: corEvento,
-        resourceIds: [agendamento],
-      ));
+      appointments.add(
+        Appointment(
+          startTime: agendamento.dataHora,
+          endTime: agendamento.dataHora.add(
+            Duration(minutes: agendamento.duracao * duracaoDaAgenda),
+          ),
+          subject: subjectTexto,
+          color: corEvento,
+          resourceIds: [agendamento],
+        ),
+      );
     }
-    
-    for (final bloqueio in bloqueios) {
-      appointments.add(Appointment(
-        startTime: bloqueio.dataHora,
-        endTime: bloqueio.dataHora.add(Duration(hours: bloqueio.duracao)),
-        subject: bloqueio.descricao,
-        color: NnkColors.cinzaSuave,
-        resourceIds: [bloqueio],
-      ));
-    }
+
     return MeetingDataSource(appointments);
   }
 }
 
 class MeetingDataSource extends CalendarDataSource {
-  MeetingDataSource(List<Appointment> source) { appointments = source; }
+  MeetingDataSource(List<Appointment> source) {
+    appointments = source;
+  }
   List<Appointment> getEventsForDay(DateTime day) {
-    final eventsToday = appointments?.where((appt) => isSameDay(appt.startTime, day)).toList().cast<Appointment>() ?? [];
+    final eventsToday =
+        appointments
+            ?.where((appt) => isSameDay(appt.startTime, day))
+            .toList()
+            .cast<Appointment>() ??
+        [];
     eventsToday.sort((a, b) => a.startTime.compareTo(b.startTime));
     return eventsToday;
   }
