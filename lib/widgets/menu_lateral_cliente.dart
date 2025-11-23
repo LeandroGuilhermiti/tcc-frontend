@@ -106,6 +106,7 @@ class AppDrawerCliente extends StatelessWidget {
             title: const Text('Sair', style: TextStyle(color: Colors.red)),
             onTap: () {
               Navigator.pop(context);
+              Navigator.of(context).pushReplacementNamed('/login');
               auth.logout();
             },
           ),

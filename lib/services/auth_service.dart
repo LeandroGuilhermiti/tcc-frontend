@@ -55,14 +55,20 @@ class AuthService {
 
     try {
       if (kIsWeb) {
+        // --- ALTERAÇÃO: Logout na Web ---
+        // Para limpar o cookie de sessão do Cognito no navegador, precisa
+        // redirecionar a janela inteira ('_self') para o endpoint de logout.
+        // O Cognito limpará a sessão e redirecionará de volta para o 'logout_uri'.
         final logoutUri = Uri.parse(
           '$_logoutEndpoint?client_id=$_clientId&logout_uri=$_webCallbackUrl',
         );
-        await FlutterWebAuth2.authenticate(
-          url: logoutUri.toString(),
-          callbackUrlScheme: "http",
+        
+        await launchUrl(
+          logoutUri,
+          webOnlyWindowName: '_self', // Garante que a página atual é redirecionada
         );
       } else {
+        // Logout Mobile (mantido como estava)
         await _appAuth.endSession(
           EndSessionRequest(
             idTokenHint: _idToken,
@@ -76,8 +82,9 @@ class AuthService {
         );
       }
     } catch (e) {
-      print("Erro durante o logout (geralmente seguro ignorar): $e");
+      print("Erro durante o logout (geralmente seguro ignorar na web pois a página recarrega): $e");
     } finally {
+      // Limpeza de variáveis locais
       _idToken = null;
       _refreshToken = null;
       _currentUser = null;

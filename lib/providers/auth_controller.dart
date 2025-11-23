@@ -18,7 +18,6 @@ class AuthController with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   Future<void> loginComHostedUI() async {
-    // ... (código existente sem alterações) ...
     _isLoading = true;
     _erro = null;
     notifyListeners();
@@ -62,7 +61,7 @@ class AuthController with ChangeNotifier {
       role: _usuario!.role,
 
       // Dados novos (que podem ter sido atualizados)
-      // O 'novosDados.containsKey' garante que só atualizamos o que veio no mapa
+      // O 'novosDados.containsKey' garante que só atualiza o que veio no map
       cep: novosDados.containsKey('cep')
           ? novosDados['cep']
           : _usuario!.cep,

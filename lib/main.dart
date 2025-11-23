@@ -13,6 +13,7 @@ import 'providers/agendamento_provider.dart';
 import 'providers/bloqueio_provider.dart';
 import 'providers/agenda_provider.dart';
 import 'providers/user_provider.dart'; 
+import 'providers/feriado_provider.dart';
 import 'models/user_model.dart';
 
 //telas
@@ -30,21 +31,18 @@ import 'pages/client_user/editar_dados_cliente.dart';
 import 'services/auth_service.dart';
 
 Future<void> main() async {
-  //Garantir que o Flutter está pronto e carregar as variáveis de ambiente
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
   await initializeDateFormatting('pt_BR', null);
 
   UserModel? initialUser;
-  final authService = AuthService(); // Instancia o serviço diretamente
+  final authService = AuthService();
 
   if (kIsWeb) {
     final uri = Uri.parse(html.window.location.href);
     if (uri.queryParameters.containsKey('code')) {
       final code = uri.queryParameters['code']!;
       initialUser = await authService.exchangeCodeForToken(code);
-
-      // Limpa a URL para remover o código, evitando reuso
       final cleanUri = uri.removeFragment().replace(queryParameters: {});
       html.window.history.replaceState(null, 'home', cleanUri.toString());
     }
@@ -86,26 +84,23 @@ class MyApp extends StatelessWidget {
           create: (_) => UsuarioProvider(null), 
           update: (_, auth, previousProvider) => UsuarioProvider(auth),
         ),
+        ChangeNotifierProvider(create: (_) => FeriadoProvider()),
       ],
+      
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'App de Agendamento',
         theme: ThemeData.light(),
         locale: const Locale('pt', 'BR'),
-        
-        // Define os delegates que traduzem os widgets internos do Flutter (calendários, diálogos, etc)
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        
-        // Lista de idiomas suportados pela aplicação
         supportedLocales: const [
           Locale('pt', 'BR'),
           Locale('en', 'US'),
         ],
-
         home: Consumer<AuthController>(
           builder: (context, auth, child) {
             if (auth.isLogado) {
