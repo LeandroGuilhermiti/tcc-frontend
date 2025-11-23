@@ -50,25 +50,41 @@ class AuthService {
   }
 
   // Faz o logout, escolhendo o método correto baseado na plataforma.
-  Future<void> logout() async {
-    if (_idToken == null) return;
-
+Future<void> logout() async {
     try {
       if (kIsWeb) {
-        // --- ALTERAÇÃO: Logout na Web ---
-        // Para limpar o cookie de sessão do Cognito no navegador, precisa
-        // redirecionar a janela inteira ('_self') para o endpoint de logout.
-        // O Cognito limpará a sessão e redirecionará de volta para o 'logout_uri'.
-        final logoutUri = Uri.parse(
-          '$_logoutEndpoint?client_id=$_clientId&logout_uri=$_webCallbackUrl',
+        // 1. Remove a barra '/' do final se ela existir, para garantir que bate com a AWS
+        String logoutUrlCallback = _webCallbackUrl;
+        if (logoutUrlCallback.endsWith('/')) {
+          logoutUrlCallback = logoutUrlCallback.substring(0, logoutUrlCallback.length - 1);
+        }
+        // 2. Extrair apenas o domínio do Cognito (sem https://)
+        // O Uri.https precisa apenas do host, ex: "tcc-agendamento.auth..."
+        final cognitoHost = _cognitoDomain; 
+
+        // 3. Construção Segura da URL
+        // Usamos Uri.https para ele codificar os parâmetros corretamente (? & =)
+        final logoutUri = Uri.https(
+          cognitoHost,
+          '/logout',
+          {
+            'client_id': _clientId,
+            'logout_uri': logoutUrlCallback, // URL limpa sem barra no final
+          },
         );
+
+        debugPrint('--- LOGOUT DEBUG ---');
+        debugPrint('URL Gerada: $logoutUri');
         
+        // 4. Redirecionamento da Janela (Obrigatório '_self')
         await launchUrl(
           logoutUri,
-          webOnlyWindowName: '_self', // Garante que a página atual é redirecionada
+          webOnlyWindowName: '_self', 
         );
+        
       } else {
-        // Logout Mobile (mantido como estava)
+        // Lógica Mobile
+        if (_idToken == null) return;
         await _appAuth.endSession(
           EndSessionRequest(
             idTokenHint: _idToken,
@@ -82,41 +98,13 @@ class AuthService {
         );
       }
     } catch (e) {
-      print("Erro durante o logout (geralmente seguro ignorar na web pois a página recarrega): $e");
+      debugPrint("Erro durante o logout: $e");
     } finally {
-      // Limpeza de variáveis locais
+      // Limpeza local
       _idToken = null;
       _refreshToken = null;
       _currentUser = null;
-    }
-  }
-
-  // --- MÉTODOS PRIVADOS ESPECÍFICOS DE CADA PLATAFORMA ---
-
-  // Lógica de login para Android e iOS usando flutter_appauth.
-  Future<UserModel> _loginMobile() async {
-    try {
-      final result = await _appAuth.authorizeAndExchangeCode(
-        AuthorizationTokenRequest(
-          _clientId,
-          _mobileCallbackUrl,
-          discoveryUrl: _discoveryUrl,
-          scopes: ['openid', 'email'],
-        ),
-      );
-
-      if (result != null && result.idToken != null) {
-        return await _processAndStoreTokens(
-          result.idToken!,
-          result.accessToken ?? '',
-          result.refreshToken,
-        );
-      } else {
-        throw Exception("Falha ao obter resposta de autorização.");
-      }
-    } catch (e) {
-      print('Erro no login mobile: $e');
-      throw Exception("Ocorreu um erro durante o login.");
+      // Nota: Não chama notifyListeners aqui porque o redirecionamento web vai recarregar a página
     }
   }
 

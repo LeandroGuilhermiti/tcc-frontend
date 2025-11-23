@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
-import 'package:provider/provider.dart';
+
 import '../../models/user_model.dart';
+
+import 'package:provider/provider.dart';
 import '../../providers/auth_controller.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/menu_lateral_cliente.dart'; 
+
+import '/pages/client_user/selecao_agenda_page.dart';
 
 class EditarDadosCliente extends StatefulWidget {
   const EditarDadosCliente({super.key});
@@ -91,7 +95,16 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Perfil atualizado com sucesso!'),
-            backgroundColor: Colors.green, // Manter verde para sucesso OK
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Fecha possível drawer/rota atual e substitui pela tela de seleção
+        // Se não houver nada para fechar, Navigator.pop falhará silenciosamente.
+        if (Navigator.canPop(context)) Navigator.pop(context);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const SelecaoAgendaPage(),
           ),
         );
       } else if (mounted) {
