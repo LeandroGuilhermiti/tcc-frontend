@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'dart:convert';
 
 // Modelos
 import '../models/agendamento_model.dart';
@@ -404,23 +405,31 @@ class DialogoAgendamentoCliente {
   }
 
   // --- ALTERAÇÃO: Atualizado para tratar erro 400 ---
-  static void _mostrarErro(BuildContext context, Object e) {
+static void _mostrarErro(BuildContext context, Object e) {
     if (!context.mounted) return;
     
     String mensagemErro = e.toString();
 
-    // Se conter "400", substitui pela mensagem personalizada
     if (mensagemErro.contains("400")) {
-      mensagemErro = "O horário solicitado ou o usuário possui agendamento no mesmo horário em outra agenda";
+      // Regex para encontrar o conteúdo de "message"
+      final RegExp regex = RegExp(r'"message":"(.*?)"');
+      final match = regex.firstMatch(mensagemErro);
+
+      if (match != null) {
+        mensagemErro = match.group(1) ?? "Horário indisponível.";
+      } else {
+        mensagemErro = "Conflito de horário. Tente outro período.";
+      }
     } else {
-      mensagemErro = mensagemErro.replaceAll("Exception: ", "");
+      mensagemErro = mensagemErro.replaceAll(RegExp(r'Exception:?\s*'), '');
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensagemErro),
         backgroundColor: Colors.red,
-        duration: const Duration(seconds: 5),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 8),
       ),
     );
   }

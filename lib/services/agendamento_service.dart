@@ -15,14 +15,17 @@ class AgendamentoService {
 
   /// Lança uma exceção padronizada a partir da resposta HTTP.
   void _handleError(http.Response response) {
-    // Tenta decodificar o corpo do erro
+    if (response.statusCode == 400) {
+      throw Exception('Erro 400: ${response.body}');
+    }
+
+    // Para outros erros, tentamos decodificar para ficar mais limpo
     try {
       final errorBody = jsonDecode(response.body);
-      // Extrai a 'message' específica do backend, se existir
       final String message = errorBody['message'] ?? response.body;
-      throw Exception(message);
+      throw Exception('Erro ${response.statusCode}: $message');
     } catch (e) {
-      // Se o corpo não for um JSON válido, lança o status code
+      // Se não der para decodificar, vai o erro padrão HTTP
       throw Exception('Erro ${response.statusCode}: ${response.reasonPhrase}');
     }
   }
@@ -46,8 +49,8 @@ class AgendamentoService {
           DateFormat('yyyy-MM-dd HH:mm:ss').format(dataHora);
     }
 
-    final uri =
-        Uri.parse('$baseUrl/agendamento').replace(queryParameters: queryParameters);
+    final uri = Uri.parse('$baseUrl/agendamento')
+        .replace(queryParameters: queryParameters);
 
     debugPrint('[AgendamentoService] Buscando em: ${uri.toString()}');
 
@@ -55,25 +58,20 @@ class AgendamentoService {
       final response = await http.get(uri, headers: _getHeaders(token));
 
       if (response.statusCode == 200) {
-        // --- CORREÇÃO: Tratar ambos os formatos de resposta ---
         final dynamic body = jsonDecode(response.body);
         List<dynamic> dataList;
 
         if (body is Map<String, dynamic> &&
             body.containsKey('data') &&
             body['data'] is List) {
-          // Formato: { "data": [...] }
           dataList = body['data'];
         } else if (body is List) {
-          // Formato: [ ... ]
           dataList = body;
         } else {
-          // Formato inesperado
           debugPrint(
               '[AgendamentoService] Resposta 200, mas formato inesperado.');
           dataList = [];
         }
-        // --- FIM DA CORREÇÃO ---
 
         final agendamentos =
             dataList.map((item) => Agendamento.fromJson(item)).toList();
@@ -81,16 +79,14 @@ class AgendamentoService {
             '[AgendamentoService] ${agendamentos.length} agendamentos carregados.');
         return agendamentos;
       } else {
-        // Se a resposta não for 200, é um erro
         debugPrint(
             '[AgendamentoService] Erro ${response.statusCode} ao buscar: ${response.body}');
         _handleError(response);
-        return []; // Nunca será atingido
+        return [];
       }
     } catch (e) {
-      // Erro de rede ou de parsing
       debugPrint('[AgendamentoService] Exceção ao buscar: ${e.toString()}');
-      rethrow; // Lança a exceção para o provider
+      rethrow;
     }
   }
 
@@ -98,7 +94,6 @@ class AgendamentoService {
   /// Cria um novo agendamento.
   Future<Agendamento> criarAgendamento(
       Agendamento agendamento, String token) async {
-    // O seu template.yaml usa /agendamento/criar para a orquestração
     final Uri uri = Uri.parse('$baseUrl/agendamento/criar');
     final String body = jsonEncode(agendamento.toJson());
 
@@ -112,29 +107,19 @@ class AgendamentoService {
         body: body,
       );
 
-      // --- CORREÇÃO PRINCIPAL AQUI ---
-      // O seu backend (Orquestrador) retorna 201 (Created) em caso de sucesso.
       if (response.statusCode == 201) {
         debugPrint('[AgendamentoService] Sucesso 201: ${response.body}');
-        
-        // O backend confirma a criação, mas não retorna o objeto 'Agendamento'.
-        // Portanto, retornamos o mesmo objeto 'agendamento' que enviamos,
-        // pois ele é a representação do que foi salvo.
         return agendamento;
-
       } else {
-        // Se não for 201, é um erro (ex: 400 Bad Request)
         debugPrint(
             '[AgendamentoService] Erro ${response.statusCode}: ${response.body}');
+        // Aqui chamará o _handleError corrigido
         _handleError(response);
-        throw Exception(
-            'Falha ao criar agendamento'); // Nunca será atingido
+        throw Exception('Falha ao criar agendamento');
       }
     } catch (e) {
-      // Erro de rede ou o _handleError
-      debugPrint(
-          '[AgendamentoService] Exceção ao criar: ${e.toString()}');
-      rethrow; // Lança a exceção para o provider
+      debugPrint('[AgendamentoService] Exceção ao criar: ${e.toString()}');
+      rethrow;
     }
   }
 
@@ -142,17 +127,11 @@ class AgendamentoService {
   /// Atualiza um agendamento.
   Future<void> atualizarAgendamento(
       Agendamento agendamento, String token) async {
-    // O seu template.yaml usa PATCH /agendamento
     final Uri uri = Uri.parse('$baseUrl/agendamento/editar');
-    
-    // --- ESTA É A CORREÇÃO ---
-    // Em vez de montar um JSON manual, usamos o método .toJson()
-    // que já existe no seu AgendamentoModel e que inclui o 'id'.
     final String body = jsonEncode(agendamento.toJson());
-    // --- FIM DA CORREÇÃO ---
 
     debugPrint('[AgendamentoService] Atualizando em: ${uri.toString()}');
-    debugPrint('[AgendamentoService] Body: $body'); // <-- Agora o 'id' deve aparecer aqui
+    debugPrint('[AgendamentoService] Body: $body');
 
     try {
       final response = await http.patch(
@@ -161,7 +140,6 @@ class AgendamentoService {
         body: body,
       );
 
-      // O seu backend de PATCH retorna 200
       if (response.statusCode != 200) {
         debugPrint(
             '[AgendamentoService] Erro ${response.statusCode} ao atualizar: ${response.body}');
@@ -181,7 +159,6 @@ class AgendamentoService {
   /// Exclui um agendamento.
   Future<void> deletarAgendamento(
       Agendamento agendamento, String token) async {
-    // O seu template.yaml usa DELETE /agendamento
     final Uri uri = Uri.parse('$baseUrl/agendamento');
     final body = jsonEncode({
       'idAgenda': agendamento.idAgenda,
@@ -199,7 +176,6 @@ class AgendamentoService {
         body: body,
       );
 
-      // O seu backend de DELETE retorna 200
       if (response.statusCode != 200) {
         debugPrint(
             '[AgendamentoService] Erro ${response.statusCode} ao deletar: ${response.body}');

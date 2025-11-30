@@ -49,17 +49,60 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _carregarDadosIniciais());
   }
 
-  void _carregarDadosIniciais() {
+  // --- ALTERAÇÃO AQUI: Função transformada em Future para gerir erros ---
+  Future<void> _carregarDadosIniciais() async {
     final idAgenda = widget.agenda.id!;
+    
+    // Carregamos os dados da app normalmente (sem await para não bloquear a UI)
     Provider.of<BloqueioProvider>(context, listen: false).carregarBloqueios(idAgenda);
     Provider.of<PeriodoProvider>(context, listen: false).carregarPeriodos(idAgenda);
     Provider.of<AgendamentoProvider>(context, listen: false).carregarAgendamentos(idAgenda: idAgenda);
     Provider.of<UsuarioProvider>(context, listen: false).buscarUsuarios();
     
+    // Tratamento específico para a API de Feriados
     final feriadoProvider = Provider.of<FeriadoProvider>(context, listen: false);
     final anoAtual = DateTime.now().year;
-    feriadoProvider.carregarFeriados(anoAtual);
-    feriadoProvider.carregarFeriados(anoAtual + 1);
+    
+    try {
+      // Usamos Future.wait para carregar os dois anos e "esperar" pelo resultado
+      // Nota: O método .carregarFeriados no provider deve retornar um Future para isto funcionar
+      await Future.wait([
+        feriadoProvider.carregarFeriados(anoAtual),
+        feriadoProvider.carregarFeriados(anoAtual + 1),
+      ]);
+    } catch (e) {
+      debugPrint("Erro ao carregar feriados: $e");
+      // Se der erro (ex: sem internet ou API fora do ar), mostramos o aviso
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.cloud_off, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "Aviso: Não foi possível obter os feriados. Verifique a conexão.",
+                    style: TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.orange[800], // Laranja para indicar aviso/atenção
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(
+              label: 'Recarregar',
+              textColor: Colors.white,
+              onPressed: () {
+                // Tenta carregar novamente se o utilizador clicar
+                _carregarDadosIniciais();
+              },
+            ),
+          ),
+        );
+      }
+    }
   }
 
   Set<int> _getDiasDeAtendimento(List<Periodo> periodos) {
@@ -252,21 +295,27 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
       duracaoSegura,
       auth,
     );
+    
+    // Preparar o título com base na data selecionada
+    String textoTitulo = _selectedDay != null 
+        ? "Agendamentos de ${DateFormat('dd/MM/yyyy').format(_selectedDay!)}" 
+        : "Selecione uma data";
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: double.infinity,
-          color: Theme.of(context).scaffoldBackgroundColor, 
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Center(child: _buildViewToggler()),
-        ),
+         Center(
+           child: Padding(
+             padding: const EdgeInsets.symmetric(vertical: 8),
+             child: _buildViewToggler(),
+           ),
+         ),
         
         Expanded(
           child: isLoading
               ? const Center(child: CircularProgressIndicator())
               : _isMonthView
-                  ? _buildMonthView(dataSource, duracaoSegura, diasDeAtendimento, detalhesBloqueios)
+                  ? _buildMonthView(dataSource, duracaoSegura, diasDeAtendimento, detalhesBloqueios, textoTitulo)
                   : _buildWeekView(dataSource, duracaoSegura, diasDeAtendimento, datasBloqueadas, horarios, specialRegions),
         ),
       ],
@@ -285,8 +334,26 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
     );
   }
 
-  Widget _buildMonthView(MeetingDataSource dataSource, int duracaoDaAgenda, Set<int> diasDeAtendimento, Map<String, String> detalhesBloqueios) {
+Widget _buildMonthView(MeetingDataSource dataSource, int duracaoDaAgenda, Set<int> diasDeAtendimento, Map<String, String> detalhesBloqueios, String textoTitulo) {
+    
+    // --- CÁLCULOS DE RESPONSIVIDADE 
+    final double screenHeight = MediaQuery.of(context).size.height;
+
+    // ALTURA DA LINHA: Reduzida para 6% da tela.
+    // Clamp: Mínimo de 35px (compacto) e Máximo de 65px (confortável
+    final double dynamicRowHeight = (screenHeight * 0.06).clamp(35.0, 65.0);
+    
+    // ALTURA DOS DIAS (SEG, TER...): 3.5% da tela
+    final double dynamicDayLabelHeight = (screenHeight * 0.035).clamp(20.0, 35.0);
+    
+    // FONTE: Proporcional, mas com limite máximo de 16 para não ficar "cartoon"
+    final double dynamicFontSize = (dynamicRowHeight * 0.35).clamp(12.0, 16.0);
+    
+    // CÍRCULO: 70% da altura da linha, max 42px 
+    final double circleSize = (dynamicRowHeight * 0.70).clamp(28.0, 42.0);
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // CALENDÁRIO
         TableCalendar(
@@ -294,16 +361,21 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
           focusedDay: _focusedDay,
           firstDay: DateTime.utc(2022),
           lastDay: DateTime.utc(2050),
-          daysOfWeekHeight: 40.0,
+          
+          // --- APLICANDO TAMANHOS DINÂMICOS ---
+          rowHeight: dynamicRowHeight, 
+          daysOfWeekHeight: dynamicDayLabelHeight,
+          // ------------------------------------
+
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
           headerStyle: const HeaderStyle(
             formatButtonVisible: false,
             titleCentered: true,
-            headerMargin: EdgeInsets.only(bottom: 8.0),
+            headerMargin: EdgeInsets.only(bottom: 6.0),
           ),
           daysOfWeekStyle: DaysOfWeekStyle(
-            weekdayStyle: TextStyle(color: NnkColors.marromEscuro),
-            weekendStyle: TextStyle(color: NnkColors.vermelho.withOpacity(0.6)),
+            weekdayStyle: TextStyle(color: NnkColors.marromEscuro, fontSize: dynamicFontSize),
+            weekendStyle: TextStyle(color: NnkColors.vermelho.withOpacity(0.6), fontSize: dynamicFontSize),
           ),
           enabledDayPredicate: (day) {
             final String dataFormatada = DateFormat('yyyy-MM-dd').format(day);
@@ -312,14 +384,23 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
             return isDiaDeAtendimento;
           },
           calendarBuilders: CalendarBuilders(
-            disabledBuilder: (context, day, focusedDay) => Center(child: Text(day.day.toString(), style: TextStyle(color: NnkColors.cinzaSuave.withOpacity(0.5)))),
-            outsideBuilder: (context, day, focusedDay) => Center(child: Text(day.day.toString(), style: TextStyle(color: NnkColors.cinzaSuave.withOpacity(0.5)))),
+            // Construtor para dias desabilitados/fora do mês
+            disabledBuilder: (context, day, focusedDay) => Center(
+              child: Text(day.day.toString(), style: TextStyle(color: NnkColors.cinzaSuave.withOpacity(0.5), fontSize: dynamicFontSize))
+            ),
+            outsideBuilder: (context, day, focusedDay) => Center(
+              child: Text(day.day.toString(), style: TextStyle(color: NnkColors.cinzaSuave.withOpacity(0.5), fontSize: dynamicFontSize))
+            ),
+            
+            // Construtor padrão (dias normais)
             defaultBuilder: (context, day, focusedDay) {
                final String dataFormatada = DateFormat('yyyy-MM-dd').format(day);
+               // Caso seja um dia bloqueado manualmente
                if (detalhesBloqueios.containsKey(dataFormatada)) {
                  return Center(
                    child: Container(
-                     margin: const EdgeInsets.all(6.0),
+                     width: circleSize, 
+                     height: circleSize,
                      decoration: BoxDecoration(
                        color: Colors.deepOrange.withOpacity(0.1), 
                        shape: BoxShape.circle,
@@ -328,12 +409,45 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
                      alignment: Alignment.center,
                      child: Text(
                        '${day.day}',
-                       style: const TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.bold),
+                       style: TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.bold, fontSize: dynamicFontSize),
                      ),
                    ),
                  );
                }
-               return null;
+               // Dia normal disponível
+               return Center(child: Text('${day.day}', style: TextStyle(fontSize: dynamicFontSize)));
+            },
+            
+            // Construtor para o dia SELECIONADO
+            selectedBuilder: (context, day, focusedDay) {
+              return Center(
+                child: Container(
+                  width: circleSize,
+                  height: circleSize,
+                  decoration: BoxDecoration(color: Theme.of(context).primaryColor, shape: BoxShape.circle),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${day.day}',
+                    style: TextStyle(color: Colors.white, fontSize: dynamicFontSize),
+                  ),
+                ),
+              );
+            },
+            
+            // Construtor para o dia de HOJE
+            todayBuilder: (context, day, focusedDay) {
+              return Center(
+                child: Container(
+                  width: circleSize,
+                  height: circleSize,
+                  decoration: BoxDecoration(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5), shape: BoxShape.circle),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${day.day}',
+                    style: TextStyle(color: Colors.white, fontSize: dynamicFontSize),
+                  ),
+                ),
+              );
             },
           ),
           onDaySelected: (selectedDay, focusedDay) {
@@ -361,48 +475,57 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
             });
           },
           eventLoader: (day) => dataSource.getEventsForDay(day),
-          calendarStyle: CalendarStyle(
-            todayDecoration: BoxDecoration(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5), shape: BoxShape.circle),
-            selectedDecoration: BoxDecoration(color: Theme.of(context).primaryColor, shape: BoxShape.circle),
-            disabledTextStyle: TextStyle(color: NnkColors.cinzaSuave.withOpacity(0.5)),
-          ),
           calendarFormat: CalendarFormat.month,
           availableGestures: AvailableGestures.horizontalSwipe,
         ),
         
         const Divider(height: 1), 
+
+        // BARRA DE TÍTULO COM O BOTÃO INTEGRADO
+        Container(
+          width: double.infinity,
+          color: Theme.of(context).primaryColor.withOpacity(0.1), 
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                textoTitulo,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+              IconButton(
+                onPressed: () => widget.onSlotTap(_selectedDay!, context),
+                icon: const Icon(Icons.add_circle),
+                color: Theme.of(context).primaryColor,
+                iconSize: 36,
+                tooltip: 'Novo Agendamento',
+              ),
+            ],
+          ),
+        ),
         
         // LISTA DE AGENDAMENTOS
         Expanded(
           child: _selectedDay == null
               ? const Center(child: Text("Selecione um dia para ver os detalhes.", style: TextStyle(color: Colors.grey)))
-              : Stack(
-                  children: [
-                    ListView.builder(
-                      padding: const EdgeInsets.only(top: 20.0, bottom: 80.0), 
-                      itemCount: dataSource.getEventsForDay(_selectedDay!).length,
-                      itemBuilder: (context, index) {
-                        final appointment = dataSource.getEventsForDay(_selectedDay!)[index];
-                        return ListTile(
-                          leading: Icon(Icons.circle, color: appointment.color, size: 12),
-                          title: Text(appointment.subject),
-                          subtitle: Text(
-                            '${DateFormat('HH:mm').format(appointment.startTime)} - ${DateFormat('HH:mm').format(appointment.endTime)}'
-                          ),
-                          onTap: () => widget.onAppointmentTap(appointment, context),
-                        );
-                      },
-                    ),
-                    Positioned(
-                      bottom: 16,
-                      right: 16,
-                      child: FloatingActionButton(
-                        onPressed: () => widget.onSlotTap(_selectedDay!, context),
-                        tooltip: 'Novo Agendamento',
-                        child: const Icon(Icons.add),
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0), 
+                  itemCount: dataSource.getEventsForDay(_selectedDay!).length,
+                  itemBuilder: (context, index) {
+                    final appointment = dataSource.getEventsForDay(_selectedDay!)[index];
+                    return ListTile(
+                      leading: Icon(Icons.circle, color: appointment.color, size: 12),
+                      title: Text(appointment.subject),
+                      subtitle: Text(
+                        '${DateFormat('HH:mm').format(appointment.startTime)} - ${DateFormat('HH:mm').format(appointment.endTime)}'
                       ),
-                    ),
-                  ],
+                      onTap: () => widget.onAppointmentTap(appointment, context),
+                    );
+                  },
                 ),
         ),
       ],

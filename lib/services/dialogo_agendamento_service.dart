@@ -7,6 +7,7 @@ import '../models/user_model.dart';
 import '../providers/agendamento_provider.dart';
 import '../providers/user_provider.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'dart:convert';
 
 class DialogoAgendamentoService {
   
@@ -309,25 +310,39 @@ class DialogoAgendamentoService {
     );
   }
 
-  // --- NOVA FUNÇÃO PARA TRATAR O ERRO 400 ---
+// --- FUNÇÃO REFATORADA (VERSÃO ROBUSTA) ---
   static void _tratarErro(BuildContext context, Object e) {
     if (!context.mounted) return;
 
     String mensagemErro = e.toString();
-    
-    // Verifica se é o erro 400 (conflito de horário)
+
+    // 1. Verifica se é erro 400
     if (mensagemErro.contains("400")) {
-      mensagemErro = "O horário solicitado já está ocupado pelo agendamento de outra pessoa ou o usuário atual possui agendamentos no mesmo horário, mas em outra agenda";
+      
+      // 2. Tenta capturar o texto que está dentro de "message":"..."
+      // Esta Regex procura por: "message":" (qualquer coisa menos aspas) "
+      final RegExp regex = RegExp(r'"message":"(.*?)"');
+      final match = regex.firstMatch(mensagemErro);
+
+      if (match != null) {
+        // Se encontrou, pega o grupo 1 (o texto da mensagem)
+        mensagemErro = match.group(1) ?? "Horário indisponível.";
+      } else {
+        // Fallback caso o padrão não seja encontrado
+        mensagemErro = "O horário solicitado não está disponível (Erro 400).";
+      }
+      
     } else {
-      // Limpa "Exception: " caso seja outro erro
-      mensagemErro = mensagemErro.replaceAll("Exception: ", "");
+      // Limpeza genérica para outros erros (remove "Exception:")
+      mensagemErro = mensagemErro.replaceAll(RegExp(r'Exception:?\s*'), '');
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensagemErro),
         backgroundColor: Colors.red,
-        duration: const Duration(seconds: 5), // Mais tempo para ler
+        behavior: SnackBarBehavior.floating, // Flutua acima de outros elementos
+        duration: const Duration(seconds: 8),
       ),
     );
   }
