@@ -132,7 +132,6 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
         periodosDoDia.sort((a, b) => timeToDouble(a.inicio).compareTo(timeToDouble(b.inicio)));
         
         double currentCursor = globalStart;
-
         double primeiroInicio = timeToDouble(periodosDoDia.first.inicio);
         
         if (primeiroInicio > currentCursor) {
@@ -221,10 +220,8 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
     final Set<int> diasDeAtendimento = _getDiasDeAtendimento(periodos);
     final horarios = _getHorariosDeAtendimento(periodos);
 
-    //Mapa para saber o motivo do bloqueio (nome do feriado ou descrição do bloqueio)
     final Map<String, String> detalhesBloqueios = {};
 
-    // Adiciona Bloqueios Manuais
     for (final bloqueio in bloqueios) {
       if (bloqueio.duracao >= 24) {
         DateTime raw = bloqueio.dataHora;
@@ -234,13 +231,11 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
       }
     }
     
-    // Adiciona Feriados (Sobrescreve se cair no mesmo dia, ou poderia concatenar)
     for (final feriado in feriados) {
        String key = DateFormat('yyyy-MM-dd').format(feriado.date);
        detalhesBloqueios[key] = feriado.name;
     }
 
-    // A lista antiga de 'datasBloqueadas' ainda é útil para a visão semanal
     final Set<String> datasBloqueadas = detalhesBloqueios.keys.toSet();
 
     final List<TimeRegion> specialRegions = _getRegionsDeBloqueio(
@@ -260,13 +255,17 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
 
     return Column(
       children: [
-        _buildViewToggler(),
-        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          color: Theme.of(context).scaffoldBackgroundColor, 
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Center(child: _buildViewToggler()),
+        ),
+        
         Expanded(
           child: isLoading
               ? const Center(child: CircularProgressIndicator())
               : _isMonthView
-                  // o novo mapa 'detalhesBloqueios'
                   ? _buildMonthView(dataSource, duracaoSegura, diasDeAtendimento, detalhesBloqueios)
                   : _buildWeekView(dataSource, duracaoSegura, diasDeAtendimento, datasBloqueadas, horarios, specialRegions),
         ),
@@ -286,10 +285,10 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
     );
   }
 
-  // --- ALTERAÇÃO: Recebe Map<String, String> em vez de Set<String> ---
   Widget _buildMonthView(MeetingDataSource dataSource, int duracaoDaAgenda, Set<int> diasDeAtendimento, Map<String, String> detalhesBloqueios) {
     return Column(
       children: [
+        // CALENDÁRIO
         TableCalendar(
           locale: 'pt_BR',
           focusedDay: _focusedDay,
@@ -308,23 +307,16 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
           ),
           enabledDayPredicate: (day) {
             final String dataFormatada = DateFormat('yyyy-MM-dd').format(day);
-            
-            // --- ALTERAÇÃO: Habilita o clique se for feriado/bloqueio ---
             if (detalhesBloqueios.containsKey(dataFormatada)) return true;
-
-            // Se não for feriado, aplica regra normal (dia de trabalho)
             final bool isDiaDeAtendimento = diasDeAtendimento.contains(day.weekday);
             return isDiaDeAtendimento;
           },
           calendarBuilders: CalendarBuilders(
             disabledBuilder: (context, day, focusedDay) => Center(child: Text(day.day.toString(), style: TextStyle(color: NnkColors.cinzaSuave.withOpacity(0.5)))),
             outsideBuilder: (context, day, focusedDay) => Center(child: Text(day.day.toString(), style: TextStyle(color: NnkColors.cinzaSuave.withOpacity(0.5)))),
-            
-            // --- ALTERAÇÃO: Builder Personalizado para Feriados ---
             defaultBuilder: (context, day, focusedDay) {
                final String dataFormatada = DateFormat('yyyy-MM-dd').format(day);
                if (detalhesBloqueios.containsKey(dataFormatada)) {
-                 // Estilo do dia de feriado (Laranja claro com borda)
                  return Center(
                    child: Container(
                      margin: const EdgeInsets.all(6.0),
@@ -341,19 +333,17 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
                    ),
                  );
                }
-               return null; // Retorna nulo para usar o estilo padrão nos outros dias
+               return null;
             },
           ),
           onDaySelected: (selectedDay, focusedDay) {
             final String dataFormatada = DateFormat('yyyy-MM-dd').format(selectedDay);
-            
-            // --- ALTERAÇÃO: Intercepta o clique se for Feriado ---
             if (detalhesBloqueios.containsKey(dataFormatada)) {
                showDialog(
                  context: context,
                  builder: (context) => AlertDialog(
                    title: const Text("Dia Indisponível"),
-                   content: Text(detalhesBloqueios[dataFormatada]!), // Exibe o nome do feriado
+                   content: Text(detalhesBloqueios[dataFormatada]!),
                    actions: [
                      TextButton(
                        onPressed: () => Navigator.pop(context), 
@@ -362,10 +352,8 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
                    ]
                  )
                );
-               return; // Não seleciona o dia, apenas avisa
+               return;
             }
-
-            // Lógica normal de seleção
             if (!diasDeAtendimento.contains(selectedDay.weekday)) return;
             setState(() {
               _selectedDay = selectedDay;
@@ -381,14 +369,17 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
           calendarFormat: CalendarFormat.month,
           availableGestures: AvailableGestures.horizontalSwipe,
         ),
-        const Divider(),
+        
+        const Divider(height: 1), 
+        
+        // LISTA DE AGENDAMENTOS
         Expanded(
           child: _selectedDay == null
-              ? const Center(child: Text("Selecione um dia para ver os detalhes."))
+              ? const Center(child: Text("Selecione um dia para ver os detalhes.", style: TextStyle(color: Colors.grey)))
               : Stack(
                   children: [
                     ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 80.0),
+                      padding: const EdgeInsets.only(top: 20.0, bottom: 80.0), 
                       itemCount: dataSource.getEventsForDay(_selectedDay!).length,
                       itemBuilder: (context, index) {
                         final appointment = dataSource.getEventsForDay(_selectedDay!)[index];

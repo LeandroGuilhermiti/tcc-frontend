@@ -13,56 +13,40 @@ import '../providers/agendamento_provider.dart';
 import '../providers/auth_controller.dart';
 
 // Serviços
-// Precisamos do serviço de diálogo do Admin para REUTILIZAR o formulário
-// de criação/edição que já está pronto.
 import 'dialogo_agendamento_service.dart';
 
-///
-/// Este novo serviço aplica a sua regra de negócio:
-/// "O cliente só pode editar ou excluir os seus próprios agendamentos."
-///
 class DialogoAgendamentoCliente {
-  ///
-  /// Ponto de entrada principal.
-  /// Este método decide qual diálogo mostrar (o de dono ou o de visitante).
-  ///
   static void mostrarDialogoCliente({
     required BuildContext context,
     required Appointment appointment,
-    required String? currentUserId, // O ID do usuário logado
+    required String? currentUserId,
     required int duracaoDaAgenda,
+    String? avisoAgendamento, 
   }) {
     final dynamic appointmentData = appointment.resourceIds?.first;
 
-    // Caso 1: É um Bloqueio (ex: Férias do profissional)
     if (appointmentData is Bloqueio) {
       _mostrarDialogoSimples(
         context: context,
         titulo: 'Horário Indisponível',
-        motivo: appointment.subject, // Ex: "Férias"
+        motivo: appointment.subject,
       );
       return;
     }
 
-    // Caso 2: É um Agendamento
     if (appointmentData is Agendamento) {
       final Agendamento agendamento = appointmentData;
-
-      // --- ESTA É A SUA REGRA DE NEGÓCIO ---
       final bool isOwner = (agendamento.idUsuario == currentUserId);
-      // -------------------------------------
 
       if (isOwner) {
-        // O usuário logado é o dono do agendamento.
-        // Mostra o diálogo completo com opções de Editar/Excluir.
         _mostrarDialogoDoDono(
           context: context,
           appointment: appointment,
           agendamento: agendamento,
           duracaoDaAgenda: duracaoDaAgenda,
+          avisoAgendamento: avisoAgendamento,
         );
       } else {
-        // Não é o dono. Mostra um diálogo simples, apenas informativo.
         _mostrarDialogoSimples(
           context: context,
           titulo: 'Horário Ocupado',
@@ -72,7 +56,6 @@ class DialogoAgendamentoCliente {
       return;
     }
 
-    // Caso 3: Clicou em algo desconhecido (segurança)
     _mostrarDialogoSimples(
       context: context,
       titulo: 'Erro',
@@ -80,10 +63,6 @@ class DialogoAgendamentoCliente {
     );
   }
 
-  ///
-  /// Diálogo para agendamentos que NÃO pertencem ao usuário logado,
-  /// ou para horários bloqueados.
-  ///
   static void _mostrarDialogoSimples({
     required BuildContext context,
     required String titulo,
@@ -104,15 +83,12 @@ class DialogoAgendamentoCliente {
     );
   }
 
-  ///
-  /// Diálogo para agendamentos que PERTENCEM ao usuário logado.
-  /// Este é muito parecido com o `mostrarDialogoEdicaoAgendamento` do Admin.
-  ///
   static void _mostrarDialogoDoDono({
     required BuildContext context,
     required Appointment appointment,
     required Agendamento agendamento,
     required int duracaoDaAgenda,
+    String? avisoAgendamento,
   }) {
     showDialog(
       context: context,
@@ -130,42 +106,32 @@ class DialogoAgendamentoCliente {
             ],
           ),
           actions: [
-            // 1. Botão Excluir
             TextButton(
               onPressed: () async {
                 try {
                   await Provider.of<AgendamentoProvider>(
                     context,
                     listen: false,
-                  ).removerAgendamento(agendamento); // Passa o objeto
-                  if (context.mounted) Navigator.pop(context); // Fecha diálogo
+                  ).removerAgendamento(agendamento);
+                  if (context.mounted) Navigator.pop(context);
                 } catch (e) {
-                  _mostrarErro(context, "Erro ao excluir: $e");
+                  _mostrarErro(context, e);
                 }
               },
               child: const Text('Excluir', style: TextStyle(color: Colors.red)),
             ),
-
-            // 2. Botão Editar
             TextButton(
               onPressed: () {
-                // Fecha o diálogo de detalhes primeiro
                 Navigator.pop(context);
-
-                // --- REUTILIZAÇÃO DE CÓDIGO ---
-                // Chama o formulário que o Admin usa, passando os dados
-                // deste agendamento para pré-preencher.
                 DialogoAgendamentoService.mostrarDialogoEdicaoAgendamento(
                   context: context,
                   appointment: appointment,
                   duracaoDaAgenda: duracaoDaAgenda,
+                  avisoAgendamento: avisoAgendamento, 
                 );
-                // --- FIM DA REUTILIZAÇÃO ---
               },
               child: const Text('Editar'),
             ),
-
-            // 3. Botão Fechar
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Fechar'),
@@ -176,32 +142,32 @@ class DialogoAgendamentoCliente {
     );
   }
 
-   /// Mostra um diálogo para criar agendamento (usado pela visão de semana).
   static void mostrarDialogoNovoAgendamentoCliente({
     required BuildContext context,
     required DateTime dataInicial,
     required String idAgenda,
     required int duracaoDaAgenda,
+    String? avisoAgendamento, 
   }) {
     _mostrarDialogoNovoCliente(
       context: context,
       dataInicial: dataInicial,
       idAgenda: idAgenda,
       duracaoDaAgenda: duracaoDaAgenda,
+      avisoAgendamento: avisoAgendamento, 
     );
   }
 
-  /// Mostra um diálogo para criar agendamento (usado pela visão de mês).
   static void mostrarDialogoApenasHoraCliente({
     required BuildContext context,
     required DateTime diaSelecionado,
     required String idAgenda,
     required int duracaoDaAgenda,
+    String? avisoAgendamento, 
   }) async {
-    // Pega a hora atual, mas "trava" os minutos
     TimeOfDay horaAtual = TimeOfDay.now();
     int duracao = duracaoDaAgenda;
-    if (duracao <= 0) duracao = 30; // Segurança
+    if (duracao <= 0) duracao = 30;
     int minutoCorrigido = (horaAtual.minute / duracao).floor() * duracao;
 
     final dataHoraInicial = DateTime(
@@ -217,36 +183,32 @@ class DialogoAgendamentoCliente {
       dataInicial: dataHoraInicial,
       idAgenda: idAgenda,
       duracaoDaAgenda: duracaoDaAgenda,
+      avisoAgendamento: avisoAgendamento, 
     );
   }
 
-  ///
-  /// Lógica principal (privada) para o formulário de NOVO agendamento do CLIENTE.
-  ///
   static void _mostrarDialogoNovoCliente({
     required BuildContext context,
     required DateTime dataInicial,
     required String idAgenda,
     required int duracaoDaAgenda,
+    String? avisoAgendamento, 
   }) {
-    // --- PASSO 1: Obter o usuário logado ---
     final auth = Provider.of<AuthController>(context, listen: false);
     final UserModel? usuarioLogado = auth.usuario;
 
-    // Se, por algum motivo, não houver usuário logado, não abre o diálogo.
     if (usuarioLogado == null) {
       _mostrarErro(context, "Erro: Usuário não encontrado. Faça login novamente.");
       return;
     }
 
-    // Pré-define o nome e o ID do usuário.
     final String idUsuarioSelecionado = usuarioLogado.id;
     final String nomeUsuario =
         '${usuarioLogado.primeiroNome} ${usuarioLogado.sobrenome ?? ''}';
 
     final formKey = GlobalKey<FormState>();
     DateTime dataHoraAgendamento = dataInicial;
-    int duracaoSelecionada = 1; // Padrão de 1 período
+    int duracaoSelecionada = 1;
 
     showDialog(
       context: context,
@@ -262,7 +224,6 @@ class DialogoAgendamentoCliente {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- CAMPO 1: Horário ---
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -272,7 +233,6 @@ class DialogoAgendamentoCliente {
                         ),
                         TextButton(
                           onPressed: () async {
-                            // ... (lógica de seleção de hora, copiada do admin) ...
                             TimeOfDay? novaHora;
                             DateTime? novaData = dataHoraAgendamento;
                             final TimeOfDay initialTime =
@@ -313,12 +273,9 @@ class DialogoAgendamentoCliente {
                       ],
                     ),
                     const SizedBox(height: 16),
-
-                    // --- CAMPO 2: Nome do Paciente (TRAVADO) ---
                     TextFormField(
-                      // Define o nome do usuário logado
                       initialValue: nomeUsuario,
-                      readOnly: true, // Torna o campo apenas de leitura
+                      readOnly: true,
                       decoration: const InputDecoration(
                         labelText: 'Nome do Paciente',
                         prefixIcon: Icon(Icons.person),
@@ -326,13 +283,8 @@ class DialogoAgendamentoCliente {
                         filled: true,
                         fillColor: Color.fromARGB(255, 238, 238, 238),
                       ),
-                      // Não precisa de validador, pois já está pré-validado
                     ),
-                    // --- FIM DA ALTERAÇÃO (Autocomplete removido) ---
-
                     const SizedBox(height: 16),
-
-                    // --- CAMPO 3: Duração ---
                     DropdownButtonFormField<int>(
                       value: duracaoSelecionada,
                       decoration: const InputDecoration(
@@ -373,28 +325,63 @@ class DialogoAgendamentoCliente {
                           if (formKey.currentState!.validate()) {
                             setDialogState(() => isSaving = true);
                             try {
-                              final provider =
-                                  Provider.of<AgendamentoProvider>(
+                              final provider = Provider.of<AgendamentoProvider>(
                                 context,
                                 listen: false,
                               );
 
                               final agendamentoParaSalvar = Agendamento(
-                                id: null, // Novo agendamento
+                                id: null,
                                 idAgenda: idAgenda,
-                                idUsuario: idUsuarioSelecionado, // <-- ID TRAVADO
+                                idUsuario: idUsuarioSelecionado,
                                 dataHora: dataHoraAgendamento,
                                 duracao: duracaoSelecionada,
                               );
 
-                              await provider
-                                  .adicionarAgendamento(agendamentoParaSalvar);
+                              await provider.adicionarAgendamento(agendamentoParaSalvar);
 
-                              if (context.mounted) Navigator.pop(context);
-                            } catch (e) {
-                              _mostrarErro(context, "Erro ao salvar: $e");
-                            } finally {
                               if (context.mounted) {
+                                if (avisoAgendamento != null && avisoAgendamento.trim().isNotEmpty) {
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (ctxAviso) => AlertDialog(
+                                      title: const Row(
+                                        children: [
+                                          Icon(Icons.info_outline, color: Colors.blue),
+                                          SizedBox(width: 8),
+                                          Text('Aviso da Agenda'),
+                                        ],
+                                      ),
+                                      content: Text(
+                                        avisoAgendamento,
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.of(ctxAviso).pop(); 
+                                            Navigator.of(context).pop();  
+                                          },
+                                          child: const Text('Entendido'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                } else {
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Agendamento criado com sucesso!'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              }
+                            } catch (e) {
+                              _mostrarErro(context, e);
+                            } finally {
+                              if (context.mounted && !(avisoAgendamento != null && avisoAgendamento.trim().isNotEmpty)) {
                                 setDialogState(() => isSaving = false);
                               }
                             }
@@ -416,13 +403,24 @@ class DialogoAgendamentoCliente {
     );
   }
 
-  // Helper para mostrar erros
-  static void _mostrarErro(BuildContext context, String mensagem) {
+  // --- ALTERAÇÃO: Atualizado para tratar erro 400 ---
+  static void _mostrarErro(BuildContext context, Object e) {
     if (!context.mounted) return;
+    
+    String mensagemErro = e.toString();
+
+    // Se conter "400", substitui pela mensagem personalizada
+    if (mensagemErro.contains("400")) {
+      mensagemErro = "O horário solicitado ou o usuário possui agendamento no mesmo horário em outra agenda";
+    } else {
+      mensagemErro = mensagemErro.replaceAll("Exception: ", "");
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(mensagem.replaceAll("Exception: ", "")),
+        content: Text(mensagemErro),
         backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
       ),
     );
   }

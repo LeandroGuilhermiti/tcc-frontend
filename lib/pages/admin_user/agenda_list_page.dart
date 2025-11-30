@@ -118,10 +118,7 @@ class _AgendaListPageState extends State<AgendaListPage> {
                   Navigator.of(ctx).pop();
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => HomePageAdmin(
-                        idAgenda: agenda.id!,
-                        duracaoAgenda: agenda.duracao,
-                      ),
+                      builder: (context) => HomePageAdmin(agenda: agenda),
                     ),
                   );
                 },

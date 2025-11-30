@@ -261,7 +261,7 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
                 controller: _descricaoController,
                 decoration: const InputDecoration(
                   labelText: 'Motivo do Bloqueio',
-                  hintText: 'Ex: Férias, Médico, Ausência',
+                  hintText: 'Ex: Feriado Municipal, Ausência',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) =>

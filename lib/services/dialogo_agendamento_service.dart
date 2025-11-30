@@ -9,65 +9,40 @@ import '../providers/user_provider.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 
 class DialogoAgendamentoService {
-  /// --- ALTERAÇÃO ---
-  /// Lógica principal e partilhada para o formulário de diálogo.
-  /// Agora aceita um [agendamentoExistente] opcional.
+  
   static void _mostrarDialogo({
     required BuildContext context,
     required String titulo,
     required DateTime dataInicial,
     required String idAgenda,
-    required int duracaoDaAgenda, // Ex: 15, 20, ou 30 (para travar o seletor)
-    Agendamento? agendamentoExistente, // <-- ADICIONADO
+    required int duracaoDaAgenda,
+    Agendamento? agendamentoExistente,
+    String? avisoAgendamento,
   }) {
     final formKey = GlobalKey<FormState>();
 
-    // --- ALTERAÇÃO --- Define se estamos editando ou criando
     final bool isEditing = agendamentoExistente != null;
     final String tituloFinal = isEditing ? 'Editar Agendamento' : titulo;
 
-    // --- ALTERAÇÃO --- Pré-preenche os dados se estiver editando
-    DateTime dataHoraAgendamento =
-        agendamentoExistente?.dataHora ?? dataInicial;
+    DateTime dataHoraAgendamento = agendamentoExistente?.dataHora ?? dataInicial;
     String? idUsuarioSelecionado = agendamentoExistente?.idUsuario;
-    
-    // --- NOVO CAMPO DE DURAÇÃO ---
-    // Pré-preenche com a duração existente ou define o padrão como 1
     int duracaoSelecionada = agendamentoExistente?.duracao ?? 1;
-    // --- FIM DA ALTERAÇÃO ---
 
-    // ALERTA: Se a lista estiver vazia, o Autocomplete não funciona
-    final usuariosDisponiveis = Provider.of<UsuarioProvider>(
-      context,
-      listen: false,
-    ).usuarios;
+    final usuariosDisponiveis = Provider.of<UsuarioProvider>(context, listen: false).usuarios;
     if (usuariosDisponiveis.isEmpty) {
-      debugPrint(
-        "ALERTA: O DialogoAgendamentoService foi aberto, mas a lista 'usuariosDisponiveis' está vazia.",
-      );
+      debugPrint("ALERTA: O DialogoAgendamentoService foi aberto, mas a lista 'usuariosDisponiveis' está vazia.");
     }
 
-    // --- ALTERAÇÃO --- Busca o nome do paciente para pré-preencher o campo
     String nomeInicialPaciente = '';
     if (isEditing && idUsuarioSelecionado != null) {
       try {
-        final usuario = usuariosDisponiveis.firstWhere(
-          (u) => u.id == idUsuarioSelecionado,
-        );
-        // Assumindo que seu UserModel tem 'primeiroNome' e 'sobrenome'
-        nomeInicialPaciente =
-            '${usuario.primeiroNome} ${usuario.sobrenome ?? ''}';
+        final usuario = usuariosDisponiveis.firstWhere((u) => u.id == idUsuarioSelecionado);
+        nomeInicialPaciente = '${usuario.primeiroNome} ${usuario.sobrenome ?? ''}';
       } catch (e) {
-        debugPrint(
-          "Não foi possível encontrar o nome do usuário para pré-preencher: $e",
-        );
-        // Se não encontrar (ex: usuário deletado), limpa o ID
+        debugPrint("Não foi possível encontrar o nome do usuário para pré-preencher: $e");
         idUsuarioSelecionado = null; 
       }
     }
-
-    // --- CORREÇÃO: Controller externo REMOVIDO ---
-    // final fieldController = TextEditingController(text: nomeInicialPaciente);
 
     showDialog(
       context: context,
@@ -76,7 +51,7 @@ class DialogoAgendamentoService {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text(tituloFinal), // <-- ALTERAÇÃO
+              title: Text(tituloFinal),
               content: Form(
                 key: formKey,
                 child: Column(
@@ -95,8 +70,7 @@ class DialogoAgendamentoService {
                             TimeOfDay? novaHora;
                             DateTime? novaData = dataHoraAgendamento;
 
-                            final TimeOfDay initialTime =
-                                TimeOfDay.fromDateTime(dataHoraAgendamento);
+                            final TimeOfDay initialTime = TimeOfDay.fromDateTime(dataHoraAgendamento);
 
                             if (context.mounted) {
                               novaHora = await showTimePicker(
@@ -106,18 +80,15 @@ class DialogoAgendamentoService {
                             }
 
                             if (novaHora != null) {
-                              // --- TRAVA DE MINUTOS ---
                               int duracao = duracaoDaAgenda;
-                              if (duracao <= 0) duracao = 30; // Segurança
+                              if (duracao <= 0) duracao = 30;
 
-                              int novoMinutoCorrigido =
-                                  (novaHora.minute / duracao).floor() * duracao;
+                              int novoMinutoCorrigido = (novaHora.minute / duracao).floor() * duracao;
 
                               final horaCorrigida = TimeOfDay(
                                 hour: novaHora.hour,
                                 minute: novoMinutoCorrigido,
                               );
-                              // --- FIM DA TRAVA ---
 
                               setDialogState(() {
                                 dataHoraAgendamento = DateTime(
@@ -131,55 +102,42 @@ class DialogoAgendamentoService {
                             }
                           },
                           child: Text(
-                            DateFormat(
-                              'dd/MM/yyyy HH:mm',
-                            ).format(dataHoraAgendamento),
+                            DateFormat('dd/MM/yyyy HH:mm').format(dataHoraAgendamento),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // ... (Autocomplete e outros campos) ...
                     Autocomplete<UserModel>(
-                      // --- CORREÇÃO: Usando initialValue para pré-preencher ---
                       initialValue: TextEditingValue(text: nomeInicialPaciente),
-                      displayStringForOption: (UserModel option) =>
-                          '${option.primeiroNome} ${option.sobrenome ?? ''}',
+                      displayStringForOption: (UserModel option) => '${option.primeiroNome} ${option.sobrenome ?? ''}',
                       optionsBuilder: (TextEditingValue textEditingValue) {
                         if (textEditingValue.text == '') {
                           return const Iterable<UserModel>.empty();
                         }
                         final query = textEditingValue.text.toLowerCase();
                         return usuariosDisponiveis.where((UserModel option) {
-                          final nomeCompleto =
-                              '${option.primeiroNome} ${option.sobrenome ?? ''}'
-                                  .toLowerCase();
+                          final nomeCompleto = '${option.primeiroNome} ${option.sobrenome ?? ''}'.toLowerCase();
                           return nomeCompleto.contains(query);
                         });
                       },
                       onSelected: (UserModel selection) {
                         idUsuarioSelecionado = selection.id;
-                        debugPrint(
-                          'Usuário selecionado ID: $idUsuarioSelecionado',
-                        );
                       },
-                      // --- CORREÇÃO: FIELD VIEW BUILDER ---
                       fieldViewBuilder: (
                         BuildContext context,
-                        // Este é o controller INTERNO do Autocomplete
                         TextEditingController internalController, 
                         FocusNode fieldFocusNode,
                         VoidCallback onFieldSubmitted,
                       ) {
-                        // Ouve o controller INTERNO para limpar o ID
-                        internalController.addListener(() { // <-- CORRIGIDO
-                          if (internalController.text.isEmpty) { // <-- CORRIGIDO
+                        internalController.addListener(() {
+                          if (internalController.text.isEmpty) {
                             idUsuarioSelecionado = null;
                           }
                         });
 
                         return TextFormField(
-                          controller: internalController, // <-- CORRIGIDO
+                          controller: internalController,
                           focusNode: fieldFocusNode,
                           decoration: const InputDecoration(
                             labelText: 'Nome do Paciente',
@@ -189,7 +147,6 @@ class DialogoAgendamentoService {
                             if (value == null || value.trim().isEmpty) {
                               return 'Informe o nome do paciente.';
                             }
-                            // Validação se o ID foi selecionado
                             if (idUsuarioSelecionado == null) {
                               return 'Selecione um paciente válido da lista.';
                             }
@@ -197,7 +154,6 @@ class DialogoAgendamentoService {
                           },
                         );
                       },
-                      // --- FIM DA CORREÇÃO ---
                       optionsViewBuilder: (context, onSelected, options) {
                         return Align(
                           alignment: Alignment.topLeft,
@@ -209,17 +165,13 @@ class DialogoAgendamentoService {
                                 padding: EdgeInsets.zero,
                                 itemCount: options.length,
                                 itemBuilder: (BuildContext context, int index) {
-                                  final UserModel option = options.elementAt(
-                                    index,
-                                  );
+                                  final UserModel option = options.elementAt(index);
                                   return InkWell(
                                     onTap: () {
                                       onSelected(option);
                                     },
                                     child: ListTile(
-                                      title: Text(
-                                        '${option.primeiroNome} ${option.sobrenome ?? ''}',
-                                      ),
+                                      title: Text('${option.primeiroNome} ${option.sobrenome ?? ''}'),
                                     ),
                                   );
                                 },
@@ -230,7 +182,6 @@ class DialogoAgendamentoService {
                       },
                     ),
 
-                    // --- NOVO WIDGET (DROPDOWN DE DURAÇÃO) ---
                     const SizedBox(height: 16),
                     DropdownButtonFormField<int>(
                       value: duracaoSelecionada,
@@ -239,7 +190,6 @@ class DialogoAgendamentoService {
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.layers_outlined),
                       ),
-                      // Gera os itens de 1 a 4
                       items: [1, 2, 3, 4].map((int valor) {
                         return DropdownMenuItem<int>(
                           value: valor,
@@ -250,7 +200,6 @@ class DialogoAgendamentoService {
                       }).toList(),
                       onChanged: (int? novoValor) {
                         if (novoValor != null) {
-                          // Atualiza o estado do diálogo
                           setDialogState(() {
                             duracaoSelecionada = novoValor;
                           });
@@ -258,8 +207,6 @@ class DialogoAgendamentoService {
                       },
                       validator: (value) => value == null ? 'Selecione a duração' : null,
                     ),
-                    // --- FIM DO NOVO WIDGET ---
-
                   ],
                 ),
               ),
@@ -276,46 +223,71 @@ class DialogoAgendamentoService {
                             setDialogState(() => isSaving = true);
 
                             try {
-                              // --- ALTERAÇÃO NA LÓGICA DE SALVAR ---
-                              final provider = Provider.of<AgendamentoProvider>(
-                                context,
-                                listen: false,
-                              );
+                              final provider = Provider.of<AgendamentoProvider>(context, listen: false);
 
-                              // Criamos um único objeto Agendamento com os dados finais
                               final agendamentoParaSalvar = Agendamento(
-                                id: isEditing ? agendamentoExistente!.id : null, // Mantém o ID
+                                id: isEditing ? agendamentoExistente!.id : null,
                                 idAgenda: idAgenda,
                                 idUsuario: idUsuarioSelecionado!,
                                 dataHora: dataHoraAgendamento,
-                                duracao: duracaoSelecionada, // <-- USA O VALOR DO DROPDOWN
+                                duracao: duracaoSelecionada,
                               );
                               
                               if (isEditing) {
-                                // Chama o provider de ATUALIZAÇÃO
                                 await provider.atualizarAgendamento(agendamentoParaSalvar);
                               } else {
-                                // Chama o provider de ADIÇÃO
                                 await provider.adicionarAgendamento(agendamentoParaSalvar);
                               }
-                              // --- FIM DA ALTERAÇÃO ---
 
-                              if (context.mounted) Navigator.pop(context);
-                            } catch (e) {
-                              // ... (SnackBar de erro) ...
-                              final snackBar = SnackBar(
-                                content: Text(
-                                  "Erro ao salvar: ${e.toString().replaceFirst("Exception: ", "")}",
-                                ),
-                                backgroundColor: Colors.red,
-                              );
                               if (context.mounted) {
-                                ScaffoldMessenger.of(
-                                  context,
-                                ).showSnackBar(snackBar);
+                                if (!isEditing && avisoAgendamento != null && avisoAgendamento.trim().isNotEmpty) {
+                                   showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (ctxAviso) => AlertDialog(
+                                      title: const Row(
+                                        children: [
+                                          Icon(Icons.info_outline, color: Colors.blue),
+                                          SizedBox(width: 8),
+                                          Text('Aviso da Agenda'),
+                                        ],
+                                      ),
+                                      content: Text(
+                                        avisoAgendamento,
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.of(ctxAviso).pop(); 
+                                            Navigator.of(context).pop();  
+                                          },
+                                          child: const Text('Entendido'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                } else {
+                                  Navigator.pop(context);
+                                  if (!isEditing) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Agendamento criado com sucesso!'),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  } else {
+                                     ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Atualizado com sucesso!')),
+                                    );
+                                  }
+                                }
                               }
+                            } catch (e) {
+                              // --- ALTERAÇÃO AQUI: Chama a função de tratamento de erro ---
+                              _tratarErro(context, e);
                             } finally {
-                              if (context.mounted) {
+                              if (context.mounted && !(!isEditing && avisoAgendamento != null && avisoAgendamento.trim().isNotEmpty)) {
                                 setDialogState(() => isSaving = false);
                               }
                             }
@@ -337,18 +309,38 @@ class DialogoAgendamentoService {
     );
   }
 
-  /// Mostra o diálogo de Edição/Exclusão.
+  // --- NOVA FUNÇÃO PARA TRATAR O ERRO 400 ---
+  static void _tratarErro(BuildContext context, Object e) {
+    if (!context.mounted) return;
+
+    String mensagemErro = e.toString();
+    
+    // Verifica se é o erro 400 (conflito de horário)
+    if (mensagemErro.contains("400")) {
+      mensagemErro = "O horário solicitado já está ocupado pelo agendamento de outra pessoa ou o usuário atual possui agendamentos no mesmo horário, mas em outra agenda";
+    } else {
+      // Limpa "Exception: " caso seja outro erro
+      mensagemErro = mensagemErro.replaceAll("Exception: ", "");
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagemErro),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5), // Mais tempo para ler
+      ),
+    );
+  }
+
   static void mostrarDialogoEdicaoAgendamento({
     required BuildContext context,
     required Appointment appointment,
-    required int duracaoDaAgenda, // <-- ADICIONADO
+    required int duracaoDaAgenda,
+    String? avisoAgendamento,
   }) {
-    // Pega o objeto de dados de 'resourceIds'.
     final dynamic appointmentData = appointment.resourceIds?.first;
 
-    // Verifica se é um Agendamento (e não um Bloqueio)
     if (appointmentData is! Agendamento) {
-      // ... (lógica de bloqueio - sem alteração) ...
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -365,7 +357,6 @@ class DialogoAgendamentoService {
       return;
     }
 
-    // Se for um Agendamento, continua com a lógica
     final Agendamento agendamento = appointmentData;
 
     showDialog(
@@ -382,78 +373,60 @@ class DialogoAgendamentoService {
               Text(
                 'Horário: ${DateFormat('dd/MM/yyyy HH:mm').format(appointment.startTime)}',
               ),
-              // --- NOVO CAMPO DE DETALHE ---
               Text(
                 'Duração: ${agendamento.duracao} período${agendamento.duracao > 1 ? 's' : ''}',
               ),
-              // --- FIM DO NOVO CAMPO ---
             ],
           ),
-          // --- ALTERAÇÃO NOS BOTÕES ---
           actions: [
-            // 1. Botão Excluir
             TextButton(
               onPressed: () async {
-                // A lógica de exclusão agora usa o objeto 'agendamento' completo
                 try {
                   await Provider.of<AgendamentoProvider>(
                     context,
                     listen: false,
-                  ).removerAgendamento(agendamento); // Passa o objeto
+                  ).removerAgendamento(agendamento);
                   if (context.mounted) Navigator.pop(context);
                 } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          "Erro ao excluir: ${e.toString().replaceFirst("Exception: ", "")}",
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
+                   // --- ALTERAÇÃO AQUI: Chama a função de tratamento de erro ---
+                   if (context.mounted) _tratarErro(context, e);
                 }
               },
               child: const Text('Excluir', style: TextStyle(color: Colors.red)),
             ),
 
-            // 2. NOVO BOTÃO EDITAR (O seu pedido!)
             TextButton(
               onPressed: () {
-                // Fecha o diálogo de detalhes primeiro
                 Navigator.pop(context);
-
-                // Abre o diálogo de formulário em MODO DE EDIÇÃO
                 _mostrarDialogo(
                   context: context,
-                  titulo: 'Editar Agendamento', // Este título será usado
-                  dataInicial: agendamento.dataHora, // Passa a data atual
+                  titulo: 'Editar Agendamento',
+                  dataInicial: agendamento.dataHora,
                   idAgenda: agendamento.idAgenda,
-                  duracaoDaAgenda: duracaoDaAgenda, // Passa a duração
-                  agendamentoExistente: agendamento, // <-- PASSA O OBJETO
+                  duracaoDaAgenda: duracaoDaAgenda,
+                  agendamentoExistente: agendamento,
+                  avisoAgendamento: avisoAgendamento,
                 );
               },
-              child: const Text('Editar'), // O botão que você queria
+              child: const Text('Editar'),
             ),
 
-            // 3. Botão Fechar
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Fechar'),
             ),
           ],
-          // --- FIM DA ALTERAÇÃO ---
         );
       },
     );
   }
 
-  /// Mostra um diálogo completo para criar um novo agendamento (usado pela visão de semana).
   static void mostrarDialogoNovoAgendamento({
     required BuildContext context,
     required DateTime dataInicial,
     required String idAgenda,
     required int duracaoDaAgenda,
+    String? avisoAgendamento,
   }) {
     _mostrarDialogo(
       context: context,
@@ -461,21 +434,21 @@ class DialogoAgendamentoService {
       dataInicial: dataInicial,
       idAgenda: idAgenda,
       duracaoDaAgenda: duracaoDaAgenda,
-      agendamentoExistente: null, // <-- ALTERAÇÃO: Confirma que é nulo
+      agendamentoExistente: null,
+      avisoAgendamento: avisoAgendamento,
     );
   }
 
-  /// Mostra um diálogo para criar agendamento a partir da visão de mês.
   static void mostrarDialogoApenasHora({
     required BuildContext context,
     required DateTime diaSelecionado,
     required String idAgenda,
     required int duracaoDaAgenda,
+    String? avisoAgendamento,
   }) async {
-    // Pega a hora atual, mas "trava" os minutos
     TimeOfDay horaAtual = TimeOfDay.now();
     int duracao = duracaoDaAgenda;
-    if (duracao <= 0) duracao = 30; // Segurança
+    if (duracao <= 0) duracao = 30; 
     int minutoCorrigido = (horaAtual.minute / duracao).floor() * duracao;
 
     final dataHoraInicial = DateTime(
@@ -492,8 +465,8 @@ class DialogoAgendamentoService {
       dataInicial: dataHoraInicial,
       idAgenda: idAgenda,
       duracaoDaAgenda: duracaoDaAgenda,
-      agendamentoExistente: null, // <-- ALTERAÇÃO: Confirma que é nulo
+      agendamentoExistente: null,
+      avisoAgendamento: avisoAgendamento,
     );
   }
 }
-

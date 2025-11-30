@@ -18,22 +18,24 @@ class HomePageCliente extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(agenda.nome),
+        scrolledUnderElevation: 0, 
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor, 
+        elevation: 0,
       ),
       drawer: const AppDrawerCliente(currentPage: null),
       body: SharedAgendaCalendar(
         agenda: agenda,
 
-        // AÇÃO DE CLIQUE NO AGENDAMENTO (CLIENTE)
         onAppointmentTap: (appointment, ctx) {
           DialogoAgendamentoCliente.mostrarDialogoCliente(
             context: ctx,
             appointment: appointment,
             currentUserId: currentUserId,
             duracaoDaAgenda: agenda.duracao,
+            avisoAgendamento: agenda.avisoAgendamento,
           );
         },
 
-        // AÇÃO DE CLIQUE NO ESPAÇO VAZIO (CLIENTE)
         onSlotTap: (date, ctx) {
            if (date.hour == 0 && date.minute == 0) {
              DialogoAgendamentoCliente.mostrarDialogoApenasHoraCliente(
@@ -41,6 +43,7 @@ class HomePageCliente extends StatelessWidget {
               diaSelecionado: date,
               idAgenda: agenda.id!,
               duracaoDaAgenda: agenda.duracao,
+              avisoAgendamento: agenda.avisoAgendamento,
             );
            } else {
              DialogoAgendamentoCliente.mostrarDialogoNovoAgendamentoCliente(
@@ -48,6 +51,7 @@ class HomePageCliente extends StatelessWidget {
               dataInicial: date,
               idAgenda: agenda.id!,
               duracaoDaAgenda: agenda.duracao,
+              avisoAgendamento: agenda.avisoAgendamento,
             );
            }
         },
