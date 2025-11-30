@@ -143,7 +143,7 @@ class AgendamentoService {
   Future<void> atualizarAgendamento(
       Agendamento agendamento, String token) async {
     // O seu template.yaml usa PATCH /agendamento
-    final Uri uri = Uri.parse('$baseUrl/agendamento');
+    final Uri uri = Uri.parse('$baseUrl/agendamento/editar');
     
     // --- ESTA É A CORREÇÃO ---
     // Em vez de montar um JSON manual, usamos o método .toJson()
