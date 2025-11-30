@@ -213,7 +213,7 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
       'cpf': _cpfFormatter.getUnmaskedText(),
       'cep': _cepFormatter.getUnmaskedText(),
       'telefone': _telefoneFormatter.getUnmaskedText(),
-      'role': _tipoSelecionado == 'admin' ? 1 : 0, // Ajuste para enviar Inteiro
+      'tipo': _tipoSelecionado == 'admin' ? 1 : 0, // Ajuste para enviar Inteiro
       
       'logradouro': _ruaController.text,
       'numero': _numeroController.text,
