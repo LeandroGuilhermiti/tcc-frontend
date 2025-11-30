@@ -156,22 +156,47 @@ Future<void> logout() async {
     final String userId = decodedToken['sub']!;
 
     try {
-      // Pegar detalhes do usuário com backend
-      final Map<String, dynamic> backendUserDetails = await _fetchBackendUserDetails(userId, idToken);
+      // 1. Busca o JSON cru do backend (status 200)
+    final Map<String, dynamic> backendResponse = await _fetchBackendUserDetails(userId, idToken);
 
-      // O backend retorna os detalhes, e nós adicionamos o token que veio do Cognito
-      final Map<String, dynamic> fullUserData = {
-        ...backendUserDetails,
-        'idToken': idToken,
-        'access_token': accessToken,
-        'refresh_token': refreshToken
+    // Variável que vai guardar os dados finais para criar o Model
+    Map<String, dynamic> dadosParaOModel;
+
+    // 2. VERIFICAÇÃO EXPLÍCITA DA RESPOSTA DO BACKEND
+    if (backendResponse.containsKey('id') && backendResponse['id'] != null) {
+      // CENÁRIO A: O usuário JÁ EXISTE no banco.
+      // O backend mandou o ID, então usamos tudo que veio de lá.
+      
+      dadosParaOModel = {
+        ...backendResponse, // Usa o JSON do backend
+        'cadastroPendente': false, // Cadastro está completo
       };
+      
+    } else {
+      // CENÁRIO B: O usuário NÃO EXISTE no banco (JSON sem ID).
+      // Precisamos "fabricar" o objeto para o Flutter não quebrar.
+      // Injetamos o ID do Cognito e avisamos que é pendente.
+      
+      dadosParaOModel = {
+        ...backendResponse, // Pega email/nome que vieram
+        'id': userId, // IMPORTANTE: Usamos o ID do Cognito aqui para preencher o required this.id
+        'cadastroPendente': true, // AVISO: Cadastro incompleto!
+      };
+    }
 
-      // Criando usuário atual
-      _currentUser = UserModel.fromJson(fullUserData);
-      debugPrint(jsonEncode(_currentUser!.toJson()));
+    // 3. Injeta os tokens que sempre são necessários
+    dadosParaOModel.addAll({
+      'idToken': idToken,
+      'access_token': accessToken,
+      'refresh_token': refreshToken,
+    });
 
-      return _currentUser!;
+    // 4. Cria o usuário com o mapa preparado corretamente
+    _currentUser = UserModel.fromJson(dadosParaOModel);
+    
+    debugPrint(jsonEncode(_currentUser!.toJson()));
+
+    return _currentUser!;
 
     } catch (e) {
       debugPrint("ERRO: Falha ao buscar detalhes do usuário no backend. $e");

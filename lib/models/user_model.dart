@@ -14,6 +14,8 @@ class UserModel {
   final String? telefone;
   final UserRole role;
 
+  final bool cadastroPendente; 
+
   UserModel({
     required this.id,
     this.idToken,
@@ -26,6 +28,7 @@ class UserModel {
     this.cep,
     this.telefone,
     required this.role,
+    this.cadastroPendente = false,
   });
 
   /// Construtor
@@ -42,6 +45,9 @@ class UserModel {
       sobrenome: json['familyName'] ?? json['sobrenome'],
       
       email: json['email'],
+
+      // Se a flag não vier no JSON, assume false (usuário comum)
+      cadastroPendente: json['cadastroPendente'] ?? false,
 
       // --- LÓGICA DE ROLE SIMPLIFICADA ---
       // Se não for '1' (admin), assume-se que é 'cliente'.
@@ -73,6 +79,7 @@ class UserModel {
       'cep': cep,
       'telefone': telefone,
       'tipo': role == UserRole.admin ? 1 : 0,
+      'cadastroPendente': cadastroPendente,
     };
   }
 }
