@@ -64,13 +64,38 @@ class UsuarioService {
     }
   }
 
-  /// Cadastra um novo usuário no backend.
+  /// Cadastra um novo usuário no backend, tanto no cognito quanto no banco de dados.
   Future<UserModel> cadastrarUsuario(
     Map<String, dynamic> dadosNovoUsuario,
     String token,
   ) async {
     // ... (código existente sem alterações) ...
     final Uri url = Uri.parse('$_baseUrl/usuario/criar');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: _getHeaders(token),
+        body: jsonEncode(dadosNovoUsuario),
+      );
+
+      if (response.statusCode == 200) {
+        return UserModel.fromJson(jsonDecode(response.body));
+      } else {
+        throw Exception('Falha ao cadastrar usuário: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Erro de rede ao cadastrar usuário: $e');
+    }
+  }
+
+  /// Cadastra um novo usuário no backend, apenas no banco de dados.
+  Future<UserModel> cadastrarUsuarioBancoDados(
+    Map<String, dynamic> dadosNovoUsuario,
+    String token,
+  ) async {
+    // ... (código existente sem alterações) ...
+    final Uri url = Uri.parse('$_baseUrl/usuario');
 
     try {
       final response = await http.post(
