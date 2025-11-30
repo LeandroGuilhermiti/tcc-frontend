@@ -79,7 +79,7 @@ class UsuarioService {
         body: jsonEncode(dadosNovoUsuario),
       );
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 200) {
         return UserModel.fromJson(jsonDecode(response.body));
       } else {
         throw Exception('Falha ao cadastrar usuário: ${response.body}');
