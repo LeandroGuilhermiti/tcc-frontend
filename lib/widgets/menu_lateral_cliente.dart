@@ -110,7 +110,7 @@ class AppDrawerCliente extends StatelessWidget {
               auth.logout();
             },
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
         ],
       ),
     );

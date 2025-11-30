@@ -52,14 +52,14 @@ class AgendaProvider with ChangeNotifier {
     return await _service.buscarPeriodosPorAgenda(agendaId, token);
   }
 
-  // --- MÉTODOS ANTIGO
-  Future<void> adicionarAgendaCompleta(Agenda agenda, List<Periodo> periodos) async {
+  // --- ALTERADO: Agora retorna Future<Agenda> ---
+  Future<Agenda> adicionarAgendaCompleta(Agenda agenda, List<Periodo> periodos) async {
     final token = _auth?.usuario?.idToken;
     if (token == null) throw Exception("Login necessário.");
-    await _service.criarAgendaCompleta(agenda, periodos, token);
+    // Supomos que o service retorne a Agenda criada.
+    return await _service.criarAgendaCompleta(agenda, periodos, token);
   }
 
-  // --- NOVO MÉTODO INTELIGENTE ---
   Future<void> salvarEdicaoInteligente({
     required Agenda agenda,
     required List<Map<String, dynamic>> adicionar,
@@ -69,9 +69,8 @@ class AgendaProvider with ChangeNotifier {
     final token = _auth?.usuario?.idToken;
     if (token == null) throw Exception("Autenticação necessária.");
 
-    // Prepara os dados da agenda (apenas os campos editáveis)
     final dadosAgenda = {
-      "id": int.parse(agenda.id!), // Garante que o ID vai como número
+      "id": int.parse(agenda.id!), 
       "nome": agenda.nome,
       "descricao": agenda.descricao,
       "duracao": agenda.duracao,
@@ -87,7 +86,6 @@ class AgendaProvider with ChangeNotifier {
       token: token,
     );
     
-    // Atualiza a lista local após salvar
     await buscarTodasAgendas();
   }
 }

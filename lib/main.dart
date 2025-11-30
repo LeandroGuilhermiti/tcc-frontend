@@ -22,6 +22,8 @@ import 'pages/admin_user/agenda_list_page.dart';
 import 'pages/admin_user/agenda_create_page.dart';
 import 'pages/admin_user/register_page_admin.dart';
 import 'pages/admin_user/list_user_page.dart';
+import 'pages/admin_user/bloqueio_create_page.dart'; 
+import 'pages/admin_user/list_bloqueios_page.dart';
 
 import 'pages/client_user/selecao_agenda_page.dart';
 import 'pages/client_user/editar_dados_cliente.dart';
@@ -120,6 +122,8 @@ class MyApp extends StatelessWidget {
           '/selecao_cliente': (_) => const SelecaoAgendaPage(),
           '/editar_dados_cliente': (_) => const EditarDadosCliente(),
           '/pacientes': (_) => const PacientesListPage(),
+          '/bloqueios/create': (_) => const BloqueioCreatePage(), 
+          '/bloqueios/list': (_) => const BloqueioListPage(),
         },
       ),
     );

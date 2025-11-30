@@ -66,7 +66,7 @@ class AgendaService {
   }
 
   // --- MÉTODO 1: CRIAR NOVA AGENDA (Mantido para a AgendaCreatePage) ---
-  Future<void> criarAgendaCompleta(
+  Future<Agenda> criarAgendaCompleta(
     Agenda agenda,
     List<Periodo> periodos,
     String token,
@@ -80,7 +80,13 @@ class AgendaService {
       }),
     );
 
-    if (response.statusCode != 201 && response.statusCode != 200) {
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      // SUCESSO: Decodifica o JSON retornado pelo backend.
+      // Assumimos aqui que o backend retorna o objeto da agenda criado (com o ID).
+      final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+      
+      return Agenda.fromJson(jsonResponse);
+    } else {
       throw Exception('Erro ao criar agenda completa: ${response.body}');
     }
   }

@@ -102,6 +102,20 @@ class _AgendaListPageState extends State<AgendaListPage> {
                 },
               ),
 
+              // Opção 3: Editar Bloqueios
+              ListTile(
+                        leading: const Icon(Icons.block, color: Colors.orange),
+                        title: const Text('Editar Bloqueios'),
+                        onTap: () {
+                          Navigator.pop(ctx); // Fecha o menu
+                          // Vai para a lista de bloqueios passando a agenda
+                          Navigator.of(context).pushNamed(
+                            '/bloqueios/list',
+                            arguments: agenda, 
+                          );
+                        },
+                      ),
+
               // Opção de Cancelar (para fechar)
               ListTile(
                 leading: const Icon(Icons.close),
