@@ -52,11 +52,9 @@ class AgendaProvider with ChangeNotifier {
     return await _service.buscarPeriodosPorAgenda(agendaId, token);
   }
 
-  // --- ALTERADO: Agora retorna Future<Agenda> ---
   Future<Agenda> adicionarAgendaCompleta(Agenda agenda, List<Periodo> periodos) async {
     final token = _auth?.usuario?.idToken;
     if (token == null) throw Exception("Login necessário.");
-    // Supomos que o service retorne a Agenda criada.
     return await _service.criarAgendaCompleta(agenda, periodos, token);
   }
 
@@ -75,7 +73,6 @@ class AgendaProvider with ChangeNotifier {
       "descricao": agenda.descricao,
       "duracao": agenda.duracao,
       "avisoAgendamento": agenda.avisoAgendamento,
-      "principal": agenda.principal,
     };
 
     await _service.salvarEdicaoAvancada(
@@ -87,5 +84,25 @@ class AgendaProvider with ChangeNotifier {
     );
     
     await buscarTodasAgendas();
+  }
+
+  Future<void> excluirAgenda(String id) async {
+    final token = _auth?.usuario?.idToken;
+    if (token == null) throw Exception("Autenticação necessária.");
+
+    try {
+      _isLoading = true;
+      notifyListeners();
+      
+      await _service.excluirAgenda(id, token);
+      
+      // Após excluir, atualiza a lista
+      await buscarTodasAgendas();
+    } catch (e) {
+      _erro = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      rethrow; // Relança o erro para a UI tratar (exibir SnackBar)
+    }
   }
 }

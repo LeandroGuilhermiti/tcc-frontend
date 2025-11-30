@@ -21,7 +21,8 @@ class AgendaService {
   };
 
   Future<List<Agenda>> buscarTodasAgendas(String token) async {
-    final uri = Uri.parse('$_baseUrl/agenda');
+    // Mantivemos o limit=100 da correção anterior
+    final uri = Uri.parse('$_baseUrl/agenda?limit=100');
     final response = await http.get(uri, headers: _getHeaders(token));
 
     if (response.statusCode == 200) {
@@ -65,7 +66,6 @@ class AgendaService {
     }
   }
 
-  // --- MÉTODO 1: CRIAR NOVA AGENDA (Mantido para a AgendaCreatePage) ---
   Future<Agenda> criarAgendaCompleta(
     Agenda agenda,
     List<Periodo> periodos,
@@ -81,17 +81,13 @@ class AgendaService {
     );
 
     if (response.statusCode == 201 || response.statusCode == 200) {
-      // SUCESSO: Decodifica o JSON retornado pelo backend.
-      // Assumimos aqui que o backend retorna o objeto da agenda criado (com o ID).
       final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-      
       return Agenda.fromJson(jsonResponse);
     } else {
       throw Exception('Erro ao criar agenda completa: ${response.body}');
     }
   }
 
-  // --- MÉTODO 2: EDITAR AGENDA (Novo Endpoint Inteligente) ---
   Future<void> salvarEdicaoAvancada({
     required Map<String, dynamic> dadosAgenda,
     required List<Map<String, dynamic>> adicionar,
@@ -115,7 +111,6 @@ class AgendaService {
     );
 
     final response = await http.post(
-      // Pode ser POST ou PATCH dependendo da API
       uri,
       headers: _getHeaders(token),
       body: jsonEncode(body),
@@ -123,6 +118,18 @@ class AgendaService {
 
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('Erro ao editar agenda: ${response.body}');
+    }
+  }
+
+  // EXCLUIR AGENDA 
+  Future<void> excluirAgenda(String id, String token) async {
+    final uri = Uri.parse('$_baseUrl/agenda/$id');
+    
+    final response = await http.delete(uri, headers: _getHeaders(token));
+
+    // Aceita 200 (OK) ou 204 (No Content) como sucesso
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Erro ao excluir agenda: ${response.body}');
     }
   }
 }

@@ -3,9 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/agenda_model.dart';
 import '../../models/periodo_model.dart';
 import '../../providers/agenda_provider.dart';
-import 'dart:convert';
 
-// Classe auxiliar para gerir os intervalos de tempo no estado da página.
 class TimeRange {
   TimeOfDay inicio;
   TimeOfDay fim;
@@ -85,7 +83,7 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
     return !hasError;
   }
 
-  Future<void> _showConfirmDialog() async {
+  Future<void> _handleSave() async {
     final isFormValid = _formKey.currentState?.validate() ?? false;
     final isAnyDaySelected = diasSelecionados.values.any((selecionado) => selecionado);
     final areHorariosValid = _validateTodosOsHorarios();
@@ -103,39 +101,10 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
       return;
     }
 
-    showDialog<void>(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Definir como Agenda Principal'),
-          content: const Text('Deseja que esta seja a sua agenda principal?'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancelar'),
-              onPressed: () => Navigator.of(dialogContext).pop(),
-            ),
-            TextButton(
-              child: const Text('Não'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                _executarSalvamento(false);
-              },
-            ),
-            ElevatedButton(
-              child: const Text('Sim'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                _executarSalvamento(true);
-              },
-            ),
-          ],
-        );
-      },
-    );
+    await _executarSalvamento();
   }
 
-  // --- Lógica de salvamento ATUALIZADA para redirecionamento ---
-  Future<void> _executarSalvamento(bool definirComoPrincipal) async {
+  Future<void> _executarSalvamento() async {
     setState(() {
       _isSaving = true;
     });
@@ -145,7 +114,6 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
       descricao: _describeController.text.trim(),
       duracao: int.parse(duracaoConsulta!.replaceAll(' min', '')),
       avisoAgendamento: _avisoController.text.trim(),
-      principal: definirComoPrincipal,
     );
 
     final List<Periodo> periodosParaSalvar = [];
@@ -169,12 +137,9 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
     try {
       final agendaProvider = Provider.of<AgendaProvider>(context, listen: false);
       
-      // Esperamos que o provider retorne a Agenda CRIADA (com ID)
-      // Se seu service retornar void, precisará ajustar o service para retornar o objeto
       final Agenda agendaCriada = await agendaProvider.adicionarAgendaCompleta(agenda, periodosParaSalvar);
 
       if (mounted) {
-        // --- NOVO DIALOGO: Pergunta se quer criar bloqueios ---
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -186,15 +151,14 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(ctx).pop(); // Fecha Dialog
-                  Navigator.of(context).pop(); // Fecha Tela Criação (volta pra lista)
+                  Navigator.of(ctx).pop();
+                  Navigator.of(context).pop();
                 },
                 child: const Text('Não, concluir'),
               ),
               FilledButton(
                 onPressed: () {
-                  Navigator.of(ctx).pop(); // Fecha Dialog
-                  // Redireciona para a tela de bloqueios, passando a agenda recém-criada
+                  Navigator.of(ctx).pop();
                   Navigator.of(context).pushReplacementNamed(
                     '/bloqueios/create',
                     arguments: agendaCriada, 
@@ -211,12 +175,9 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erro ao salvar agenda: ${e.toString()}')),
         );
-        // Se der erro, só tiramos o loading
         setState(() => _isSaving = false); 
       }
     }
-    // Nota: Removi o `finally { _isSaving = false }` daqui porque se for sucesso, 
-    // navegamos para outra tela ou mostramos dialog, e não queremos rebuildar esta tela inutilmente
   }
 
   void _adicionarPeriodo(String dia) {
@@ -370,7 +331,7 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
               const SizedBox(height: 30),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), textStyle: const TextStyle(fontSize: 18)),
-                onPressed: _isSaving ? null : _showConfirmDialog,
+                onPressed: _isSaving ? null : _handleSave,
                 child: _isSaving
                     ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
                     : const Text('Salvar Agenda'),

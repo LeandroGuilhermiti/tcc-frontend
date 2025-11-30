@@ -15,12 +15,14 @@ class SelecaoAgendaPage extends StatefulWidget {
 
 class _SelecaoAgendaPageState extends State<SelecaoAgendaPage> {
   final List<Color> _cardColors = [
-    NnkColors.azulProfundo,
-    NnkColors.verde,
-    NnkColors.dourado.withOpacity(0.9),
-    NnkColors.marromEscuro.withOpacity(0.8),
-    NnkColors.azulProfundo.withOpacity(0.7),
-    NnkColors.verde.withOpacity(0.7),
+    Colors.pink.shade300,
+    Colors.purple.shade300,
+    Colors.orange.shade300,
+    Colors.teal.shade300,
+    Colors.blue.shade300,
+    Colors.red.shade300,
+    Colors.indigo.shade300,
+    Colors.green.shade300,
   ];
 
   @override
@@ -159,17 +161,6 @@ class _AgendaCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (agenda.principal)
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: Chip(
-                    label: const Text('Principal'),
-                    labelStyle: const TextStyle(fontSize: 10),
-                    padding: EdgeInsets.zero,
-                    backgroundColor: Colors.white.withOpacity(0.8),
-                  ),
-                ),
             ],
           ),
         ),

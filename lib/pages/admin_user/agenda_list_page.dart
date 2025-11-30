@@ -45,6 +45,52 @@ class _AgendaListPageState extends State<AgendaListPage> {
     ).buscarTodasAgendas();
   }
 
+  Future<void> _confirmarExclusao(BuildContext context, Agenda agenda) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir Agenda'),
+        content: Text('Tem a certeza que deseja excluir a agenda "${agenda.nome}"?\nEsta ação não pode ser desfeita.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        await Provider.of<AgendaProvider>(context, listen: false)
+            .excluirAgenda(agenda.id!);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Agenda excluída com sucesso!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao excluir: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _mostrarOpcoes(BuildContext context, Agenda agenda) async {
     await showModalBottomSheet(
       context: context,
@@ -53,7 +99,6 @@ class _AgendaListPageState extends State<AgendaListPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Título do menu
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Text(
@@ -66,57 +111,66 @@ class _AgendaListPageState extends State<AgendaListPage> {
               ),
               const Divider(height: 1),
 
-              // Opção 1: Ver Calendário
               ListTile(
                 leading: const Icon(Icons.calendar_month),
                 title: const Text('Ver Calendário'),
                 onTap: () {
-                  // 1. Fecha o menu
                   Navigator.of(ctx).pop();
-
-                  // 2. Navega para a HomePageAdmin, passando os dados!
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => HomePageAdmin(
-                        idAgenda: agenda.id!, // Passa o ID
-                        duracaoAgenda: agenda.duracao, // Passa a Duração
+                        idAgenda: agenda.id!,
+                        duracaoAgenda: agenda.duracao,
                       ),
                     ),
                   );
                 },
               ),
 
-              // Opção 2: Editar Agenda
               ListTile(
                 leading: const Icon(Icons.edit),
                 title: const Text('Editar Agenda'),
-                onTap: () {
-                  // 1. Fecha o menu
+                onTap: () async {
                   Navigator.of(ctx).pop();
-                  // 2. Navega para a AgendaEditPage 
-                  Navigator.of(context).push(
+                  await Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => AgendaEditPage(agenda: agenda),
                     ),
                   );
+                  _fetchAgendas();
                 },
               ),
 
-              // Opção 3: Editar Bloqueios
               ListTile(
-                        leading: const Icon(Icons.block, color: Colors.orange),
-                        title: const Text('Editar Bloqueios'),
-                        onTap: () {
-                          Navigator.pop(ctx); // Fecha o menu
-                          // Vai para a lista de bloqueios passando a agenda
-                          Navigator.of(context).pushNamed(
-                            '/bloqueios/list',
-                            arguments: agenda, 
-                          );
-                        },
-                      ),
+                leading: const Icon(Icons.block, color: Colors.orange),
+                title: const Text('Editar Bloqueios'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.of(context).pushNamed(
+                    '/bloqueios/list',
+                    arguments: agenda, 
+                  );
+                },
+              ),
+              
+              const Divider(),
 
-              // Opção de Cancelar (para fechar)
+              // --- NOVA OPÇÃO DE EXCLUIR ---
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text(
+                  'Excluir Agenda',
+                  style: TextStyle(color: Colors.red),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx); // Fecha o menu primeiro
+                  // Chama a confirmação após fechar o menu
+                  Future.delayed(const Duration(milliseconds: 200), () {
+                     if (context.mounted) _confirmarExclusao(context, agenda);
+                  });
+                },
+              ),
+
               ListTile(
                 leading: const Icon(Icons.close),
                 title: const Text('Cancelar'),
@@ -176,7 +230,6 @@ class _AgendaListPageState extends State<AgendaListPage> {
             );
           }
 
-          // GridView com os cartões
           return GridView.builder(
             padding: const EdgeInsets.all(16),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -193,7 +246,6 @@ class _AgendaListPageState extends State<AgendaListPage> {
               return _AgendaCard(
                 agenda: agenda,
                 cor: cor,
-
                 onTap: () {
                   if (agenda.id != null) {
                     _mostrarOpcoes(context, agenda);
@@ -212,10 +264,11 @@ class _AgendaListPageState extends State<AgendaListPage> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.of(context).push(
+        onPressed: () async {
+          await Navigator.of(context).push(
             MaterialPageRoute(builder: (context) => const AgendaCreatePage()),
           );
+          _fetchAgendas();
         },
         child: const Icon(Icons.add),
         tooltip: 'Criar Nova Agenda',
@@ -246,50 +299,35 @@ class _AgendaCard extends StatelessWidget {
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(12.0),
-          child: Stack(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.calendar_today_outlined,
-                    color: Colors.white.withOpacity(0.8),
-                    size: 24,
-                  ),
-                  const Spacer(),
-                  Text(
-                    agenda.nome,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    agenda.descricao,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 12,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              Icon(
+                Icons.calendar_today_outlined,
+                color: Colors.white.withOpacity(0.8),
+                size: 24,
               ),
-              if (agenda.principal)
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: Chip(
-                    label: const Text('Principal'),
-                    labelStyle: const TextStyle(fontSize: 10),
-                    padding: EdgeInsets.zero,
-                    backgroundColor: Colors.white.withOpacity(0.8),
-                  ),
+              const Spacer(),
+              Text(
+                agenda.nome,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                agenda.descricao,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 12,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),

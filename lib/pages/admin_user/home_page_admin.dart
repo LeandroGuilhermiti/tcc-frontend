@@ -25,7 +25,6 @@ class HomePageAdmin extends StatelessWidget {
           'Agenda do Profissional', // Título genérico ou passado por parâmetro
       descricao: '',
       duracao: duracaoAgenda,
-      principal: false,
     );
 
     return Scaffold(
