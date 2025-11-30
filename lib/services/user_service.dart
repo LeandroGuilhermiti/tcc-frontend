@@ -70,7 +70,7 @@ class UsuarioService {
     String token,
   ) async {
     // ... (código existente sem alterações) ...
-    final Uri url = Uri.parse('$_baseUrl/usuario');
+    final Uri url = Uri.parse('$_baseUrl/usuario/criar');
 
     try {
       final response = await http.post(
