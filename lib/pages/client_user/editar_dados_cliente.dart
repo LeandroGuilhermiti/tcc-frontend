@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/user_model.dart';
-
-import 'package:provider/provider.dart';
 import '../../providers/auth_controller.dart';
 import '../../providers/user_provider.dart';
-import '../../widgets/menu_lateral_cliente.dart'; 
+import '../../services/auth_service.dart'; // Importe para usar no cadastro
+import '../../services/user_service.dart'; // Importe o serviço diretamente para o POST
 
+import '../../widgets/menu_lateral_cliente.dart'; 
 import '/pages/client_user/selecao_agenda_page.dart';
 
 class EditarDadosCliente extends StatefulWidget {
-  const EditarDadosCliente({super.key});
+  // Adicionamos esta flag para distinguir os modos
+  final bool isNovoCadastro;
+
+  const EditarDadosCliente({
+    super.key, 
+    this.isNovoCadastro = false,
+  });
 
   @override
   State<EditarDadosCliente> createState() => _EditarDadosClienteState();
@@ -21,7 +28,6 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
   final _formKey = GlobalKey<FormState>();
   bool _isSaving = false;
 
-  // Controladores de texto
   late TextEditingController _nomeController;
   late TextEditingController _sobrenomeController;
   late TextEditingController _emailController;
@@ -29,7 +35,6 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
   late TextEditingController _telefoneController;
   late TextEditingController _cepController;
 
-  // Máscaras de formatação
   final _cpfFormatter = MaskTextInputFormatter(
     mask: '###.###.###-##',
     filter: {"#": RegExp(r'[0-9]')},
@@ -51,19 +56,17 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
 
   void _carregarDadosUsuario() {
     final auth = Provider.of<AuthController>(context, listen: false);
-    final UserModel? usuario = auth.usuario;
+    final UserModel? usuario = auth.usuario; // Aqui usamos o usuario "temporário" criado no login
 
-    _nomeController =
-        TextEditingController(text: usuario?.primeiroNome ?? '');
-    _sobrenomeController =
-        TextEditingController(text: usuario?.sobrenome ?? '');
+    _nomeController = TextEditingController(text: usuario?.primeiroNome ?? '');
+    _sobrenomeController = TextEditingController(text: usuario?.sobrenome ?? '');
     _emailController = TextEditingController(text: usuario?.email ?? '');
-    _cpfController = TextEditingController(
-        text: _cpfFormatter.maskText(usuario?.cpf ?? ''));
-    _telefoneController = TextEditingController(
-        text: _telefoneFormatter.maskText(usuario?.telefone ?? ''));
-    _cepController = TextEditingController(
-        text: _cepFormatter.maskText(usuario?.cep ?? ''));
+    
+    // Se for novo cadastro, o CPF provavelmente virá vazio do Cognito, então deixamos vazio.
+    _cpfController = TextEditingController(text: _cpfFormatter.maskText(usuario?.cpf ?? ''));
+    
+    _telefoneController = TextEditingController(text: _telefoneFormatter.maskText(usuario?.telefone ?? ''));
+    _cepController = TextEditingController(text: _cepFormatter.maskText(usuario?.cep ?? ''));
   }
 
   Future<void> _salvarPerfil() async {
@@ -71,110 +74,129 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
       return; 
     }
 
-    setState(() {
-      _isSaving = true;
-    });
-    final String telefoneMascarado = _telefoneController.text;
-    final String cepMascarado = _cepController.text;
+    setState(() => _isSaving = true);
 
-    final String telefoneSemMascara =
-        telefoneMascarado.replaceAll(RegExp(r'[^0-9]'), '');
-    final String cepSemMascara =
-        cepMascarado.replaceAll(RegExp(r'[^0-9]'), '');
+    final authController = Provider.of<AuthController>(context, listen: false);
+    final userProvider = Provider.of<UsuarioProvider>(context, listen: false);
+    final userService = UsuarioService(); // Instancia o serviço diretamente para o POST
 
-    final Map<String, dynamic> dadosAtualizados = {
-      'telefone': telefoneSemMascara,
-      'cep': cepSemMascara,
-    };
+    // Limpeza das máscaras
+    final String telefoneSemMascara = _telefoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final String cepSemMascara = _cepController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final String cpfSemMascara = _cpfController.text.replaceAll(RegExp(r'[^0-9]'), '');
 
     try {
-      final sucesso = await Provider.of<UsuarioProvider>(context, listen: false)
-          .atualizarUsuario(dadosAtualizados);
+      bool sucesso = false;
+
+      // --- CENÁRIO 1: NOVO CADASTRO (POST) ---
+      if (widget.isNovoCadastro) {
+        
+        // Montamos o objeto completo para o banco de dados
+        final Map<String, dynamic> dadosNovoUsuario = {
+          'id': authController.usuario!.id, // ID QUE VEIO DO COGNITO (Injetado no Login)
+          'nome': _nomeController.text.trim(), // Ajuste conforme seu backend espera (nome ou givenName?)
+          'sobrenome': _sobrenomeController.text.trim(),
+          'email': _emailController.text.trim(),
+          'cpf': cpfSemMascara,
+          'cep': cepSemMascara,
+          'telefone': telefoneSemMascara,
+          'tipo': 0, // 0 = Cliente Comum
+        };
+
+        // Fazemos o POST
+        await userService.cadastrarUsuario(
+          dadosNovoUsuario, 
+          authController.usuario!.idToken!
+        );
+        
+        // Se não deu Exception, foi sucesso.
+        // PRECISAS ADICIONAR UM MÉTODO NO AUTHCONTROLLER PARA ATUALIZAR O ESTADO
+        // Exemplo: authController.concluirCadastro();
+        // Por enquanto, vamos forçar uma atualização manual no model local:
+        authController.atualizarUsuarioLocalmente(
+             cadastroPendente: false,
+             cpf: cpfSemMascara,
+             telefone: telefoneSemMascara,
+             cep: cepSemMascara
+        );
+        
+        sucesso = true;
+
+      } 
+      // --- CENÁRIO 2: EDIÇÃO (PATCH) ---
+      else {
+        final Map<String, dynamic> dadosAtualizados = {
+          'telefone': telefoneSemMascara,
+          'cep': cepSemMascara,
+        };
+        sucesso = await userProvider.atualizarUsuario(dadosAtualizados);
+      }
 
       if (sucesso && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Perfil atualizado com sucesso!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Dados salvos com sucesso!'),
+          backgroundColor: Colors.green,
+        ));
 
-        // Fecha possível drawer/rota atual e substitui pela tela de seleção
-        // Se não houver nada para fechar, Navigator.pop falhará silenciosamente.
-        if (Navigator.canPop(context)) Navigator.pop(context);
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const SelecaoAgendaPage(),
-          ),
-        );
-      } else if (mounted) {
-        final erro = Provider.of<UsuarioProvider>(context, listen: false).error;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao atualizar: $erro'),
-            backgroundColor: Colors.red, // Manter vermelho para erro OK
-          ),
-        );
-      }
+        // Redireciona para a home (o main.dart vai reconstruir e ver que cadastroPendente agora é false)
+        Navigator.of(context).pushReplacementNamed('/selecao_cliente'); 
+      } 
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ocorreu um erro: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erro ao salvar: $e'),
+          backgroundColor: Colors.red,
+        ));
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-      }
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Se for novo cadastro, não mostra menu lateral (drawer), pois ele ainda não "entrou" no sistema
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Editar Meus Dados'),
+        title: Text(widget.isNovoCadastro ? 'Finalizar Cadastro' : 'Editar Meus Dados'),
+        // Remove botão de voltar se for novo cadastro para obrigar o preenchimento
+        automaticallyImplyLeading: !widget.isNovoCadastro, 
       ),
-      drawer: const AppDrawerCliente(currentPage: AppDrawerPage.perfil),
+      drawer: widget.isNovoCadastro ? null : const AppDrawerCliente(currentPage: AppDrawerPage.perfil),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
+            if (widget.isNovoCadastro)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 20),
+                child: Text(
+                  "Olá! Vimos que é seu primeiro acesso. Por favor, confirme seus dados para continuar.",
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ),
+
             // --- Card de Informações Pessoais ---
             Card(
               elevation: 2, 
-              shape: RoundedRectangleBorder( 
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      "Meus Dados",
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
+                    Text("Dados Pessoais", style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 20),
+                    
+                    // NOME E SOBRENOME (Geralmente vem do Cognito, ReadOnly)
                     Row(
                       children: [
                         Expanded(
                           child: TextFormField(
                             controller: _nomeController,
-                            readOnly: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Nome',
-                            ),
-                            validator: (value) =>
-                                value == null || value.trim().isEmpty
-                                    ? 'Obrigatório'
-                                    : null,
+                            readOnly: true, // Cognito manda, não edita
+                            decoration: const InputDecoration(labelText: 'Nome', filled: true),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -182,35 +204,42 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
                           child: TextFormField(
                             controller: _sobrenomeController,
                             readOnly: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Sobrenome',
-                            ),
+                            decoration: const InputDecoration(labelText: 'Sobrenome', filled: true),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
+                    
+                    // EMAIL (ReadOnly)
                     TextFormField(
                       controller: _emailController,
-                      readOnly: true, 
-                      decoration: InputDecoration(
-                        labelText: 'Email (não pode ser alterado)',
-                        prefixIcon: Icon(Icons.email_outlined),
-                        filled: true,
-                        fillColor: Theme.of(context).disabledColor.withOpacity(0.1), 
-                      ),
+                      readOnly: true,
+                      decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined), filled: true),
                     ),
                     const SizedBox(height: 16),
+                    
+                    // CPF - LÓGICA DE BLOQUEIO
+                    // Se é novo cadastro, permite editar. Se é edição, bloqueia.
                     TextFormField(
                       controller: _cpfController,
-                      readOnly: true, 
+                      // Só pode editar se for NOVO cadastro
+                      readOnly: !widget.isNovoCadastro, 
                       inputFormatters: [_cpfFormatter],
                       decoration: InputDecoration(
-                        labelText: 'CPF (não pode ser alterado)',
-                        prefixIcon: Icon(Icons.badge_outlined),
-                        filled: true,
-                        fillColor: Theme.of(context).disabledColor.withOpacity(0.1),
+                        labelText: 'CPF',
+                        prefixIcon: const Icon(Icons.badge_outlined),
+                        filled: !widget.isNovoCadastro, // Cinza se bloqueado
+                        // Helper text para avisar
+                        helperText: widget.isNovoCadastro ? 'Obrigatório para agendamentos' : null,
                       ),
+                      validator: (value) {
+                         if (widget.isNovoCadastro) {
+                            if (value == null || value.isEmpty) return 'Obrigatório';
+                            if (_cpfFormatter.getUnmaskedText().length != 11) return 'CPF incompleto';
+                         }
+                         return null;
+                      },
                     ),
                   ],
                 ),
@@ -218,48 +247,28 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
             ),
             const SizedBox(height: 20),
 
-            // --- Card de Contato (Editável) ---
+            // --- Card de Contato ---
             Card(
               elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      "Contato",
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 20),
                     TextFormField(
                       controller: _telefoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Telefone',
-                        prefixIcon: Icon(Icons.phone_outlined),
-                      ),
+                      decoration: const InputDecoration(labelText: 'Telefone', prefixIcon: Icon(Icons.phone_outlined)),
                       keyboardType: TextInputType.phone,
                       inputFormatters: [_telefoneFormatter],
-                      validator: (value) => value == null || value.length < 15
-                          ? 'Telefone inválido'
-                          : null,
+                      validator: (v) => v!.length < 14 ? 'Inválido' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _cepController,
-                      decoration: const InputDecoration(
-                        labelText: 'CEP',
-                        prefixIcon: Icon(Icons.location_on_outlined),
-                      ),
+                      decoration: const InputDecoration(labelText: 'CEP', prefixIcon: Icon(Icons.location_on_outlined)),
                       keyboardType: TextInputType.number,
                       inputFormatters: [_cepFormatter],
-                      validator: (value) =>
-                          _cepFormatter.getUnmaskedText().isNotEmpty &&
-                                  _cepFormatter.getUnmaskedText().length < 8
-                              ? 'CEP inválido'
-                              : null,
+                      validator: (v) => _cepFormatter.getUnmaskedText().length < 8 ? 'Inválido' : null,
                     ),
                   ],
                 ),
@@ -267,21 +276,17 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
             ),
             const SizedBox(height: 24),
 
-            // Botão de Ação Principal
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _isSaving ? null : _salvarPerfil,
+                style: ElevatedButton.styleFrom(
+                   padding: const EdgeInsets.symmetric(vertical: 16),
+                   backgroundColor: widget.isNovoCadastro ? Colors.blueAccent : null, // Destaque se for novo
+                ),
                 child: _isSaving
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 3,
-                        ),
-                      )
-                    : const Text('Salvar Alterações'),
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : Text(widget.isNovoCadastro ? 'FINALIZAR CADASTRO' : 'SALVAR ALTERAÇÕES'),
               ),
             ),
           ],

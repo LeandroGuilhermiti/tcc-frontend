@@ -106,6 +106,14 @@ class MyApp extends StatelessWidget {
         home: Consumer<AuthController>(
           builder: (context, auth, child) {
             if (auth.isLogado) {
+              // 1. LÓGICA DE CADASTRO PENDENTE
+              // Se estiver pendente, força a ida para a tela de edição,
+              // mas avisando que é um "Novo Cadastro"
+              if (auth.usuario?.cadastroPendente == true) {
+                 return const EditarDadosCliente(isNovoCadastro: true);
+              }
+              
+              // 2. FLUXO NORMAL
               return auth.tipoUsuario == UserRole.admin
                   ? const AgendaListPage()
                   : const SelecaoAgendaPage();

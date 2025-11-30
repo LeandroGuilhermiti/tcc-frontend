@@ -73,4 +73,37 @@ class AuthController with ChangeNotifier {
     // Notifica a aplicação (ex: a PerfilClientePage) que os dados mudaram
     notifyListeners();
   }
+
+  // Adicione este método na classe AuthController
+  void atualizarUsuarioLocalmente({
+    required bool cadastroPendente, 
+    String? cpf, 
+    String? telefone, 
+    String? cep
+  }) {
+    if (_usuario != null) {
+      // Cria uma cópia do usuário atual com os novos dados
+      // Precisas garantir que teu UserModel tenha um método copyWith ou criar um novo manualmente
+      // Como não vi copyWith no teu código, vou criar um novo manual:
+      
+      _usuario = UserModel(
+        id: _usuario!.id,
+        idToken: _usuario!.idToken,
+        accessToken: _usuario!.accessToken,
+        refreshToken: _usuario!.refreshToken,
+        primeiroNome: _usuario!.primeiroNome,
+        sobrenome: _usuario!.sobrenome,
+        email: _usuario!.email,
+        role: _usuario!.role,
+        
+        // Atualizando os campos novos
+        cadastroPendente: cadastroPendente,
+        cpf: cpf ?? _usuario!.cpf,
+        telefone: telefone ?? _usuario!.telefone,
+        cep: cep ?? _usuario!.cep,
+      );
+      
+      notifyListeners(); // ISSO É IMPORTANTE! Vai avisar o main.dart para reconstruir
+    }
+  }
 }
