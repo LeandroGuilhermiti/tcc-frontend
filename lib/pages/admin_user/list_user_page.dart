@@ -92,9 +92,9 @@ class _PacientesListPageState extends State<PacientesListPage> {
         }
 
         // --- LÓGICA DE FILTRO ---
-        final List<UserModel> pacientes = userProvider.usuarios
-            .where((user) => user.role == UserRole.cliente)
-            .toList();
+        final List<UserModel> pacientes = userProvider.usuarios;
+            // .where((user) => user.role == UserRole.cliente)
+            // .toList();
 
         final List<UserModel> pacientesFiltrados = pacientes.where((paciente) {
           // Constrói o nome completo seguro para a pesquisa

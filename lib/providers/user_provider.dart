@@ -78,9 +78,10 @@ class UsuarioProvider with ChangeNotifier {
   }
 
   /// Atualiza os dados do usuário logado.
-  Future<bool> atualizarUsuario(Map<String, dynamic> dadosAtualizados) async {
+  Future<bool> atualizarUsuario(Map<String, dynamic> dadosAtualizados, {String? idUsuarioAlvo}) async {
     final token = _auth?.usuario?.idToken;
-    final id = _auth?.usuario?.id;
+    
+    final id = idUsuarioAlvo ?? _auth?.usuario?.id;
 
     if (token == null || id == null) {
       _erro = "Usuário não autenticado.";
@@ -108,7 +109,9 @@ class UsuarioProvider with ChangeNotifier {
 
       // 2. Chama o AuthController para ATUALIZAR OS DADOS LOCAIS
       // Passamos os dados que acabámos de enviar
-      authController.atualizarDadosLocais(dadosAtualizados);
+      if (id == _auth?.usuario?.id) {
+        authController.atualizarDadosLocais(dadosAtualizados);
+      }
 
       return true;
     } catch (e) {

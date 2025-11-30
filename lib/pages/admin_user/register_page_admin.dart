@@ -15,59 +15,39 @@ class RegisterPageAdmin extends StatefulWidget {
 class _RegisterPageAdminState extends State<RegisterPageAdmin> {
   final _formKey = GlobalKey<FormState>();
 
-  // Lista de UFs para o Dropdown
+  // Lista de UFs
   final Map<String, String> listaUFs = {
-    'AC': 'Acre',
-    'AL': 'Alagoas',
-    'AP': 'Amapá',
-    'AM': 'Amazonas',
-    'BA': 'Bahia',
-    'CE': 'Ceará',
-    'DF': 'Distrito Federal',
-    'ES': 'Espírito Santo',
-    'GO': 'Goiás',
-    'MA': 'Maranhão',
-    'MT': 'Mato Grosso',
-    'MS': 'Mato Grosso do Sul',
-    'MG': 'Minas Gerais',
-    'PA': 'Pará',
-    'PB': 'Paraíba',
-    'PR': 'Paraná',
-    'PE': 'Pernambuco',
-    'PI': 'Piauí',
-    'RJ': 'Rio de Janeiro',
-    'RN': 'Rio Grande do Norte',
-    'RS': 'Rio Grande do Sul',
-    'RO': 'Rondônia',
-    'RR': 'Roraima',
-    'SC': 'Santa Catarina',
-    'SP': 'São Paulo',
-    'SE': 'Sergipe',
-    'TO': 'Tocantins',
+    'AC': 'Acre', 'AL': 'Alagoas', 'AP': 'Amapá', 'AM': 'Amazonas', 'BA': 'Bahia',
+    'CE': 'Ceará', 'DF': 'Distrito Federal', 'ES': 'Espírito Santo', 'GO': 'Goiás',
+    'MA': 'Maranhão', 'MT': 'Mato Grosso', 'MS': 'Mato Grosso do Sul', 'MG': 'Minas Gerais',
+    'PA': 'Pará', 'PB': 'Paraíba', 'PR': 'Paraná', 'PE': 'Pernambuco', 'PI': 'Piauí',
+    'RJ': 'Rio de Janeiro', 'RN': 'Rio Grande do Norte', 'RS': 'Rio Grande do Sul',
+    'RO': 'Rondônia', 'RR': 'Roraima', 'SC': 'Santa Catarina', 'SP': 'São Paulo',
+    'SE': 'Sergipe', 'TO': 'Tocantins',
   };
 
-  // Controladores de texto
-  final _nomeController = TextEditingController();
+  // Controladores
+  final _givenNameController = TextEditingController();
+  final _familyNameController = TextEditingController();
   final _cpfController = TextEditingController();
   final _cepController = TextEditingController();
   final _telefoneController = TextEditingController();
   final _emailController = TextEditingController(); 
-  final _senhaController = TextEditingController();
-
-  // Controladores para os campos de endereço
+  
+  // Endereço
   final _ruaController = TextEditingController();
   final _numeroController = TextEditingController();
   final _bairroController = TextEditingController();
   final _cidadeController = TextEditingController();
-  String? _ufSelecionada; // Variável para armazenar a UF selecionada
-
-  // Variáveis de estado da UI
+  
+  // Variáveis de Estado (Iniciam nulas)
+  String? _ufSelecionada; 
   String? _tipoSelecionado;
+  
   bool _isSaving = false;
-  bool _isPasswordVisible = false;
   bool _isSearchingCep = false;
 
-  // Máscaras de formatação para UX aprimorada
+  // Máscaras
   final _cpfFormatter = MaskTextInputFormatter(
     mask: '###.###.###-##',
     filter: {"#": RegExp(r'[0-9]')},
@@ -83,13 +63,12 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
 
   @override
   void dispose() {
-    // Limpeza dos controladores para evitar vazamento de memória
-    _nomeController.dispose();
+    _givenNameController.dispose();
+    _familyNameController.dispose();
     _cpfController.dispose();
     _cepController.dispose();
     _telefoneController.dispose();
     _emailController.dispose(); 
-    _senhaController.dispose();
     _ruaController.dispose();
     _numeroController.dispose();
     _bairroController.dispose();
@@ -97,241 +76,178 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
     super.dispose();
   }
 
-  // Método para ser chamado quando o CEP for preenchido
   Future<void> _buscarCep() async {
     final cep = _cepFormatter.getUnmaskedText();
-    if (cep.length != 8) return; // Só busca se o CEP estiver completo
+    if (cep.length != 8) return; 
 
-    setState(() {
-      _isSearchingCep = true; // Ativa o loading
-    });
+    setState(() => _isSearchingCep = true);
 
     try {
       final cepService = CepService();
       final endereco = await cepService.buscarEndereco(cep);
 
       if (mounted && endereco != null) {
-        // Se encontrou, preenche os campos
         _ruaController.text = endereco.logradouro;
         _bairroController.text = endereco.bairro;
         _cidadeController.text = endereco.localidade;
         setState(() {
-          _ufSelecionada = endereco.uf;
+          // Verifica se a UF retornada existe na nossa lista antes de atribuir
+          if (listaUFs.containsKey(endereco.uf)) {
+             _ufSelecionada = endereco.uf;
+          } else {
+             _ufSelecionada = null;
+          }
         });
       } else if (mounted) {
-        // Se não encontrou, mostra um aviso
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('CEP não encontrado.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('CEP não encontrado.'),
+          backgroundColor: Colors.orange,
+        ));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao buscar CEP: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erro ao buscar CEP: $e'),
+          backgroundColor: Colors.red,
+        ));
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isSearchingCep = false; // Desativa o loading
-        });
-      }
+      if (mounted) setState(() => _isSearchingCep = false);
     }
   }  
 
-  // Método para limpar os campos de endereço
   void _limparCamposEndereco() {
     _ruaController.clear();
     _bairroController.clear();
     _cidadeController.clear();
-    setState(() {
-    _ufSelecionada = null;
-    });
+    setState(() => _ufSelecionada = null);
     _numeroController.clear(); 
   }
 
-  // Método que é chamado pelo botão "Buscar CEP"
   Future<void> _buscarCepPorEndereco() async {
-    // Pega os dados dos campos
     final uf = _ufSelecionada;
     final cidade = _cidadeController.text;
     final rua = _ruaController.text;
 
-    // Valida se os campos necessários estão preenchidos
     if (uf == null || cidade.isEmpty || rua.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Preencha UF, Cidade e Rua para buscar o CEP.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Preencha UF, Cidade e Rua para buscar o CEP.'),
+        backgroundColor: Colors.orange,
+      ));
       return;
     }
 
-    setState(() {
-      _isSearchingCep = true; // Reutilizamos a variável de loading
-    });
+    setState(() => _isSearchingCep = true);
 
     try {
       final cepService = CepService();
-      final resultados = await cepService.buscarCepPorEndereco(
-        uf: uf,
-        cidade: cidade,
-        rua: rua,
-      );
+      final resultados = await cepService.buscarCepPorEndereco(uf: uf, cidade: cidade, rua: rua);
 
       if (mounted && resultados.isNotEmpty) {
-        // Se encontrou resultados, mostra o diálogo de seleção
         _mostrarDialogoSelecaoCep(resultados);
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Nenhum CEP encontrado para este endereço.'),
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Nenhum CEP encontrado.'),
+        ));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro na busca: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e')));
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isSearchingCep = false;
-        });
-      }
+      if (mounted) setState(() => _isSearchingCep = false);
     }
   }
 
-  // Diálogo para o usuário selecionar o CEP correto
   void _mostrarDialogoSelecaoCep(List<Endereco> resultados) {
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('Selecione o CEP Correto'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: resultados.length,
-                itemBuilder: (context, index) {
-                  final endereco = resultados[index];
-                  return ListTile(
-                    title: Text(endereco.cep),
-                    subtitle: Text('${endereco.logradouro}, ${endereco.bairro}'),
-
-                    // --- ALTERAÇÃO AQUI ---
-                    onTap: () {
-                      // Pega o texto do CEP (ex: "12345-678") e remove a formatação,
-                      // deixando apenas os números ("12345678").
-                      final unmaskedCep = endereco.cep.replaceAll(
-                        RegExp(r'[^0-9]'),
-                        '',
-                      );
-
-                      // Agora, usamos o NOSSO formatador para aplicar a máscara.
-                      // Isso garante que o estado do controlador e do formatador fiquem sincronizados.
-                      _cepController.value = _cepFormatter.formatEditUpdate(
-                        TextEditingValue.empty, // Estado antigo (não importa)
-                        TextEditingValue(
-                          text: unmaskedCep,
-                        ), // Novo texto a ser formatado
-                      );
-
-                      // Opcional, mas bom para garantir: dispara a lógica de limpeza/busca
-                      // caso o usuário interaja mais com o campo depois.
-                      if (_cepFormatter.getUnmaskedText().length < 8) {
-                        _limparCamposEndereco();
-                      }
-
-                      // Fecha o diálogo
-                      Navigator.of(context).pop();
-                    },
-                  );
-                },
-              ),
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Selecione o CEP Correto'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: resultados.length,
+              itemBuilder: (context, index) {
+                final endereco = resultados[index];
+                return ListTile(
+                  title: Text(endereco.cep),
+                  subtitle: Text('${endereco.logradouro}, ${endereco.bairro}'),
+                  onTap: () {
+                    final unmaskedCep = endereco.cep.replaceAll(RegExp(r'[^0-9]'), '');
+                    _cepController.value = _cepFormatter.formatEditUpdate(
+                      TextEditingValue.empty, 
+                      TextEditingValue(text: unmaskedCep), 
+                    );
+                    if (_cepFormatter.getUnmaskedText().length < 8) {
+                      _limparCamposEndereco();
+                    }
+                    Navigator.of(context).pop();
+                  },
+                );
+              },
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancelar'),
-              ),
-            ],
-          );
-        },
-      );
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _salvarUsuario() async {
-    // Valida o formulário antes de prosseguir
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isSaving = true;
-    });
+    setState(() => _isSaving = true);
 
-    // Monta o Map de dados para enviar ao provider
     final dadosNovoUsuario = {
-      'nome': _nomeController.text.trim(),
-      'email': _emailController.text.trim(), // Re-adicionado
-      'senha': _senhaController.text.trim(),
-      // Pega os valores sem a máscara de formatação
+      'givenName': _givenNameController.text.trim(),
+      'familyName': _familyNameController.text.trim(),
+      'email': _emailController.text.trim(),
       'cpf': _cpfFormatter.getUnmaskedText(),
       'cep': _cepFormatter.getUnmaskedText(),
       'telefone': _telefoneFormatter.getUnmaskedText(),
-      'role': _tipoSelecionado == 'admin' ? 1 : 0,
+      'tipo': _tipoSelecionado == 'admin' ? 1 : 0, // Ajuste para enviar Inteiro
+      
+      'logradouro': _ruaController.text,
+      'numero': _numeroController.text,
+      'bairro': _bairroController.text,
+      'cidade': _cidadeController.text,
+      'uf': _ufSelecionada,
     };
 
     try {
-      // Chama o provider de forma assíncrona
-      final sucesso = await Provider.of<UsuarioProvider>(
-        context,
-        listen: false,
-      ).adicionarUsuario(dadosNovoUsuario);
+      final sucesso = await Provider.of<UsuarioProvider>(context, listen: false)
+          .adicionarUsuario(dadosNovoUsuario);
 
       if (sucesso && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Usuário cadastrado com sucesso!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Usuário cadastrado com sucesso!'),
+          backgroundColor: Colors.green,
+        ));
         Navigator.pop(context);
       } else if (mounted) {
         final erro = Provider.of<UsuarioProvider>(context, listen: false).error;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Falha ao cadastrar: $erro"),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("Falha ao cadastrar: $erro"),
+          backgroundColor: Colors.red,
+        ));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Ocorreu um erro inesperado: ${e.toString()}"),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("Erro inesperado: $e"),
+          backgroundColor: Colors.red,
+        ));
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-      }
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -347,30 +263,39 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
             // --- Card de Informações Pessoais ---
             Card(
               elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      "Informações Pessoais",
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
+                    Text("Informações Pessoais", style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 20),
-                    TextFormField(
-                      controller: _nomeController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nome Completo',
-                        prefixIcon: Icon(Icons.person_outline),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? 'Informe o nome'
-                          : null,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _givenNameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Nome',
+                              prefixIcon: Icon(Icons.person_outline),
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) => value == null || value.trim().isEmpty ? 'Obrigatório' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _familyNameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Sobrenome',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) => value == null || value.trim().isEmpty ? 'Obrigatório' : null,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -382,9 +307,7 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
                       ),
                       keyboardType: TextInputType.number,
                       inputFormatters: [_cpfFormatter],
-                      validator: (value) => value == null || value.length < 14
-                          ? 'CPF inválido'
-                          : null,
+                      validator: (value) => value == null || value.length < 14 ? 'CPF inválido' : null,
                     ),
                   ],
                 ),
@@ -392,23 +315,17 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
             ),
             const SizedBox(height: 20),
 
-            // --- Card de Contato e Acesso ---
+            // --- Card de Contato e Endereço ---
             Card(
               elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      "Contato e Acesso",
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
+                    Text("Contato e Endereço", style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 20),
-                    // CAMPO DE E-MAIL RE-ADICIONADO AQUI
                     TextFormField(
                       controller: _emailController,
                       decoration: const InputDecoration(
@@ -417,10 +334,7 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.emailAddress,
-                      validator: (value) =>
-                          value == null || !value.contains('@')
-                          ? 'Email inválido'
-                          : null,
+                      validator: (value) => value == null || !value.contains('@') ? 'Email inválido' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -432,60 +346,37 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
                       ),
                       keyboardType: TextInputType.phone,
                       inputFormatters: [_telefoneFormatter],
-                      validator: (value) => value == null || value.length < 15
-                          ? 'Telefone inválido'
-                          : null,
+                      validator: (value) => value == null || value.length < 15 ? 'Telefone inválido' : null,
                     ),
                     const SizedBox(height: 16),
+                    
+                    // --- ENDEREÇO ---
                     TextFormField(
-                      // Propriedades de controle e formatação do input
                       controller: _cepController,
                       keyboardType: TextInputType.number,
                       inputFormatters: [_cepFormatter],
-
-                      // Lógica de validação do campo
                       validator: (value) {
-                        // É mais seguro validar pelo texto sem máscara
-                        if (_cepFormatter.getUnmaskedText().isEmpty) {
-                          return 'Informe o CEP';
-                        }
-                        if (_cepFormatter.getUnmaskedText().length < 8) {
-                          return 'CEP inválido';
-                        }
+                        if (_cepFormatter.getUnmaskedText().isEmpty) return 'Informe o CEP';
+                        if (_cepFormatter.getUnmaskedText().length < 8) return 'CEP inválido';
                         return null;
                       },
-
-                      // Lógica de interação em tempo real
                       onChanged: (value) {
-                        // Busca automática quando o CEP está completo
                         if (_cepFormatter.getUnmaskedText().length == 8) {
                           _buscarCep();
-                        }
-                        // Limpa os campos de endereço se o CEP for apagado
-                        else {
+                        } else {
                           _limparCamposEndereco();
                         }
                       },
-
-                      // Configurações visuais do campo (layout)
                       decoration: InputDecoration(
                         labelText: 'CEP',
                         hintText: '00000-000',
                         prefixIcon: const Icon(Icons.location_on_outlined),
                         border: const OutlineInputBorder(),
-
-                        // Ícone de sufixo dinâmico: mostra loading ou o botão de busca
                         suffixIcon: _isSearchingCep
-                            // Se estiver buscando, mostra o indicador de progresso
                             ? const Padding(
                                 padding: EdgeInsets.all(12.0),
-                                child: SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2.0),
-                                ),
+                                child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2.0)),
                               )
-                            // Se não, mostra o botão de busca com um Tooltip
                             : Tooltip(
                                 message: 'Buscar CEP pelo endereço',
                                 child: IconButton(
@@ -496,7 +387,6 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // --- NOVOS CAMPOS DE ENDEREÇO ---
                     TextFormField(
                       controller: _ruaController,
                       decoration: const InputDecoration(
@@ -504,7 +394,6 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
                         prefixIcon: Icon(Icons.signpost_outlined),
                         border: OutlineInputBorder(),
                       ),
-                      // O usuário pode editar, mas o preenchimento inicial é automático
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -513,10 +402,7 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
                           flex: 3,
                           child: TextFormField(
                             controller: _bairroController,
-                            decoration: const InputDecoration(
-                              labelText: 'Bairro',
-                              border: OutlineInputBorder(),
-                            ),
+                            decoration: const InputDecoration(labelText: 'Bairro', border: OutlineInputBorder()),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -524,10 +410,7 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
                           flex: 2,
                           child: TextFormField(
                             controller: _numeroController,
-                            decoration: const InputDecoration(
-                              labelText: 'Nº',
-                              border: OutlineInputBorder(),
-                            ),
+                            decoration: const InputDecoration(labelText: 'Nº', border: OutlineInputBorder()),
                             keyboardType: TextInputType.number,
                           ),
                         ),
@@ -540,95 +423,81 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
                           flex: 3,
                           child: TextFormField(
                             controller: _cidadeController,
-                            decoration: const InputDecoration(
-                              labelText: 'Cidade',
-                              border: OutlineInputBorder(),
-                            ),
+                            decoration: const InputDecoration(labelText: 'Cidade', border: OutlineInputBorder()),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           flex: 1,
-                          //dropdown de UF
                           child: DropdownButtonFormField<String>(
-                            value: _ufSelecionada,
+                            // --- PROTEÇÃO CONTRA ERRO DE VALOR INVÁLIDO ---
+                            // Se _ufSelecionada não estiver na lista (null ou valor sujo), usa null
+                            value: (listaUFs.containsKey(_ufSelecionada)) ? _ufSelecionada : null,
+                            
                             isExpanded: true,
-                            decoration: const InputDecoration(
-                              labelText: 'UF',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12.0), // Ajuste de padding
-                            ),
-                            // Mapeia nossa lista de UFs para os itens do dropdown
+                            decoration: const InputDecoration(labelText: 'UF', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12.0)),
                             items: listaUFs.keys.map((String sigla) {
-                              return DropdownMenuItem<String>(
-                                value: sigla,
-                                child: Text(sigla),
-                              );
+                              return DropdownMenuItem<String>(value: sigla, child: Text(sigla));
                             }).toList(),
-                            // Atualiza o estado quando o usuário seleciona uma UF
-                            onChanged: (String? novoValor) {
-                              setState(() {
-                                _ufSelecionada = novoValor;
-                              });
-                            },
+                            onChanged: (String? novoValor) => setState(() => _ufSelecionada = novoValor),
                             validator: (value) => value == null ? 'UF?' : null,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // --- Card Configurações ---
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Configurações do Sistema", style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 20),
                     DropdownButtonFormField<String>(
                       decoration: const InputDecoration(
                         labelText: 'Tipo de Usuário',
                         prefixIcon: Icon(Icons.security_outlined),
                         border: OutlineInputBorder(),
                       ),
-                      value: _tipoSelecionado,
-                      items: ['cliente', 'admin']
-                          .map(
-                            (tipo) => DropdownMenuItem(
-                              value: tipo,
-                              child: Text(
-                                tipo[0].toUpperCase() + tipo.substring(1),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) =>
-                          setState(() => _tipoSelecionado = value),
-                      validator: (value) =>
-                          value == null ? 'Selecione o tipo' : null,
+                      
+                      // --- PROTEÇÃO CONTRA ERRO DE VALOR INVÁLIDO ---
+                      value: (['cliente', 'admin'].contains(_tipoSelecionado)) ? _tipoSelecionado : null,
+                      
+                      items: ['cliente', 'admin'].map((tipo) => DropdownMenuItem(
+                        value: tipo,
+                        child: Text(tipo[0].toUpperCase() + tipo.substring(1)),
+                      )).toList(),
+                      onChanged: (value) => setState(() => _tipoSelecionado = value),
+                      validator: (value) => value == null ? 'Selecione o tipo' : null,
                     ),
                   ],
                 ),
               ),
             ),
+
             const SizedBox(height: 24),
 
-            // Botão de Ação Principal
+            // Botão Salvar
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: _isSaving ? null : _salvarUsuario,
                 child: _isSaving
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 3,
-                        ),
-                      )
+                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
                     : const Text('Salvar Usuário'),
               ),
             ),
