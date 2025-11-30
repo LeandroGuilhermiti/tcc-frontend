@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
@@ -23,8 +25,14 @@ class AuthController with ChangeNotifier {
     notifyListeners();
 
     try {
-      final user = await _authService.login();
-      // _usuario = user;
+      await _authService.login();
+      final user = await tentaRecuperarSessao();
+      _usuario = user;
+      
+      // SALVAR SESSÃO: Se o login for bem sucedido, salvamos no disco
+      if (_usuario != null) {
+        await salvarSessaoEstatica(_usuario!);
+      }
     } catch (e) {
       _erro = e.toString().replaceFirst('Exception: ', '');
     } finally {
@@ -37,31 +45,31 @@ class AuthController with ChangeNotifier {
     await _authService.logout();
     _usuario = null;
     _erro = null;
+    
+    // LIMPAR SESSÃO: Removemos do disco ao sair
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('userData');
+    
     notifyListeners();
   }
 
   /// ATUALIZA o UserModel local com novos dados, PRESERVANDO OS TOKENS.
-
   void atualizarDadosLocais(Map<String, dynamic> novosDados) {
-    if (_usuario == null) return; // Não deve acontecer se estiver logado
+    if (_usuario == null) return; 
 
-    // Cria um novo UserModel baseado no ANTIGO, mas atualiza
-    // os campos que vieram no mapa 'novosDados'.
     _usuario = UserModel(
       id: _usuario!.id,
-      idToken: _usuario!.idToken, // <-- O TOKEN É PRESERVADO
-      accessToken: _usuario!.accessToken, // <-- O TOKEN É PRESERVADO
-      refreshToken: _usuario!.refreshToken, // <-- O TOKEN É PRESERVADO
+      idToken: _usuario!.idToken, 
+      accessToken: _usuario!.accessToken, 
+      refreshToken: _usuario!.refreshToken, 
       
-      // Dados antigos
       primeiroNome: _usuario!.primeiroNome,
       sobrenome: _usuario!.sobrenome,
       email: _usuario!.email,
       cpf: _usuario!.cpf,
       role: _usuario!.role,
+      cadastroPendente: _usuario!.cadastroPendente, // Mantém o status
 
-      // Dados novos (que podem ter sido atualizados)
-      // O 'novosDados.containsKey' garante que só atualiza o que veio no map
       cep: novosDados.containsKey('cep')
           ? novosDados['cep']
           : _usuario!.cep,
@@ -70,11 +78,11 @@ class AuthController with ChangeNotifier {
           : _usuario!.telefone,
     );
     
-    // Notifica a aplicação (ex: a PerfilClientePage) que os dados mudaram
+    // Atualiza também no disco para persistir a mudança
+    salvarSessaoEstatica(_usuario!);
     notifyListeners();
   }
 
-  // Adicione este método na classe AuthController
   void atualizarUsuarioLocalmente({
     required bool cadastroPendente, 
     String? cpf, 
@@ -82,10 +90,6 @@ class AuthController with ChangeNotifier {
     String? cep
   }) {
     if (_usuario != null) {
-      // Cria uma cópia do usuário atual com os novos dados
-      // Precisas garantir que teu UserModel tenha um método copyWith ou criar um novo manualmente
-      // Como não vi copyWith no teu código, vou criar um novo manual:
-      
       _usuario = UserModel(
         id: _usuario!.id,
         idToken: _usuario!.idToken,
@@ -96,14 +100,82 @@ class AuthController with ChangeNotifier {
         email: _usuario!.email,
         role: _usuario!.role,
         
-        // Atualizando os campos novos
         cadastroPendente: cadastroPendente,
         cpf: cpf ?? _usuario!.cpf,
         telefone: telefone ?? _usuario!.telefone,
         cep: cep ?? _usuario!.cep,
       );
       
-      notifyListeners(); // ISSO É IMPORTANTE! Vai avisar o main.dart para reconstruir
+      // Atualiza também no disco
+      salvarSessaoEstatica(_usuario!);
+      notifyListeners(); 
+    }
+  }
+
+  // --- MÉTODOS ESTÁTICOS DE PERSISTÊNCIA ---
+
+  /// Salva o usuário no SharedPreferences
+  static Future<void> salvarSessaoEstatica(UserModel user) async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Convertemos o UserRole enum para inteiro para salvar
+    final roleIndex = user.role?.index ?? 0; 
+
+    final userData = json.encode({
+      'id': user.id,
+      'idToken': user.idToken,
+      'accessToken': user.accessToken,
+      'refreshToken': user.refreshToken,
+      'primeiroNome': user.primeiroNome,
+      'sobrenome': user.sobrenome,
+      'email': user.email,
+      'roleIndex': roleIndex, // Salvamos o índice do Enum
+      'cadastroPendente': user.cadastroPendente,
+      'cpf': user.cpf,
+      'telefone': user.telefone,
+      'cep': user.cep,
+    });
+    
+    await prefs.setString('userData', userData);
+  }
+
+  /// Tenta recuperar o usuário do SharedPreferences
+  static Future<UserModel?> tentaRecuperarSessao() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    if (!prefs.containsKey('userData')) {
+      return null;
+    }
+
+    try {
+      final data = json.decode(prefs.getString('userData')!) as Map<String, dynamic>;
+      
+      // Recupera o Enum pelo índice
+      final roleIndex = data['roleIndex'] as int? ?? 0;
+      UserRole userRole;
+      if (roleIndex < UserRole.values.length) {
+        userRole = UserRole.values[roleIndex];
+      } else {
+        userRole = UserRole.cliente; // Fallback
+      }
+
+      return UserModel(
+        id: data['id'],
+        idToken: data['idToken'],
+        accessToken: data['accessToken'],
+        refreshToken: data['refreshToken'],
+        primeiroNome: data['primeiroNome'],
+        sobrenome: data['sobrenome'],
+        email: data['email'],
+        role: userRole,
+        cadastroPendente: data['cadastroPendente'] ?? false,
+        cpf: data['cpf'],
+        telefone: data['telefone'],
+        cep: data['cep'],
+      );
+    } catch (e) {
+      debugPrint("Erro ao recuperar sessão: $e");
+      return null;
     }
   }
 }

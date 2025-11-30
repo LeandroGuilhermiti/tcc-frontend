@@ -28,7 +28,6 @@ import 'pages/admin_user/list_bloqueios_page.dart';
 import 'pages/client_user/selecao_agenda_page.dart';
 import 'pages/client_user/editar_dados_cliente.dart';
 
-
 // Service
 import 'services/auth_service.dart';
 
@@ -37,14 +36,29 @@ Future<void> main() async {
   await dotenv.load(fileName: ".env");
   await initializeDateFormatting('pt_BR', null);
 
-  UserModel? initialUser;
+  // 1. Tenta recuperar sessão salva (F5/Refresh)
+  UserModel? initialUser = await AuthController.tentaRecuperarSessao();
+  
   final authService = AuthService();
 
   if (kIsWeb) {
     final uri = Uri.parse(html.window.location.href);
+    
+    // 2. Se houver código na URL, é um login novo via OAuth (Sobrescreve a sessão anterior)
     if (uri.queryParameters.containsKey('code')) {
       final code = uri.queryParameters['code']!;
-      initialUser = await authService.exchangeCodeForToken(code);
+      
+      try {
+        final newUser = await authService.exchangeCodeForToken(code);
+        if (newUser != null) {
+          initialUser = newUser;
+          // Salva a nova sessão imediatamente
+          await AuthController.salvarSessaoEstatica(newUser);
+        }
+      } catch (e) {
+        debugPrint("Erro ao trocar código por token: $e");
+      }
+
       final cleanUri = uri.removeFragment().replace(queryParameters: {});
       html.window.history.replaceState(null, 'home', cleanUri.toString());
     }
@@ -107,8 +121,6 @@ class MyApp extends StatelessWidget {
           builder: (context, auth, child) {
             if (auth.isLogado) {
               // 1. LÓGICA DE CADASTRO PENDENTE
-              // Se estiver pendente, força a ida para a tela de edição,
-              // mas avisando que é um "Novo Cadastro"
               if (auth.usuario?.cadastroPendente == true) {
                  return const EditarDadosCliente(isNovoCadastro: true);
               }

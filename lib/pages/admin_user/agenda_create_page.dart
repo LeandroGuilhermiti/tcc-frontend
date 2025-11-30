@@ -24,11 +24,11 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
   final TextEditingController _avisoController = TextEditingController();
 
   final Map<String, int> diasSemanaMap = {
-    'Seg': 1, 'Ter': 2, 'Qua': 3, 'Qui': 4, 'Sex': 5, 'Sáb': 6,
+    'Seg': 1, 'Ter': 2, 'Qua': 3, 'Qui': 4, 'Sex': 5, 'Sáb': 6, 'Dom': 7,
   };
-  final List<String> diasSemana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  final List<String> diasSemana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
   final Map<String, bool> diasSelecionados = {
-    'Seg': false, 'Ter': false, 'Qua': false, 'Qui': false, 'Sex': false, 'Sáb': false,
+    'Seg': false, 'Ter': false, 'Qua': false, 'Qui': false, 'Sex': false, 'Sáb': false, 'Dom': false,
   };
 
   final Map<String, List<TimeRange>> periodosPorDia = {};

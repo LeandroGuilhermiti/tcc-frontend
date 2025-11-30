@@ -23,11 +23,20 @@ class _BloqueioListPageState extends State<BloqueioListPage> {
     super.didChangeDependencies();
     if (_isInit) {
       final args = ModalRoute.of(context)?.settings.arguments;
+      
+      // 1. Verifica se recebemos a Agenda corretamente
       if (args is Agenda) {
         _agenda = args;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           Provider.of<BloqueioProvider>(context, listen: false)
               .carregarBloqueios(_agenda!.id!);
+        });
+      } else {
+        // 2. CASO DE ERRO (F5 ou acesso direto): Redirecionar
+        // Agendamos o redirecionamento para após a construção do widget
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          // Volta para a rota '/agendas' (ou a tua rota principal de admin)
+          Navigator.of(context).pushReplacementNamed('/agendas');
         });
       }
       _isInit = false;
@@ -54,12 +63,10 @@ class _BloqueioListPageState extends State<BloqueioListPage> {
       try {
         final int agendaIdInt = int.parse(_agenda!.id!);
         
-        // 1. Chama a exclusão
         await Provider.of<BloqueioProvider>(context, listen: false)
             .excluirBloqueio(agendaIdInt, bloqueio.dataHora);
         
         if (mounted) {
-          // 2. --- RECARREGA A LISTA DO SERVIDOR ---
           await Provider.of<BloqueioProvider>(context, listen: false)
               .carregarBloqueios(_agenda!.id!);
 
@@ -80,14 +87,11 @@ class _BloqueioListPageState extends State<BloqueioListPage> {
         bloqueio: bloqueio,
         onSalvar: (bloqueioEditado) async {
           try {
-            // 1. Chama a atualização
             await Provider.of<BloqueioProvider>(context, listen: false)
                 .atualizarBloqueio(bloqueioEditado);
             
             if (mounted) {
-              Navigator.pop(ctx); // Fecha o dialog
-              
-              // 2. --- RECARREGA A LISTA DO SERVIDOR ---
+              Navigator.pop(ctx);
               await Provider.of<BloqueioProvider>(context, listen: false)
                   .carregarBloqueios(_agenda!.id!);
 
@@ -107,8 +111,21 @@ class _BloqueioListPageState extends State<BloqueioListPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 3. Interface de Loading enquanto redireciona
     if (_agenda == null) {
-      return Scaffold(appBar: AppBar(title: const Text('Bloqueios')), body: const Center(child: Text('Erro na agenda.')));
+      return Scaffold(
+        appBar: AppBar(title: const Text('Bloqueios')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Redirecionando...'),
+            ],
+          ),
+        ),
+      );
     }
 
     return Scaffold(

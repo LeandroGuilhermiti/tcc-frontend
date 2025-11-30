@@ -49,30 +49,24 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _carregarDadosIniciais());
   }
 
-  // --- ALTERAÇÃO AQUI: Função transformada em Future para gerir erros ---
   Future<void> _carregarDadosIniciais() async {
     final idAgenda = widget.agenda.id!;
     
-    // Carregamos os dados da app normalmente (sem await para não bloquear a UI)
     Provider.of<BloqueioProvider>(context, listen: false).carregarBloqueios(idAgenda);
     Provider.of<PeriodoProvider>(context, listen: false).carregarPeriodos(idAgenda);
     Provider.of<AgendamentoProvider>(context, listen: false).carregarAgendamentos(idAgenda: idAgenda);
     Provider.of<UsuarioProvider>(context, listen: false).buscarUsuarios();
     
-    // Tratamento específico para a API de Feriados
     final feriadoProvider = Provider.of<FeriadoProvider>(context, listen: false);
     final anoAtual = DateTime.now().year;
     
     try {
-      // Usamos Future.wait para carregar os dois anos e "esperar" pelo resultado
-      // Nota: O método .carregarFeriados no provider deve retornar um Future para isto funcionar
       await Future.wait([
         feriadoProvider.carregarFeriados(anoAtual),
         feriadoProvider.carregarFeriados(anoAtual + 1),
       ]);
     } catch (e) {
       debugPrint("Erro ao carregar feriados: $e");
-      // Se der erro (ex: sem internet ou API fora do ar), mostramos o aviso
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -88,14 +82,13 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
                 ),
               ],
             ),
-            backgroundColor: Colors.orange[800], // Laranja para indicar aviso/atenção
+            backgroundColor: Colors.orange[800],
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 6),
             action: SnackBarAction(
               label: 'Recarregar',
               textColor: Colors.white,
               onPressed: () {
-                // Tenta carregar novamente se o utilizador clicar
                 _carregarDadosIniciais();
               },
             ),
@@ -296,7 +289,6 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
       auth,
     );
     
-    // Preparar o título com base na data selecionada
     String textoTitulo = _selectedDay != null 
         ? "Agendamentos de ${DateFormat('dd/MM/yyyy').format(_selectedDay!)}" 
         : "Selecione uma data";
@@ -316,6 +308,7 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
               ? const Center(child: CircularProgressIndicator())
               : _isMonthView
                   ? _buildMonthView(dataSource, duracaoSegura, diasDeAtendimento, detalhesBloqueios, textoTitulo)
+                  // MODIFICAÇÃO: Passamos a usar a nova versão da WeekView com setas
                   : _buildWeekView(dataSource, duracaoSegura, diasDeAtendimento, datasBloqueadas, horarios, specialRegions),
         ),
       ],
@@ -334,38 +327,26 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
     );
   }
 
-Widget _buildMonthView(MeetingDataSource dataSource, int duracaoDaAgenda, Set<int> diasDeAtendimento, Map<String, String> detalhesBloqueios, String textoTitulo) {
+  Widget _buildMonthView(MeetingDataSource dataSource, int duracaoDaAgenda, Set<int> diasDeAtendimento, Map<String, String> detalhesBloqueios, String textoTitulo) {
     
-    // --- CÁLCULOS DE RESPONSIVIDADE 
     final double screenHeight = MediaQuery.of(context).size.height;
 
-    // ALTURA DA LINHA: Reduzida para 6% da tela.
-    // Clamp: Mínimo de 35px (compacto) e Máximo de 65px (confortável
     final double dynamicRowHeight = (screenHeight * 0.06).clamp(35.0, 65.0);
-    
-    // ALTURA DOS DIAS (SEG, TER...): 3.5% da tela
     final double dynamicDayLabelHeight = (screenHeight * 0.035).clamp(20.0, 35.0);
-    
-    // FONTE: Proporcional, mas com limite máximo de 16 para não ficar "cartoon"
     final double dynamicFontSize = (dynamicRowHeight * 0.35).clamp(12.0, 16.0);
-    
-    // CÍRCULO: 70% da altura da linha, max 42px 
     final double circleSize = (dynamicRowHeight * 0.70).clamp(28.0, 42.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // CALENDÁRIO
         TableCalendar(
           locale: 'pt_BR',
           focusedDay: _focusedDay,
           firstDay: DateTime.utc(2022),
           lastDay: DateTime.utc(2050),
           
-          // --- APLICANDO TAMANHOS DINÂMICOS ---
           rowHeight: dynamicRowHeight, 
           daysOfWeekHeight: dynamicDayLabelHeight,
-          // ------------------------------------
 
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
           headerStyle: const HeaderStyle(
@@ -384,18 +365,14 @@ Widget _buildMonthView(MeetingDataSource dataSource, int duracaoDaAgenda, Set<in
             return isDiaDeAtendimento;
           },
           calendarBuilders: CalendarBuilders(
-            // Construtor para dias desabilitados/fora do mês
             disabledBuilder: (context, day, focusedDay) => Center(
               child: Text(day.day.toString(), style: TextStyle(color: NnkColors.cinzaSuave.withOpacity(0.5), fontSize: dynamicFontSize))
             ),
             outsideBuilder: (context, day, focusedDay) => Center(
               child: Text(day.day.toString(), style: TextStyle(color: NnkColors.cinzaSuave.withOpacity(0.5), fontSize: dynamicFontSize))
             ),
-            
-            // Construtor padrão (dias normais)
             defaultBuilder: (context, day, focusedDay) {
                final String dataFormatada = DateFormat('yyyy-MM-dd').format(day);
-               // Caso seja um dia bloqueado manualmente
                if (detalhesBloqueios.containsKey(dataFormatada)) {
                  return Center(
                    child: Container(
@@ -414,11 +391,8 @@ Widget _buildMonthView(MeetingDataSource dataSource, int duracaoDaAgenda, Set<in
                    ),
                  );
                }
-               // Dia normal disponível
                return Center(child: Text('${day.day}', style: TextStyle(fontSize: dynamicFontSize)));
             },
-            
-            // Construtor para o dia SELECIONADO
             selectedBuilder: (context, day, focusedDay) {
               return Center(
                 child: Container(
@@ -433,8 +407,6 @@ Widget _buildMonthView(MeetingDataSource dataSource, int duracaoDaAgenda, Set<in
                 ),
               );
             },
-            
-            // Construtor para o dia de HOJE
             todayBuilder: (context, day, focusedDay) {
               return Center(
                 child: Container(
@@ -481,7 +453,6 @@ Widget _buildMonthView(MeetingDataSource dataSource, int duracaoDaAgenda, Set<in
         
         const Divider(height: 1), 
 
-        // BARRA DE TÍTULO COM O BOTÃO INTEGRADO
         Container(
           width: double.infinity,
           color: Theme.of(context).primaryColor.withOpacity(0.1), 
@@ -508,7 +479,6 @@ Widget _buildMonthView(MeetingDataSource dataSource, int duracaoDaAgenda, Set<in
           ),
         ),
         
-        // LISTA DE AGENDAMENTOS
         Expanded(
           child: _selectedDay == null
               ? const Center(child: Text("Selecione um dia para ver os detalhes.", style: TextStyle(color: Colors.grey)))
@@ -533,30 +503,60 @@ Widget _buildMonthView(MeetingDataSource dataSource, int duracaoDaAgenda, Set<in
   }
 
   Widget _buildWeekView(MeetingDataSource dataSource, int duracaoDaAgenda, Set<int> diasDeAtendimento, Set<String> datasBloqueadas, ({double startHour, double endHour}) horarios, List<TimeRegion> specialRegions) {
-    return SfCalendar(
-      view: CalendarView.week,
-      dataSource: dataSource,
-      firstDayOfWeek: 1,
-      specialRegions: specialRegions,
-      timeSlotViewSettings: TimeSlotViewSettings(
-        startHour: horarios.startHour,
-        endHour: horarios.endHour,
-        timeInterval: Duration(minutes: duracaoDaAgenda),
-        timeFormat: 'HH:mm',
-      ),
-      onTap: (details) {
-        if (details.date != null) {
-          final String dataFormatada = DateFormat('yyyy-MM-dd').format(details.date!);
-          if (!diasDeAtendimento.contains(details.date!.weekday) ||
-              datasBloqueadas.contains(dataFormatada)) return;
-        }
+    return Stack(
+      children: [
+        SfCalendar(
+          view: CalendarView.week,
+          dataSource: dataSource,
+          firstDayOfWeek: 1,
+          specialRegions: specialRegions,
+          timeSlotViewSettings: TimeSlotViewSettings(
+            startHour: horarios.startHour,
+            endHour: horarios.endHour,
+            timeInterval: Duration(minutes: duracaoDaAgenda),
+            timeFormat: 'HH:mm',
+          ),
+          onTap: (details) {
+            if (details.date != null) {
+              final String dataFormatada = DateFormat('yyyy-MM-dd').format(details.date!);
+              if (!diasDeAtendimento.contains(details.date!.weekday) ||
+                  datasBloqueadas.contains(dataFormatada)) return;
+            }
 
-        if (details.targetElement == CalendarElement.appointment && details.appointments!.isNotEmpty) {
-          widget.onAppointmentTap(details.appointments!.first, context); 
-        } else if (details.targetElement == CalendarElement.calendarCell) {
-          widget.onSlotTap(details.date!, context); 
-        }
-      },
+            if (details.targetElement == CalendarElement.appointment && details.appointments!.isNotEmpty) {
+              widget.onAppointmentTap(details.appointments!.first, context); 
+            } else if (details.targetElement == CalendarElement.calendarCell) {
+              widget.onSlotTap(details.date!, context); 
+            }
+          },
+        ),
+
+        // Indicador de SWIPE ESQUERDO (<<)
+        Positioned(
+          left: 0,
+          top: 28,
+          height: 40, 
+          width: 50,           
+          child: IgnorePointer( // Importante: Permite tocar "através" do ícone
+            child: Center(
+              child: _SwipeIndicator(isRight: false),
+            ),
+          ),
+        ),
+
+        // Indicador de SWIPE DIREITO (>>)
+        Positioned(
+          right: 0,
+          top: 28,
+          height: 40, 
+          width: 50,
+          child: IgnorePointer(
+            child: Center(
+              child: _SwipeIndicator(isRight: true),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -606,5 +606,71 @@ class MeetingDataSource extends CalendarDataSource {
     final eventsToday = appointments?.where((appt) => isSameDay(appt.startTime, day)).toList().cast<Appointment>() ?? [];
     eventsToday.sort((a, b) => a.startTime.compareTo(b.startTime));
     return eventsToday;
+  }
+}
+
+// --- WIDGET: Indicador Animado ---
+class _SwipeIndicator extends StatefulWidget {
+  final bool isRight;
+  const _SwipeIndicator({required this.isRight});
+
+  @override
+  State<_SwipeIndicator> createState() => _SwipeIndicatorState();
+}
+
+class _SwipeIndicatorState extends State<_SwipeIndicator> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    // Controlador da animação (duração de 1 segundo, repetindo vai e volta)
+    _controller = AnimationController(
+      duration: const Duration(seconds: 1),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    // Define o movimento: vai de 0 a 10 pixels
+    _animation = Tween<double>(begin: 0, end: 10).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        // Se for direita, move +valor. Se for esquerda, move -valor.
+        final double offsetValue = widget.isRight ? _animation.value : -_animation.value;
+        
+        return Transform.translate(
+          offset: Offset(offsetValue, 0),
+          child: Opacity(
+            opacity: 0.6, // Semi-transparente 
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Icon(
+                widget.isRight ? Icons.keyboard_double_arrow_right : Icons.keyboard_double_arrow_left,
+                size: 40,
+                color: Theme.of(context).primaryColor.withOpacity(0.7),
+                //sombra leve para melhorar o contraste
+                shadows: const [
+                  Shadow(blurRadius: 10, color: Colors.white, offset: Offset(0,0))
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }

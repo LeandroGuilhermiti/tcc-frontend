@@ -26,12 +26,12 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
   late TextEditingController _avisoController;
 
   final Map<String, int> diasSemanaMap = {
-    'Seg': 1, 'Ter': 2, 'Qua': 3, 'Qui': 4, 'Sex': 5, 'Sáb': 6,
+    'Seg': 1, 'Ter': 2, 'Qua': 3, 'Qui': 4, 'Sex': 5, 'Sáb': 6, 'Dom': 7,
   };
   final Map<int, String> diasSemanaMapInverso = {
-    1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb',
+    1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb', 7: 'Dom',
   };
-  final List<String> diasSemana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  final List<String> diasSemana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
   final Map<String, bool> diasSelecionados = {};
   final Map<String, List<TimeRange>> periodosPorDia = {};
