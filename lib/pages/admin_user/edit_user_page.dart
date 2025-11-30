@@ -31,9 +31,10 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
     'SE': 'Sergipe', 'TO': 'Tocantins',
   };
 
-  // Controladores
-  late TextEditingController _nomeController;
-  late TextEditingController _sobrenomeController; // Caso queira separar ou juntar
+  // --- ALTERAÇÃO 1: Controladores separados para Nome e Sobrenome ---
+  late TextEditingController _givenNameController; // Nome
+  late TextEditingController _familyNameController; // Sobrenome
+  
   late TextEditingController _cpfController;
   late TextEditingController _cepController;
   late TextEditingController _telefoneController;
@@ -74,13 +75,11 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
   void _inicializarDados() {
     final p = widget.paciente;
 
-    // Concatena nome se necessário ou usa campos separados se tiver no model
-    String nomeCompleto = p.primeiroNome ?? '';
-    if (p.sobrenome != null && p.sobrenome!.isNotEmpty) {
-      nomeCompleto += ' ${p.sobrenome}';
-    }
-
-    _nomeController = TextEditingController(text: nomeCompleto);
+    // --- ALTERAÇÃO 2: Inicialização separada ---
+    // Pega o dado do model, ou string vazia se for null
+    _givenNameController = TextEditingController(text: p.primeiroNome ?? '');
+    _familyNameController = TextEditingController(text: p.sobrenome ?? '');
+    
     _emailController = TextEditingController(text: p.email ?? '');
     
     // Aplica a máscara nos dados vindos do banco
@@ -88,21 +87,23 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
     _cepController = TextEditingController(text: _cepFormatter.maskText(p.cep ?? ''));
     _telefoneController = TextEditingController(text: _telefoneFormatter.maskText(p.telefone ?? ''));
 
-    // Inicializa endereço (Caso o UserModel não tenha esses campos, iniciam vazios)
-    // Se você tiver adicionado rua/bairro no UserModel, mapeie aqui: p.rua, p.bairro...
-    _ruaController = TextEditingController(text: ''); 
+    // Inicializa endereço
+    _ruaController = TextEditingController(text: ''); // Mapear p.rua se existir
     _numeroController = TextEditingController(text: '');
     _bairroController = TextEditingController(text: '');
     _cidadeController = TextEditingController(text: '');
-    _ufSelecionada = null; // ou p.uf
+    _ufSelecionada = null; 
 
-    // Define o tipo inicial baseado no Role do usuário
+    // Define o tipo inicial
     _tipoSelecionado = p.role == UserRole.admin ? 'admin' : 'cliente';
   }
 
   @override
   void dispose() {
-    _nomeController.dispose();
+    // --- ALTERAÇÃO 3: Dispose dos novos controllers ---
+    _givenNameController.dispose();
+    _familyNameController.dispose();
+    
     _cpfController.dispose();
     _cepController.dispose();
     _telefoneController.dispose();
@@ -114,7 +115,7 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
     super.dispose();
   }
 
-  // --- Lógica de CEP (Idêntica ao Cadastro) ---
+  // --- Lógica de CEP (Mantida igual) ---
   Future<void> _buscarCep() async {
     final cep = _cepFormatter.getUnmaskedText();
     if (cep.length != 8) return;
@@ -241,29 +242,19 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
 
     setState(() => _isSaving = true);
 
-    // Separando Nome e Sobrenome (lógica simples baseada no primeiro espaço)
-    final nomeCompleto = _nomeController.text.trim();
-    String nome = nomeCompleto;
-    String sobrenome = '';
-    
-    if (nomeCompleto.contains(' ')) {
-      final partes = nomeCompleto.split(' ');
-      nome = partes[0];
-      sobrenome = partes.sublist(1).join(' ');
-    }
-
-    // Monta o JSON de Atualização (PATCH)
+    // --- ALTERAÇÃO 4: Montagem do JSON com as chaves corretas ---
     final Map<String, dynamic> dadosAtualizados = {
-      'nome': nome,
-      'sobrenome': sobrenome,
+      // Usando as chaves que seu Backend Node espera
+      'givenName': _givenNameController.text.trim(),
+      'familyName': _familyNameController.text.trim(),
+      
       'email': _emailController.text.trim(),
       'cpf': _cpfFormatter.getUnmaskedText(),
       'cep': _cepFormatter.getUnmaskedText(),
       'telefone': _telefoneFormatter.getUnmaskedText(),
-      // Converte a string 'admin'/'cliente' para Inteiro (1 ou 0)
+      
       'tipo': _tipoSelecionado == 'admin' ? 1 : 0,
       
-      // Adicione os campos de endereço se seu backend suportar no PATCH
       'logradouro': _ruaController.text,
       'numero': _numeroController.text,
       'bairro': _bairroController.text,
@@ -272,18 +263,15 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
     };
 
     try {
-      // Chama o método de ATUALIZAR, passando o ID do usuário
       final sucesso = await Provider.of<UsuarioProvider>(context, listen: false)
           .atualizarUsuario(dadosAtualizados, idUsuarioAlvo: widget.paciente.id); 
-          // Nota: Certifique-se que seu UsuarioProvider tem um método como 'atualizarUsuarioNaLista'
-          // que recebe (id, map) e faz o PATCH na API.
 
       if (sucesso && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Dados atualizados com sucesso!'),
           backgroundColor: Colors.green,
         ));
-        Navigator.pop(context); // Volta para a lista
+        Navigator.pop(context);
       } else if (mounted) {
         final erro = Provider.of<UsuarioProvider>(context, listen: false).error;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -323,16 +311,37 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
                   children: [
                     Text("Informações Pessoais", style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 20),
-                    TextFormField(
-                      controller: _nomeController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nome Completo',
-                        prefixIcon: Icon(Icons.person_outline),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Informe o nome' : null,
+                    
+                    // --- ALTERAÇÃO 5: Linha com Nome e Sobrenome separados ---
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _givenNameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Nome', // Label para UI
+                              prefixIcon: Icon(Icons.person_outline),
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) => v == null || v.trim().isEmpty ? 'Obrigatório' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _familyNameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Sobrenome', // Label para UI
+                              border: OutlineInputBorder(),
+                            ),
+                            // Sobrenome é opcional? Se for obrigatório, adicione validação
+                            validator: (v) => v == null || v.trim().isEmpty ? 'Obrigatório' : null,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
+                    
                     TextFormField(
                       controller: _cpfController,
                       decoration: const InputDecoration(
@@ -350,7 +359,7 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
             ),
             const SizedBox(height: 20),
 
-            // --- Card de Contato e Acesso ---
+            // --- Card de Contato ---
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -359,7 +368,7 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Contato e Permissões", style: Theme.of(context).textTheme.titleLarge),
+                    Text("Contato e Endereço", style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 20),
                     TextFormField(
                       controller: _emailController,
@@ -383,25 +392,10 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
                       inputFormatters: [_telefoneFormatter],
                       validator: (v) => v == null || v.length < 15 ? 'Telefone inválido' : null,
                     ),
-                    const SizedBox(height: 16),
-                    // DROPDOWN DE TIPO (ROLE)
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                        labelText: 'Tipo de Usuário',
-                        prefixIcon: Icon(Icons.security_outlined),
-                        border: OutlineInputBorder(),
-                      ),
-                      value: _tipoSelecionado,
-                      items: ['cliente', 'admin'].map((tipo) => DropdownMenuItem(
-                        value: tipo,
-                        child: Text(tipo[0].toUpperCase() + tipo.substring(1)),
-                      )).toList(),
-                      onChanged: (value) => setState(() => _tipoSelecionado = value),
-                      validator: (value) => value == null ? 'Selecione o tipo' : null,
-                    ),
+
                     const SizedBox(height: 16),
                     
-                    // --- ÁREA DE ENDEREÇO (Igual ao Cadastro) ---
+                    // --- ÁREA DE ENDEREÇO ---
                     TextFormField(
                       controller: _cepController,
                       keyboardType: TextInputType.number,
@@ -493,6 +487,38 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
                 ),
               ),
             ),
+            const SizedBox(height: 20),
+
+            // --- ALTERAÇÃO 6: Card exclusivo para Permissões no final ---
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Configurações do Sistema", style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 20),
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(
+                        labelText: 'Tipo de Usuário',
+                        prefixIcon: Icon(Icons.security_outlined),
+                        border: OutlineInputBorder(),
+                      ),
+                      value: _tipoSelecionado,
+                      items: ['cliente', 'admin'].map((tipo) => DropdownMenuItem(
+                        value: tipo,
+                        child: Text(tipo[0].toUpperCase() + tipo.substring(1)),
+                      )).toList(),
+                      onChanged: (value) => setState(() => _tipoSelecionado = value),
+                      validator: (value) => value == null ? 'Selecione o tipo' : null,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
             const SizedBox(height: 24),
 
             // Botão Salvar
