@@ -280,13 +280,50 @@ class _PacientesListPageState extends State<PacientesListPage> {
                 borderRadius: BorderRadius.circular(8.0),
               ),
             ),
-            onPressed: () {
-              Navigator.of(context).push(
+            onPressed: () async {
+              await Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => PacienteEditPage(paciente: paciente),
                 ),
               );
+
+              if (context.mounted) {
+                Provider.of<UsuarioProvider>(context, listen: false).buscarUsuarios();
+              }
             },
+          ),
+          // Botão de Editar Estilizado
+          SizedBox(
+            height: 45,
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              label: Text(
+                'Editar Dados',
+                style: GoogleFonts.cinzel(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: NnkColors.tintaCastanha, // Fundo escuro
+                foregroundColor: NnkColors.ouroAntigo,    // Texto dourado
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  side: const BorderSide(color: NnkColors.ouroAntigo),
+                ),
+              ),
+              onPressed: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => PacienteEditPage(paciente: paciente),
+                  ),
+                );
+                if (context.mounted) {
+                  Provider.of<UsuarioProvider>(context, listen: false).buscarUsuarios();
+                }
+              },
+            ),
           ),
         ],
       ),
