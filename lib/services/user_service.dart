@@ -136,7 +136,7 @@ class UsuarioService {
     Map<String, dynamic> dadosAtualizados,
     String token,
   ) async {
-    final Uri url = Uri.parse('$_baseUrl/usuario/$id');
+    final Uri url = Uri.parse('$_baseUrl/usuario/$id/editar');
     // debugPrint("[UsuarioService] Dados: ${jsonEncode(dadosAtualizados)}");
     // debugPrint("[UsuarioService] Atualizando usuário em: ${url.toString()}");
 
