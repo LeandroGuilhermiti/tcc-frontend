@@ -269,35 +269,24 @@ class _PacientesListPageState extends State<PacientesListPage> {
           ),
           const SizedBox(height: 20),
 
-          // Botão de Editar Estilizado
-          SizedBox(
-            height: 45,
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.edit_outlined, size: 20),
-              label: Text(
-                'Editar Dados',
-                style: GoogleFonts.cinzel(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.0
-                ),
+          // Botão de Editar
+          ElevatedButton.icon(
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: const Text('Editar Dados'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blueGrey, // Cor temática
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: NnkColors.tintaCastanha, // Fundo escuro
-                foregroundColor: NnkColors.ouroAntigo,    // Texto dourado
-                elevation: 3,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                  side: const BorderSide(color: NnkColors.ouroAntigo),
-                ),
-              ),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => PacienteEditPage(paciente: paciente),
-                  ),
-                );
-              },
             ),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => PacienteEditPage(paciente: paciente),
+                ),
+              );
+            },
           ),
         ],
       ),
