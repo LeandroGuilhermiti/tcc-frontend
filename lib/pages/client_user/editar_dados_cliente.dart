@@ -79,23 +79,52 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
 
   void _inicializarDados() {
     final auth = Provider.of<AuthController>(context, listen: false);
-    final UserModel? usuario = auth.usuario; 
+    final UserModel? usuario = auth.usuario;
 
-    // Inicialização idêntica ao Admin, mas pegando do AuthController
+    // 1. Dados Pessoais (Que existem no banco/Cognito)
     _givenNameController = TextEditingController(text: usuario?.primeiroNome ?? '');
     _familyNameController = TextEditingController(text: usuario?.sobrenome ?? '');
     _emailController = TextEditingController(text: usuario?.email ?? '');
-    
-    _cpfController = TextEditingController(text: _cpfFormatter.maskText(usuario?.cpf ?? ''));
-    _telefoneController = TextEditingController(text: _telefoneFormatter.maskText(usuario?.telefone ?? ''));
-    _cepController = TextEditingController(text: _cepFormatter.maskText(usuario?.cep ?? ''));
 
-    // Endereço Completo (Se o UserModel tiver esses campos, mapeie aqui. Senão inicia vazio)
-    _ruaController = TextEditingController(text: ''); 
+    // 2. Preparar dados para Máscaras
+    final cpfDB = usuario?.cpf ?? '';
+    final celDB = usuario?.telefone ?? '';
+    final cepDB = usuario?.cep ?? '';
+
+    // Inicializa os controllers aplicando a máscara visualmente
+    _cpfController = TextEditingController(text: _cpfFormatter.maskText(cpfDB));
+    _telefoneController = TextEditingController(text: _telefoneFormatter.maskText(celDB));
+    _cepController = TextEditingController(text: _cepFormatter.maskText(cepDB));
+
+    // ATENÇÃO: Atualiza o estado interno da máscara para o validador não achar que está vazio
+    // Isso resolve o problema de "ter que digitar de novo"
+    if (cpfDB.isNotEmpty) {
+      _cpfFormatter.updateMask(mask: '###.###.###-##', newValue: TextEditingValue(text: _cpfController.text));
+    }
+    if (celDB.isNotEmpty) {
+      _telefoneFormatter.updateMask(mask: '(##) #####-####', newValue: TextEditingValue(text: _telefoneController.text));
+    }
+    if (cepDB.isNotEmpty) {
+      _cepFormatter.updateMask(mask: '#####-###', newValue: TextEditingValue(text: _cepController.text));
+    }
+
+    // 3. Inicializar Endereço VAZIO (Pois não tem no banco)
+    _ruaController = TextEditingController(text: '');
     _numeroController = TextEditingController(text: '');
     _bairroController = TextEditingController(text: '');
     _cidadeController = TextEditingController(text: '');
+    
+    // IMPORTANTE: Começar com null evita o erro "Assertion failed" no Dropdown
     _ufSelecionada = null; 
+
+    // 4. AUTOMAÇÃO: Se tiver CEP, busca o endereço sozinho
+    if (cepDB.isNotEmpty && cepDB.length >= 8) {
+      // Usamos o addPostFrameCallback para garantir que a tela já foi construída
+      // antes de chamar o setState dentro do _buscarCep
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _buscarCep(); 
+      });
+    }
   }
 
   @override

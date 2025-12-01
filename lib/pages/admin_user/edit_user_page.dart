@@ -73,29 +73,56 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
   }
 
   void _inicializarDados() {
+    // Aqui usamos 'p' para facilitar, que representa o Paciente vindo da tela anterior
     final p = widget.paciente;
 
-    // --- ALTERAÇÃO 2: Inicialização separada ---
-    // Pega o dado do model, ou string vazia se for null
+    // 1. Inicializa Textos Básicos
     _givenNameController = TextEditingController(text: p.primeiroNome ?? '');
     _familyNameController = TextEditingController(text: p.sobrenome ?? '');
-    
     _emailController = TextEditingController(text: p.email ?? '');
     
-    // Aplica a máscara nos dados vindos do banco
-    _cpfController = TextEditingController(text: _cpfFormatter.maskText(p.cpf ?? ''));
-    _cepController = TextEditingController(text: _cepFormatter.maskText(p.cep ?? ''));
-    _telefoneController = TextEditingController(text: _telefoneFormatter.maskText(p.telefone ?? ''));
+    // 2. Prepara dados brutos para Máscaras
+    final cpfDB = p.cpf ?? '';
+    final celDB = p.telefone ?? '';
+    final cepDB = p.cep ?? '';
 
-    // Inicializa endereço
-    _ruaController = TextEditingController(text: ''); // Mapear p.rua se existir
+    // Inicializa os controllers com a máscara visual aplicada
+    _cpfController = TextEditingController(text: _cpfFormatter.maskText(cpfDB));
+    _cepController = TextEditingController(text: _cepFormatter.maskText(cepDB));
+    _telefoneController = TextEditingController(text: _telefoneFormatter.maskText(celDB));
+
+    // --- CORREÇÃO 1: Atualiza o estado interno das máscaras ---
+    // Isso impede que o validador ache que o campo está vazio ao clicar em Salvar
+    if (cpfDB.isNotEmpty) {
+      _cpfFormatter.updateMask(mask: '###.###.###-##', newValue: TextEditingValue(text: _cpfController.text));
+    }
+    if (celDB.isNotEmpty) {
+      _telefoneFormatter.updateMask(mask: '(##) #####-####', newValue: TextEditingValue(text: _telefoneController.text));
+    }
+    if (cepDB.isNotEmpty) {
+      _cepFormatter.updateMask(mask: '#####-###', newValue: TextEditingValue(text: _cepController.text));
+    }
+
+    // 3. Inicializa Endereço VAZIO (Banco não tem rua/bairro/cidade)
+    _ruaController = TextEditingController(text: '');
     _numeroController = TextEditingController(text: '');
     _bairroController = TextEditingController(text: '');
     _cidadeController = TextEditingController(text: '');
+    
+    // Define null para evitar o erro "Assertion failed" no Dropdown
     _ufSelecionada = null; 
 
-    // Define o tipo inicial
+    // Define o tipo de usuário (Lógica específica do Admin)
     _tipoSelecionado = p.role == UserRole.admin ? 'admin' : 'cliente';
+
+    // --- CORREÇÃO 2: Busca automática do Endereço via CEP ---
+    // Se o usuário do banco tem CEP, buscamos o resto do endereço automaticamente
+    if (cepDB.isNotEmpty && cepDB.length >= 8) {
+       WidgetsBinding.instance.addPostFrameCallback((_) {
+         // Chama a função de busca que você já tem na tela
+         _buscarCep(); 
+       });
+    }
   }
 
   @override
