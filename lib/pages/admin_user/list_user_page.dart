@@ -217,12 +217,16 @@ class _PacientesListPageState extends State<PacientesListPage> {
                 borderRadius: BorderRadius.circular(8.0),
               ),
             ),
-            onPressed: () {
-              Navigator.of(context).push(
+            onPressed: () async {
+              await Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => PacienteEditPage(paciente: paciente),
                 ),
               );
+
+              if (context.mounted) {
+                Provider.of<UsuarioProvider>(context, listen: false).buscarUsuarios();
+              }
             },
           ),
         ],
