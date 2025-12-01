@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart'; // Import necessário
 import 'dart:math';
 
 import '../theme/app_theme.dart'; 
@@ -67,34 +68,6 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
       ]);
     } catch (e) {
       debugPrint("Erro ao carregar feriados: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.cloud_off, color: Colors.white),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    "Aviso: Não foi possível obter os feriados. Verifique a conexão.",
-                    style: TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.orange[800],
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 6),
-            action: SnackBarAction(
-              label: 'Recarregar',
-              textColor: Colors.white,
-              onPressed: () {
-                _carregarDadosIniciais();
-              },
-            ),
-          ),
-        );
-      }
     }
   }
 
@@ -129,9 +102,9 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
   ) {
     final List<TimeRegion> regions = [];
     
-    final Color corSemAtendimento = const Color(0xFFF5F5F5); 
-    final Color corBloqueio = const Color(0xFFE0E0E0); 
-    final Color corFeriado = const Color(0xFFFFF3E0); 
+    final Color corSemAtendimento = NnkColors.cinzaSuave.withOpacity(0.3); 
+    final Color corBloqueio = NnkColors.vermelhoLacre.withOpacity(0.15); 
+    final Color corFeriado = NnkColors.ouroAntigo.withOpacity(0.2); 
 
     final Map<int, String> weekDayMap = {
       1: 'MO', 2: 'TU', 3: 'WE', 4: 'TH', 5: 'FR', 6: 'SA', 7: 'SU'
@@ -153,17 +126,17 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
           recurrenceRule: 'FREQ=WEEKLY;BYDAY=${weekDayMap[dia]}',
           color: corSemAtendimento,
           text: label,
-          textStyle: const TextStyle(
-            color: Color(0xFFD32F2F), 
+          textStyle: GoogleFonts.alegreya(
+            color: NnkColors.tintaCastanha.withOpacity(0.5), 
             fontSize: 12,
-            fontStyle: FontStyle.italic
+            fontStyle: FontStyle.italic,
           ),
           enablePointerInteraction: false,
         ));
       }
 
       if (periodosDoDia.isEmpty) {
-        addRegion(globalStart, globalEnd, "Sem Atendimentos");
+        addRegion(globalStart, globalEnd, "Fechado");
       } else {
         periodosDoDia.sort((a, b) => timeToDouble(a.inicio).compareTo(timeToDouble(b.inicio)));
         
@@ -171,7 +144,7 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
         double primeiroInicio = timeToDouble(periodosDoDia.first.inicio);
         
         if (primeiroInicio > currentCursor) {
-          addRegion(currentCursor, primeiroInicio, "Sem Atendimentos");
+          addRegion(currentCursor, primeiroInicio, "Fechado");
           currentCursor = primeiroInicio; 
         }
         
@@ -186,7 +159,7 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
         }
 
         if (currentCursor < globalEnd) {
-          addRegion(currentCursor, globalEnd, "Sem Atendimentos");
+          addRegion(currentCursor, globalEnd, "Fechado");
         }
       }
     }
@@ -206,7 +179,7 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
         endTime: endTime,
         color: corBloqueio,
         text: bloqueio.descricao,
-        textStyle: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+        textStyle: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontWeight: FontWeight.bold),
         enablePointerInteraction: false, 
       ));
     }
@@ -220,8 +193,8 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
         endTime: end,
         color: corFeriado,
         text: feriado.name,
-        textStyle: const TextStyle(
-          color: Colors.deepOrange, 
+        textStyle: GoogleFonts.alegreya(
+          color: NnkColors.tintaCastanha, 
           fontWeight: FontWeight.bold,
           fontSize: 14,
         ),
@@ -293,44 +266,63 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
         ? "Agendamentos de ${DateFormat('dd/MM/yyyy').format(_selectedDay!)}" 
         : "Selecione uma data";
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-         Center(
-           child: Padding(
-             padding: const EdgeInsets.symmetric(vertical: 8),
-             child: _buildViewToggler(),
+    return Container(
+      color: NnkColors.papelAntigo,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+           Center(
+             child: Padding(
+               padding: const EdgeInsets.symmetric(vertical: 8),
+               child: _buildViewToggler(),
+             ),
            ),
-         ),
-        
-        Expanded(
-          child: isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _isMonthView
-                  ? _buildMonthView(dataSource, duracaoSegura, diasDeAtendimento, detalhesBloqueios, textoTitulo)
-                  // MODIFICAÇÃO: Passamos a usar a nova versão da WeekView com setas
-                  : _buildWeekView(dataSource, duracaoSegura, diasDeAtendimento, datasBloqueadas, horarios, specialRegions),
-        ),
-      ],
+          
+          Expanded(
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator(color: NnkColors.ouroAntigo))
+                : _isMonthView
+                    ? _buildMonthView(dataSource, duracaoSegura, diasDeAtendimento, detalhesBloqueios, textoTitulo)
+                    : _buildWeekView(dataSource, duracaoSegura, diasDeAtendimento, datasBloqueadas, horarios, specialRegions),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildViewToggler() {
-    return ToggleButtons(
-      isSelected: [_isMonthView, !_isMonthView],
-      onPressed: (index) => setState(() => _isMonthView = index == 0),
-      borderRadius: const BorderRadius.all(Radius.circular(8)),
-      children: const [
-        Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('Mês')),
-        Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('Semana')),
-      ],
+    return Container(
+      decoration: BoxDecoration(
+        color: NnkColors.ouroClaro.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: NnkColors.ouroAntigo),
+      ),
+      child: ToggleButtons(
+        isSelected: [_isMonthView, !_isMonthView],
+        onPressed: (index) => setState(() => _isMonthView = index == 0),
+        borderRadius: BorderRadius.circular(11),
+        selectedColor: NnkColors.papelAntigo, 
+        fillColor: NnkColors.tintaCastanha,   
+        color: NnkColors.tintaCastanha,       
+        renderBorder: false,
+        textStyle: GoogleFonts.cinzel(fontWeight: FontWeight.bold), // Fonte do Toggle
+        children: const [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24), 
+            child: Row(children: [Icon(Icons.calendar_month, size: 18), SizedBox(width: 8), Text('MÊS')]),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24), 
+            child: Row(children: [Icon(Icons.view_week, size: 18), SizedBox(width: 8), Text('SEMANA')]),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildMonthView(MeetingDataSource dataSource, int duracaoDaAgenda, Set<int> diasDeAtendimento, Map<String, String> detalhesBloqueios, String textoTitulo) {
     
     final double screenHeight = MediaQuery.of(context).size.height;
-
     final double dynamicRowHeight = (screenHeight * 0.06).clamp(35.0, 65.0);
     final double dynamicDayLabelHeight = (screenHeight * 0.035).clamp(20.0, 35.0);
     final double dynamicFontSize = (dynamicRowHeight * 0.35).clamp(12.0, 16.0);
@@ -349,27 +341,47 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
           daysOfWeekHeight: dynamicDayLabelHeight,
 
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-          headerStyle: const HeaderStyle(
+          
+          headerStyle: HeaderStyle(
             formatButtonVisible: false,
             titleCentered: true,
-            headerMargin: EdgeInsets.only(bottom: 6.0),
+            headerMargin: const EdgeInsets.only(bottom: 6.0),
+            decoration: const BoxDecoration(color: NnkColors.papelAntigo),
+            titleTextStyle: GoogleFonts.cinzel(
+              color: NnkColors.tintaCastanha,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+            leftChevronIcon: const Icon(Icons.chevron_left, color: NnkColors.ouroAntigo),
+            rightChevronIcon: const Icon(Icons.chevron_right, color: NnkColors.ouroAntigo),
           ),
+
           daysOfWeekStyle: DaysOfWeekStyle(
-            weekdayStyle: TextStyle(color: NnkColors.marromEscuro, fontSize: dynamicFontSize),
-            weekendStyle: TextStyle(color: NnkColors.vermelho.withOpacity(0.6), fontSize: dynamicFontSize),
+            weekdayStyle: GoogleFonts.alegreya(
+              color: NnkColors.tintaCastanha, 
+              fontSize: dynamicFontSize, 
+              fontWeight: FontWeight.bold,
+            ),
+            weekendStyle: GoogleFonts.alegreya(
+              color: NnkColors.vermelhoLacre.withOpacity(0.7), 
+              fontSize: dynamicFontSize,
+              fontWeight: FontWeight.bold,
+            ),
           ),
+          
           enabledDayPredicate: (day) {
             final String dataFormatada = DateFormat('yyyy-MM-dd').format(day);
             if (detalhesBloqueios.containsKey(dataFormatada)) return true;
             final bool isDiaDeAtendimento = diasDeAtendimento.contains(day.weekday);
             return isDiaDeAtendimento;
           },
+
           calendarBuilders: CalendarBuilders(
             disabledBuilder: (context, day, focusedDay) => Center(
-              child: Text(day.day.toString(), style: TextStyle(color: NnkColors.cinzaSuave.withOpacity(0.5), fontSize: dynamicFontSize))
+              child: Text(day.day.toString(), style: GoogleFonts.alegreya(color: NnkColors.cinzaSuave, fontSize: dynamicFontSize))
             ),
             outsideBuilder: (context, day, focusedDay) => Center(
-              child: Text(day.day.toString(), style: TextStyle(color: NnkColors.cinzaSuave.withOpacity(0.5), fontSize: dynamicFontSize))
+              child: Text(day.day.toString(), style: GoogleFonts.alegreya(color: NnkColors.cinzaSuave.withOpacity(0.5), fontSize: dynamicFontSize))
             ),
             defaultBuilder: (context, day, focusedDay) {
                final String dataFormatada = DateFormat('yyyy-MM-dd').format(day);
@@ -379,30 +391,39 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
                      width: circleSize, 
                      height: circleSize,
                      decoration: BoxDecoration(
-                       color: Colors.deepOrange.withOpacity(0.1), 
+                       color: NnkColors.ouroClaro, 
                        shape: BoxShape.circle,
-                       border: Border.all(color: Colors.deepOrange.withOpacity(0.5)),
+                       border: Border.all(color: NnkColors.ouroAntigo.withOpacity(0.5)),
                      ),
                      alignment: Alignment.center,
                      child: Text(
                        '${day.day}',
-                       style: TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.bold, fontSize: dynamicFontSize),
+                       style: GoogleFonts.alegreya(
+                         color: NnkColors.tintaCastanha.withOpacity(0.6), 
+                         fontWeight: FontWeight.bold, 
+                         fontSize: dynamicFontSize,
+                         decoration: TextDecoration.lineThrough,
+                       ),
                      ),
                    ),
                  );
                }
-               return Center(child: Text('${day.day}', style: TextStyle(fontSize: dynamicFontSize)));
+               return Center(child: Text('${day.day}', style: GoogleFonts.alegreya(fontSize: dynamicFontSize, color: NnkColors.tintaCastanha)));
             },
             selectedBuilder: (context, day, focusedDay) {
               return Center(
                 child: Container(
                   width: circleSize,
                   height: circleSize,
-                  decoration: BoxDecoration(color: Theme.of(context).primaryColor, shape: BoxShape.circle),
+                  decoration: const BoxDecoration(
+                    color: NnkColors.ouroAntigo, 
+                    shape: BoxShape.circle,
+                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0,2))]
+                  ),
                   alignment: Alignment.center,
                   child: Text(
                     '${day.day}',
-                    style: TextStyle(color: Colors.white, fontSize: dynamicFontSize),
+                    style: GoogleFonts.alegreya(color: NnkColors.papelAntigo, fontSize: dynamicFontSize, fontWeight: FontWeight.bold),
                   ),
                 ),
               );
@@ -412,11 +433,14 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
                 child: Container(
                   width: circleSize,
                   height: circleSize,
-                  decoration: BoxDecoration(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5), shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: NnkColors.tintaCastanha, width: 2),
+                    shape: BoxShape.circle
+                  ),
                   alignment: Alignment.center,
                   child: Text(
                     '${day.day}',
-                    style: TextStyle(color: Colors.white, fontSize: dynamicFontSize),
+                    style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: dynamicFontSize, fontWeight: FontWeight.bold),
                   ),
                 ),
               );
@@ -428,12 +452,13 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
                showDialog(
                  context: context,
                  builder: (context) => AlertDialog(
-                   title: const Text("Dia Indisponível"),
-                   content: Text(detalhesBloqueios[dataFormatada]!),
+                   backgroundColor: NnkColors.papelAntigo,
+                   title: Text("Data Indisponível", style: GoogleFonts.cinzel(color: NnkColors.vermelhoLacre)),
+                   content: Text(detalhesBloqueios[dataFormatada]!, style: GoogleFonts.alegreya(fontSize: 18)),
                    actions: [
                      TextButton(
                        onPressed: () => Navigator.pop(context), 
-                       child: const Text("OK")
+                       child: Text("ENTENDIDO", style: GoogleFonts.cinzel(color: NnkColors.tintaCastanha, fontWeight: FontWeight.bold))
                      )
                    ]
                  )
@@ -451,27 +476,27 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
           availableGestures: AvailableGestures.horizontalSwipe,
         ),
         
-        const Divider(height: 1), 
+        Divider(height: 1, color: NnkColors.ouroAntigo.withOpacity(0.5)), 
 
         Container(
           width: double.infinity,
-          color: Theme.of(context).primaryColor.withOpacity(0.1), 
+          color: NnkColors.ouroClaro.withOpacity(0.3), 
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 textoTitulo,
-                style: TextStyle(
-                  fontSize: 16,
+                style: GoogleFonts.cinzel(
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).primaryColor,
+                  color: NnkColors.tintaCastanha,
                 ),
               ),
               IconButton(
                 onPressed: () => widget.onSlotTap(_selectedDay!, context),
                 icon: const Icon(Icons.add_circle),
-                color: Theme.of(context).primaryColor,
+                color: NnkColors.ouroAntigo,
                 iconSize: 36,
                 tooltip: 'Novo Agendamento',
               ),
@@ -481,19 +506,24 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
         
         Expanded(
           child: _selectedDay == null
-              ? const Center(child: Text("Selecione um dia para ver os detalhes.", style: TextStyle(color: Colors.grey)))
+              ? Center(child: Text("Selecione um dia para ver os detalhes.", style: GoogleFonts.alegreya(color: NnkColors.cinzaSuave, fontSize: 18)))
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 8.0), 
                   itemCount: dataSource.getEventsForDay(_selectedDay!).length,
                   itemBuilder: (context, index) {
                     final appointment = dataSource.getEventsForDay(_selectedDay!)[index];
                     return ListTile(
-                      leading: Icon(Icons.circle, color: appointment.color, size: 12),
-                      title: Text(appointment.subject),
+                      leading: Icon(Icons.circle, color: appointment.color, size: 14),
+                      title: Text(
+                        appointment.subject, 
+                        style: GoogleFonts.alegreya(fontSize: 18, fontWeight: FontWeight.bold)
+                      ),
                       subtitle: Text(
-                        '${DateFormat('HH:mm').format(appointment.startTime)} - ${DateFormat('HH:mm').format(appointment.endTime)}'
+                        '${DateFormat('HH:mm').format(appointment.startTime)} - ${DateFormat('HH:mm').format(appointment.endTime)}',
+                        style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha.withOpacity(0.7)),
                       ),
                       onTap: () => widget.onAppointmentTap(appointment, context),
+                      splashColor: NnkColors.ouroAntigo.withOpacity(0.1),
                     );
                   },
                 ),
@@ -510,12 +540,44 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
           dataSource: dataSource,
           firstDayOfWeek: 1,
           specialRegions: specialRegions,
+          backgroundColor: NnkColors.papelAntigo,
+          
+          headerStyle: CalendarHeaderStyle(
+            backgroundColor: NnkColors.papelAntigo,
+            textStyle: GoogleFonts.cinzel(
+              color: NnkColors.tintaCastanha, 
+              fontSize: 20
+            ),
+          ),
+          
+          viewHeaderStyle: ViewHeaderStyle(
+            backgroundColor: NnkColors.papelAntigo,
+            dayTextStyle: GoogleFonts.cinzel(
+              color: NnkColors.tintaCastanha, 
+              fontWeight: FontWeight.bold
+            ),
+            dateTextStyle: GoogleFonts.alegreya(
+              color: NnkColors.tintaCastanha, 
+              fontSize: 18
+            ),
+          ),
+          
           timeSlotViewSettings: TimeSlotViewSettings(
             startHour: horarios.startHour,
             endHour: horarios.endHour,
             timeInterval: Duration(minutes: duracaoDaAgenda),
             timeFormat: 'HH:mm',
+            timeTextStyle: GoogleFonts.alegreya(color: NnkColors.tintaCastanha),
+            timelineAppointmentHeight: -1, 
           ),
+          
+          todayHighlightColor: NnkColors.ouroAntigo,
+          
+          selectionDecoration: BoxDecoration(
+            border: Border.all(color: NnkColors.tintaCastanha, width: 2),
+            color: Colors.transparent,
+          ),
+
           onTap: (details) {
             if (details.date != null) {
               final String dataFormatada = DateFormat('yyyy-MM-dd').format(details.date!);
@@ -531,20 +593,18 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
           },
         ),
 
-        // Indicador de SWIPE ESQUERDO (<<)
         Positioned(
           left: 0,
           top: 28,
           height: 40, 
           width: 50,           
-          child: IgnorePointer( // Importante: Permite tocar "através" do ícone
+          child: IgnorePointer(
             child: Center(
               child: _SwipeIndicator(isRight: false),
             ),
           ),
         ),
 
-        // Indicador de SWIPE DIREITO (>>)
         Positioned(
           right: 0,
           top: 28,
@@ -579,12 +639,12 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
       Color corEvento;
 
       if (isClient && !isMe) {
-        subjectTexto = 'Agendado';
-        corEvento = Colors.grey.withOpacity(0.7);
+        subjectTexto = 'Ocupado';
+        corEvento = NnkColors.cinzaSuave;
       } else {
         final nomePaciente = mapaUsuarios[agendamento.idUsuario] ?? 'ID: ${agendamento.idUsuario}';
-        subjectTexto = 'Agendado: $nomePaciente';
-        corEvento = Theme.of(context).primaryColor;
+        subjectTexto = '$nomePaciente';
+        corEvento = isMe ? NnkColors.verdeErva : NnkColors.ouroAntigo;
       }
 
       appointments.add(Appointment(
@@ -593,6 +653,8 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
         subject: subjectTexto,
         color: corEvento,
         resourceIds: [agendamento],
+        startTimeZone: '',
+        endTimeZone: '',
       ));
     }
     
@@ -602,6 +664,7 @@ class _SharedAgendaCalendarState extends State<SharedAgendaCalendar> {
 
 class MeetingDataSource extends CalendarDataSource {
   MeetingDataSource(List<Appointment> source) { appointments = source; }
+  @override
   List<Appointment> getEventsForDay(DateTime day) {
     final eventsToday = appointments?.where((appt) => isSameDay(appt.startTime, day)).toList().cast<Appointment>() ?? [];
     eventsToday.sort((a, b) => a.startTime.compareTo(b.startTime));
@@ -609,7 +672,6 @@ class MeetingDataSource extends CalendarDataSource {
   }
 }
 
-// --- WIDGET: Indicador Animado ---
 class _SwipeIndicator extends StatefulWidget {
   final bool isRight;
   const _SwipeIndicator({required this.isRight});
@@ -625,13 +687,11 @@ class _SwipeIndicatorState extends State<_SwipeIndicator> with SingleTickerProvi
   @override
   void initState() {
     super.initState();
-    // Controlador da animação (duração de 1 segundo, repetindo vai e volta)
     _controller = AnimationController(
       duration: const Duration(seconds: 1),
       vsync: this,
     )..repeat(reverse: true);
 
-    // Define o movimento: vai de 0 a 10 pixels
     _animation = Tween<double>(begin: 0, end: 10).animate(CurvedAnimation(
       parent: _controller,
       curve: Curves.easeInOut,
@@ -649,22 +709,20 @@ class _SwipeIndicatorState extends State<_SwipeIndicator> with SingleTickerProvi
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
-        // Se for direita, move +valor. Se for esquerda, move -valor.
         final double offsetValue = widget.isRight ? _animation.value : -_animation.value;
         
         return Transform.translate(
           offset: Offset(offsetValue, 0),
           child: Opacity(
-            opacity: 0.6, // Semi-transparente 
+            opacity: 0.8,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: Icon(
                 widget.isRight ? Icons.keyboard_double_arrow_right : Icons.keyboard_double_arrow_left,
                 size: 40,
-                color: Theme.of(context).primaryColor.withOpacity(0.7),
-                //sombra leve para melhorar o contraste
+                color: NnkColors.ouroAntigo,
                 shadows: const [
-                  Shadow(blurRadius: 10, color: Colors.white, offset: Offset(0,0))
+                  Shadow(blurRadius: 4, color: Colors.white, offset: Offset(0,0))
                 ],
               ),
             ),

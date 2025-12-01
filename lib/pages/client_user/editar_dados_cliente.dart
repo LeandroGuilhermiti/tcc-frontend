@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart'; // Import das fontes
 
 // Imports de Modelos e Serviços
 import '../../models/user_model.dart';
-import '../../models/endereco_model.dart'; // Necessário para a busca de CEP
+import '../../models/endereco_model.dart'; 
 import '../../providers/auth_controller.dart';
 import '../../providers/user_provider.dart';
 import '../../services/user_service.dart';
-import '../../services/cep_service.dart'; // Necessário para a busca de CEP
+import '../../services/cep_service.dart'; 
 
 import '../../widgets/menu_lateral_cliente.dart'; 
-// import '/pages/client_user/selecao_agenda_page.dart'; // Descomente se necessário
+import '../../theme/app_theme.dart'; // Import do tema
 
 class EditarDadosCliente extends StatefulWidget {
   final bool isNovoCadastro;
@@ -30,7 +31,7 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
   bool _isSaving = false;
   bool _isSearchingCep = false;
 
-  // Lista de UFs (Igual ao Admin)
+  // Lista de UFs
   final Map<String, String> listaUFs = {
     'AC': 'Acre', 'AL': 'Alagoas', 'AP': 'Amapá', 'AM': 'Amazonas', 'BA': 'Bahia',
     'CE': 'Ceará', 'DF': 'Distrito Federal', 'ES': 'Espírito Santo', 'GO': 'Goiás',
@@ -41,7 +42,6 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
     'SE': 'Sergipe', 'TO': 'Tocantins',
   };
 
-  // Controladores (Nomes atualizados para bater com Admin)
   late TextEditingController _givenNameController;
   late TextEditingController _familyNameController;
   late TextEditingController _emailController;
@@ -49,7 +49,6 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
   late TextEditingController _telefoneController;
   late TextEditingController _cepController;
 
-  // Novos Controladores de Endereço (Vindos do Admin)
   late TextEditingController _ruaController;
   late TextEditingController _numeroController;
   late TextEditingController _bairroController;
@@ -81,7 +80,6 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
     final auth = Provider.of<AuthController>(context, listen: false);
     final UserModel? usuario = auth.usuario; 
 
-    // Inicialização idêntica ao Admin, mas pegando do AuthController
     _givenNameController = TextEditingController(text: usuario?.primeiroNome ?? '');
     _familyNameController = TextEditingController(text: usuario?.sobrenome ?? '');
     _emailController = TextEditingController(text: usuario?.email ?? '');
@@ -90,7 +88,6 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
     _telefoneController = TextEditingController(text: _telefoneFormatter.maskText(usuario?.telefone ?? ''));
     _cepController = TextEditingController(text: _cepFormatter.maskText(usuario?.cep ?? ''));
 
-    // Endereço Completo (Se o UserModel tiver esses campos, mapeie aqui. Senão inicia vazio)
     _ruaController = TextEditingController(text: ''); 
     _numeroController = TextEditingController(text: '');
     _bairroController = TextEditingController(text: '');
@@ -113,7 +110,7 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
     super.dispose();
   }
 
-  // --- Lógica de CEP (Copiada do Admin para consistência) ---
+  // --- Lógica de CEP ---
   Future<void> _buscarCep() async {
     final cep = _cepFormatter.getUnmaskedText();
     if (cep.length != 8) return;
@@ -134,14 +131,14 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('CEP não encontrado.'),
-          backgroundColor: Colors.orange,
+          backgroundColor: NnkColors.ouroAntigo,
         ));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Erro ao buscar CEP: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: NnkColors.vermelhoLacre,
         ));
       }
     } finally {
@@ -165,7 +162,7 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
     if (uf == null || cidade.isEmpty || rua.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Preencha UF, Cidade e Rua para buscar o CEP.'),
-        backgroundColor: Colors.orange,
+        backgroundColor: NnkColors.ouroAntigo,
       ));
       return;
     }
@@ -181,6 +178,7 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Nenhum CEP encontrado.'),
+          backgroundColor: NnkColors.ouroAntigo,
         ));
       }
     } catch (e) {
@@ -197,7 +195,15 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Selecione o CEP Correto'),
+          backgroundColor: NnkColors.papelAntigo,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: NnkColors.ouroAntigo, width: 2),
+          ),
+          title: Text(
+            'Selecione o CEP Correto',
+            style: GoogleFonts.cinzel(fontWeight: FontWeight.bold, color: NnkColors.tintaCastanha),
+          ),
           content: SizedBox(
             width: double.maxFinite,
             child: ListView.builder(
@@ -206,8 +212,9 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
               itemBuilder: (context, index) {
                 final endereco = resultados[index];
                 return ListTile(
-                  title: Text(endereco.cep),
+                  title: Text(endereco.cep, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text('${endereco.logradouro}, ${endereco.bairro}'),
+                  textColor: NnkColors.tintaCastanha,
                   onTap: () {
                     final unmaskedCep = endereco.cep.replaceAll(RegExp(r'[^0-9]'), '');
                     _cepController.value = _cepFormatter.formatEditUpdate(
@@ -226,14 +233,13 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
+              child: const Text('Cancelar', style: TextStyle(color: NnkColors.vermelhoLacre)),
             ),
           ],
         );
       },
     );
   }
-  // --- Fim Lógica CEP ---
 
   Future<void> _salvarPerfil() async {
     if (!_formKey.currentState!.validate()) return; 
@@ -251,7 +257,6 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
     try {
       bool sucesso = false;
 
-      // Dados comuns de endereço para enviar (se o backend aceitar)
       final Map<String, dynamic> dadosEndereco = {
         'logradouro': _ruaController.text,
         'numero': _numeroController.text,
@@ -260,18 +265,17 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
         'uf': _ufSelecionada,
       };
 
-      // --- CENÁRIO 1: NOVO CADASTRO (POST) ---
       if (widget.isNovoCadastro) {
         final Map<String, dynamic> dadosNovoUsuario = {
           'id': authController.usuario!.id,
-          'givenName': _givenNameController.text.trim(), // Usando padrão givenName
+          'givenName': _givenNameController.text.trim(),
           'familyName': _familyNameController.text.trim(),
           'email': _emailController.text.trim(),
           'cpf': cpfSemMascara,
           'cep': cepSemMascara,
           'telefone': telefoneSemMascara,
-          'tipo': 0, // Cliente fixo
-          ...dadosEndereco // Espalha os dados de endereço
+          'tipo': 0,
+          ...dadosEndereco
         };
 
         await userService.cadastrarUsuarioBancoDados(
@@ -287,13 +291,11 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
         );
         sucesso = true;
 
-      } 
-      // --- CENÁRIO 2: EDIÇÃO (PATCH) ---
-      else {
+      } else {
         final Map<String, dynamic> dadosAtualizados = {
           'telefone': telefoneSemMascara,
           'cep': cepSemMascara,
-          ...dadosEndereco // Atualiza endereço também na edição
+          ...dadosEndereco
         };
         sucesso = await userProvider.atualizarUsuario(dadosAtualizados);
       }
@@ -301,7 +303,7 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
       if (sucesso && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Dados salvos com sucesso!'),
-          backgroundColor: Colors.green,
+          backgroundColor: NnkColors.verdeErva,
         ));
         Navigator.of(context).pushReplacementNamed('/selecao_cliente'); 
       } 
@@ -309,7 +311,7 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Erro ao salvar: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: NnkColors.vermelhoLacre,
         ));
       }
     } finally {
@@ -317,11 +319,63 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
     }
   }
 
+  // --- Helper: Estilo dos Campos de Input ---
+  InputDecoration _buildInputDecoration(String label, IconData? icon, {Widget? suffix}) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.alegreya(color: NnkColors.tintaCastanha.withOpacity(0.7)),
+      prefixIcon: icon != null ? Icon(icon, color: NnkColors.ouroAntigo) : null,
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.5),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10.0),
+        borderSide: const BorderSide(color: NnkColors.ouroAntigo),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10.0),
+        borderSide: const BorderSide(color: NnkColors.ouroAntigo),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10.0),
+        borderSide: const BorderSide(color: NnkColors.tintaCastanha, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10.0),
+        borderSide: const BorderSide(color: NnkColors.vermelhoLacre),
+      ),
+      // Ajustes para campos desabilitados
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10.0),
+        borderSide: BorderSide(color: NnkColors.cinzaSuave.withOpacity(0.5)),
+      ),
+    );
+  }
+
+  // --- Helper: Estilo de Texto Interno ---
+  TextStyle _inputTextStyle() {
+    return GoogleFonts.alegreya(fontSize: 18, color: NnkColors.tintaCastanha);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: NnkColors.papelAntigo,
       appBar: AppBar(
-        title: Text(widget.isNovoCadastro ? 'Finalizar Cadastro' : 'Editar Meus Dados'),
+        backgroundColor: NnkColors.papelAntigo,
+        iconTheme: const IconThemeData(color: NnkColors.tintaCastanha),
+        title: Text(
+          widget.isNovoCadastro ? 'Finalizar Cadastro' : 'Editar Meus Dados',
+          style: GoogleFonts.cinzel(
+            color: NnkColors.tintaCastanha,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(color: NnkColors.ouroAntigo.withOpacity(0.5), height: 1.0),
+        ),
         automaticallyImplyLeading: !widget.isNovoCadastro, 
       ),
       drawer: widget.isNovoCadastro ? null : const AppDrawerCliente(currentPage: AppDrawerPage.perfil),
@@ -331,38 +385,47 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
           padding: const EdgeInsets.all(16.0),
           children: [
             if (widget.isNovoCadastro)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 20),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20),
                 child: Text(
                   "Olá! Vimos que é seu primeiro acesso. Por favor, confirme seus dados para continuar.",
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                  style: GoogleFonts.alegreya(fontSize: 18, color: NnkColors.tintaCastanha.withOpacity(0.8)),
                 ),
               ),
 
-            // --- Card de Informações Pessoais (Visual do Admin) ---
+            // --- Card de Informações Pessoais ---
             Card(
-              elevation: 2, 
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              color: Colors.white,
+              elevation: 3,
+              shadowColor: NnkColors.tintaCastanha.withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: NnkColors.ouroAntigo.withOpacity(0.4)),
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Dados Pessoais", style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      "Dados Pessoais", 
+                      style: GoogleFonts.cinzel(
+                        fontSize: 20, 
+                        fontWeight: FontWeight.bold,
+                        color: NnkColors.tintaCastanha
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     
-                    // Linha com Nome e Sobrenome separados
                     Row(
                       children: [
                         Expanded(
                           child: TextFormField(
                             controller: _givenNameController,
-                            readOnly: true, // Usuário não edita nome que vem do Cognito
-                            decoration: const InputDecoration(
-                              labelText: 'Nome',
-                              prefixIcon: Icon(Icons.person_outline),
-                              border: OutlineInputBorder(),
-                              filled: true, // Cinza para indicar ReadOnly
+                            readOnly: true,
+                            style: _inputTextStyle().copyWith(color: NnkColors.cinzaSuave), // Visual de leitura
+                            decoration: _buildInputDecoration('Nome', Icons.person_outline).copyWith(
+                              fillColor: NnkColors.cinzaSuave.withOpacity(0.2), // Fundo mais escuro
                             ),
                           ),
                         ),
@@ -371,10 +434,9 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
                           child: TextFormField(
                             controller: _familyNameController,
                             readOnly: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Sobrenome',
-                              border: OutlineInputBorder(),
-                              filled: true,
+                            style: _inputTextStyle().copyWith(color: NnkColors.cinzaSuave),
+                            decoration: _buildInputDecoration('Sobrenome', null).copyWith(
+                              fillColor: NnkColors.cinzaSuave.withOpacity(0.2),
                             ),
                           ),
                         ),
@@ -384,16 +446,16 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
                     
                     TextFormField(
                       controller: _cpfController,
-                      // Só pode editar CPF se for NOVO cadastro
                       readOnly: !widget.isNovoCadastro, 
                       inputFormatters: [_cpfFormatter],
-                      decoration: InputDecoration(
-                        labelText: 'CPF',
-                        prefixIcon: const Icon(Icons.badge_outlined),
-                        border: const OutlineInputBorder(),
-                        // Cinza se bloqueado
-                        filled: !widget.isNovoCadastro,
+                      style: _inputTextStyle().copyWith(
+                        color: !widget.isNovoCadastro ? NnkColors.cinzaSuave : NnkColors.tintaCastanha
+                      ),
+                      decoration: _buildInputDecoration('CPF', Icons.badge_outlined).copyWith(
+                        filled: true,
+                        fillColor: !widget.isNovoCadastro ? NnkColors.cinzaSuave.withOpacity(0.2) : Colors.white.withOpacity(0.5),
                         helperText: widget.isNovoCadastro ? 'Obrigatório para agendamentos' : null,
+                        helperStyle: GoogleFonts.alegreya(color: NnkColors.ouroAntigo),
                       ),
                       validator: (value) {
                          if (widget.isNovoCadastro) {
@@ -409,38 +471,45 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
             ),
             const SizedBox(height: 20),
 
-            // --- Card de Contato e Endereço (Visual do Admin Completo) ---
+            // --- Card de Contato e Endereço ---
             Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              color: Colors.white,
+              elevation: 3,
+              shadowColor: NnkColors.tintaCastanha.withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: NnkColors.ouroAntigo.withOpacity(0.4)),
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Contato e Endereço", style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      "Contato e Endereço", 
+                      style: GoogleFonts.cinzel(
+                        fontSize: 20, 
+                        fontWeight: FontWeight.bold,
+                        color: NnkColors.tintaCastanha
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     
                     // Email ReadOnly
                     TextFormField(
                       controller: _emailController,
                       readOnly: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Email', 
-                        prefixIcon: Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(),
-                        filled: true,
+                      style: _inputTextStyle().copyWith(color: NnkColors.cinzaSuave),
+                      decoration: _buildInputDecoration('Email', Icons.email_outlined).copyWith(
+                        fillColor: NnkColors.cinzaSuave.withOpacity(0.2),
                       ),
                     ),
                     const SizedBox(height: 16),
                     
                     TextFormField(
                       controller: _telefoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Telefone', 
-                        prefixIcon: Icon(Icons.phone_outlined),
-                        border: OutlineInputBorder(),
-                      ),
+                      style: _inputTextStyle(),
+                      decoration: _buildInputDecoration('Telefone', Icons.phone_outlined),
                       keyboardType: TextInputType.phone,
                       inputFormatters: [_telefoneFormatter],
                       validator: (v) => v!.length < 14 ? 'Telefone inválido' : null,
@@ -448,9 +517,10 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
                     
                     const SizedBox(height: 16),
                     
-                    // --- ÁREA DE ENDEREÇO COMPLETA (Do Admin) ---
+                    // --- ÁREA DE ENDEREÇO ---
                     TextFormField(
                       controller: _cepController,
+                      style: _inputTextStyle(),
                       keyboardType: TextInputType.number,
                       inputFormatters: [_cepFormatter],
                       validator: (value) {
@@ -465,29 +535,28 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
                           _limparCamposEndereco();
                         }
                       },
-                      decoration: InputDecoration(
-                        labelText: 'CEP',
-                        hintText: '00000-000',
-                        prefixIcon: const Icon(Icons.location_on_outlined),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: _isSearchingCep
+                      decoration: _buildInputDecoration(
+                        'CEP', 
+                        Icons.location_on_outlined,
+                        suffix: _isSearchingCep
                             ? const Padding(
                                 padding: EdgeInsets.all(12.0),
-                                child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2.0)),
+                                child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2.0, color: NnkColors.ouroAntigo)),
                               )
                             : Tooltip(
                                 message: 'Buscar CEP pelo endereço',
                                 child: IconButton(
-                                  icon: const Icon(Icons.search),
+                                  icon: const Icon(Icons.search, color: NnkColors.tintaCastanha),
                                   onPressed: _buscarCepPorEndereco,
                                 ),
                               ),
-                      ),
+                      ).copyWith(hintText: '00000-000', hintStyle: GoogleFonts.alegreya(color: NnkColors.cinzaSuave)),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _ruaController,
-                      decoration: const InputDecoration(labelText: 'Rua / Logradouro', border: OutlineInputBorder()),
+                      style: _inputTextStyle(),
+                      decoration: _buildInputDecoration('Rua / Logradouro', null),
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -496,7 +565,8 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
                           flex: 3,
                           child: TextFormField(
                             controller: _bairroController,
-                            decoration: const InputDecoration(labelText: 'Bairro', border: OutlineInputBorder()),
+                            style: _inputTextStyle(),
+                            decoration: _buildInputDecoration('Bairro', null),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -504,7 +574,8 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
                           flex: 2,
                           child: TextFormField(
                             controller: _numeroController,
-                            decoration: const InputDecoration(labelText: 'Nº', border: OutlineInputBorder()),
+                            style: _inputTextStyle(),
+                            decoration: _buildInputDecoration('Nº', null),
                             keyboardType: TextInputType.number,
                           ),
                         ),
@@ -517,7 +588,8 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
                           flex: 3,
                           child: TextFormField(
                             controller: _cidadeController,
-                            decoration: const InputDecoration(labelText: 'Cidade', border: OutlineInputBorder()),
+                            style: _inputTextStyle(),
+                            decoration: _buildInputDecoration('Cidade', null),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -526,9 +598,16 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
                           child: DropdownButtonFormField<String>(
                             value: _ufSelecionada,
                             isExpanded: true,
-                            decoration: const InputDecoration(labelText: 'UF', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12.0)),
+                            style: _inputTextStyle(),
+                            dropdownColor: NnkColors.papelAntigo,
+                            decoration: _buildInputDecoration('UF', null).copyWith(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0)
+                            ),
                             items: listaUFs.keys.map((String sigla) {
-                              return DropdownMenuItem<String>(value: sigla, child: Text(sigla));
+                              return DropdownMenuItem<String>(
+                                value: sigla, 
+                                child: Text(sigla, style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha))
+                              );
                             }).toList(),
                             onChanged: (String? novoValor) => setState(() => _ufSelecionada = novoValor),
                             validator: (value) => value == null ? 'UF?' : null,
@@ -543,20 +622,35 @@ class _EditarDadosClienteState extends State<EditarDadosCliente> {
             
             const SizedBox(height: 24),
 
-            // Botão Salvar
+            // Botão Salvar Estilizado
             SizedBox(
               width: double.infinity,
+              height: 55,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  backgroundColor: widget.isNovoCadastro ? Colors.blueAccent : null,
+                  backgroundColor: NnkColors.tintaCastanha,
+                  foregroundColor: NnkColors.ouroAntigo,
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: NnkColors.ouroAntigo, width: 1.5),
+                  ),
                 ),
                 onPressed: _isSaving ? null : _salvarPerfil,
                 child: _isSaving
-                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                    : Text(widget.isNovoCadastro ? 'FINALIZAR CADASTRO' : 'SALVAR ALTERAÇÕES'),
+                    ? const SizedBox(
+                        height: 24, 
+                        width: 24, 
+                        child: CircularProgressIndicator(color: NnkColors.ouroAntigo, strokeWidth: 3)
+                      )
+                    : Text(
+                        widget.isNovoCadastro ? 'FINALIZAR CADASTRO' : 'SALVAR ALTERAÇÕES',
+                        style: GoogleFonts.cinzel(
+                          fontSize: 18, 
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2
+                        ),
+                      ),
               ),
             ),
           ],

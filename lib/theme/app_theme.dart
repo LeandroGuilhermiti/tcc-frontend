@@ -2,181 +2,183 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // =======================================================
-//  PALETA DE CORES
+//  PALETA DE CORES "NI NO KUNI" / RPG
 // =======================================================
 class NnkColors {
-  // Azul profundo (UI, botões primários)
-  static const Color azulProfundo = Color(0xFF3D5A80);
-  // Dourado mágico (destaques, ícones)
-  static const Color dourado = Color(0xFFEEA823);
-  // Creme/Pergaminho (fundo de telas e cards)
-  static const Color pergaminho = Color(0xFFFBF3E4);
-  // Marrom escuro (texto principal, bordas)
-  static const Color marromEscuro = Color(0xFF4E342E);
-  // Verde Ghibli (ações secundárias, sucesso)
-  static const Color verde = Color(0xFF73A580);
-  // Vermelho (erros, 'cancelar')
-  static const Color vermelho = Color(0xFFC0392B);
-  // Cinza Suave (bordas de campos de texto, desabilitado)
+  // Fundo Creme/Papel Antigo (A cor principal que pediste)
+  static const Color papelAntigo = Color(0xFFFDFBF7); 
+  
+  // Castanho Tinta (Para textos e ícones principais)
+  static const Color tintaCastanha = Color(0xFF4A3B32);
+  
+  // Dourado Envelhecido (Para bordas, destaques e botões)
+  static const Color ouroAntigo = Color(0xFFC5A059);
+  
+  // Dourado Claro (Para fundos de destaque subtis)
+  static const Color ouroClaro = Color(0xFFEDE6D6);
+
+  // Vermelho Lacre (Para erros ou ações destrutivas)
+  static const Color vermelhoLacre = Color(0xFFA83232);
+  
+  // Verde Erva (Para sucesso ou confirmações)
+  static const Color verdeErva = Color(0xFF5D8A66);
+
+  // Cinza Suave (Para itens desabilitados, placeholders ou bordas neutras)
   static const Color cinzaSuave = Color(0xFFBDBDBD);
+  
+  // Azul Calmo (Para widgets, detalhes pequenos)
+  static const Color azulSuave = Color(0xFF358C9F);
+
+  static List<Color> coresVivas = [
+    Colors.pink.shade300,
+    Colors.purple.shade300,
+    Colors.orange.shade300,
+    Colors.teal.shade300,
+    Colors.blue.shade300,
+    Colors.red.shade300,
+    Colors.indigo.shade300,
+    Colors.green.shade300,
+  ];
 }
 
-// =======================================================
-// Esta função cria o ThemeData que será usado no MaterialApp.
-// =======================================================
+
 ThemeData getNnkTheme() {
-  // Define as fontes base
-  // Nunito: suave e legível, para textos do dia-a-dia
-  final textThemeBase = GoogleFonts.nunitoTextTheme();
-  // Merriweather: serifada, estilo "livro de histórias", para títulos
-  final headlineThemeBase = GoogleFonts.merriweatherTextTheme();
+  // Tipografia Épica
+  final TextTheme textThemeBase = GoogleFonts.alegreyaTextTheme(); // Corpo do texto (Livro)
+  final TextTheme titleThemeBase = GoogleFonts.cinzelTextTheme();  // Títulos (Épico)
 
   return ThemeData(
-    // --- CORES PRINCIPAIS ---
-    primaryColor: NnkColors.azulProfundo,
-    scaffoldBackgroundColor: NnkColors.pergaminho,
-    colorScheme: ColorScheme.light(
-      primary: NnkColors.azulProfundo,
-      onPrimary: Colors.white,
-      secondary: NnkColors.verde,
-      onSecondary: Colors.white,
-      background: NnkColors.pergaminho,
-      onBackground: NnkColors.marromEscuro,
-      surface: NnkColors.pergaminho, // Cor de Cards, Menus
-      onSurface: NnkColors.marromEscuro, // Cor do texto em Cards
-      error: NnkColors.vermelho,
-      onError: Colors.white,
+    useMaterial3: true,
+    scaffoldBackgroundColor: NnkColors.papelAntigo,
+    primaryColor: NnkColors.ouroAntigo,
+    
+    // Definição de Cores do Material 3
+    colorScheme: const ColorScheme(
       brightness: Brightness.light,
+      primary: NnkColors.tintaCastanha,
+      onPrimary: Colors.white,
+      secondary: NnkColors.ouroAntigo,
+      onSecondary: NnkColors.tintaCastanha,
+      error: NnkColors.vermelhoLacre,
+      onError: Colors.white,
+      surface: NnkColors.papelAntigo, // Fundo
+      onSurface: NnkColors.tintaCastanha, // Texto no fundo
     ),
 
-    // --- FONTES (TEXT THEME) ---
-    // Aplica o marrom escuro como cor padrão de texto
-    textTheme: textThemeBase
-        .apply(
-          bodyColor: NnkColors.marromEscuro,
-          displayColor: NnkColors.marromEscuro,
-        )
-        .copyWith(
-          // Sobrescreve títulos (usados nos Cards) com a fonte serifada
-          headlineSmall: headlineThemeBase.headlineSmall?.copyWith(
-            color: NnkColors.azulProfundo,
-            fontWeight: FontWeight.bold,
-          ),
-          titleLarge: headlineThemeBase.titleLarge?.copyWith(
-            color: NnkColors.azulProfundo,
-            fontWeight: FontWeight.bold,
-          ),
-          titleMedium: textThemeBase.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-
-    // --- ESTILO DA APPBAR ---
-    appBarTheme: AppBarTheme(
-      backgroundColor: NnkColors.azulProfundo,
-      foregroundColor: Colors.white,
-      elevation: 2.0,
-      titleTextStyle: GoogleFonts.merriweather(
-        fontSize: 20,
+    // --- TIPOGRAFIA ---
+    textTheme: textThemeBase.copyWith(
+      // Títulos Épicos
+      displayLarge: titleThemeBase.displayLarge?.copyWith(color: NnkColors.tintaCastanha),
+      headlineMedium: titleThemeBase.headlineMedium?.copyWith(
+        color: NnkColors.tintaCastanha, 
+        fontWeight: FontWeight.bold
+      ),
+      headlineSmall: titleThemeBase.headlineSmall?.copyWith(
+        color: NnkColors.tintaCastanha,
         fontWeight: FontWeight.bold,
       ),
+      titleLarge: titleThemeBase.titleLarge?.copyWith(
+        color: NnkColors.tintaCastanha,
+        fontWeight: FontWeight.w600,
+      ),
+      // Corpo do texto estilo livro
+      bodyLarge: textThemeBase.bodyLarge?.copyWith(color: NnkColors.tintaCastanha, fontSize: 18),
+      bodyMedium: textThemeBase.bodyMedium?.copyWith(color: NnkColors.tintaCastanha, fontSize: 16),
+      // Pequenos textos ou legendas
+      bodySmall: textThemeBase.bodySmall?.copyWith(color: NnkColors.tintaCastanha.withOpacity(0.7)),
     ),
 
-    // --- ESTILO DE FORMULÁRIOS (TextFormField, DropdownButtonFormField) ---
-    // (Usado em register_page_admin.dart, agenda_create_page.dart, etc.)
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: Colors.white.withOpacity(
-        0.5,
-      ), // Fundo branco semi-transparente
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.0),
-        borderSide: BorderSide(color: NnkColors.cinzaSuave),
+    // --- APP BAR (Cabeçalho do Livro) ---
+    appBarTheme: AppBarTheme(
+      backgroundColor: NnkColors.papelAntigo,
+      foregroundColor: NnkColors.tintaCastanha,
+      centerTitle: true,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      titleTextStyle: GoogleFonts.cinzel(
+        color: NnkColors.tintaCastanha,
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 1.5, // Espaçamento elegante
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.0),
-        borderSide: BorderSide(color: NnkColors.cinzaSuave.withOpacity(0.7)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.0),
-        borderSide: BorderSide(color: NnkColors.azulProfundo, width: 2.0),
-      ),
-      labelStyle: TextStyle(color: NnkColors.marromEscuro.withOpacity(0.8)),
+      iconTheme: const IconThemeData(color: NnkColors.ouroAntigo),
     ),
 
-    // --- ESTILO DE BOTÕES (ElevatedButton) ---
-    // (Usado em register_page_admin.dart, list_user_page.dart, etc.)
+    // --- BOTÕES (Selo de Cera / Placa Dourada) ---
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: NnkColors.azulProfundo,
-        foregroundColor: Colors.white,
+        backgroundColor: NnkColors.tintaCastanha, // Fundo escuro
+        foregroundColor: NnkColors.ouroAntigo,    // Texto dourado
+        disabledBackgroundColor: NnkColors.cinzaSuave.withOpacity(0.3), // Fundo desabilitado
+        disabledForegroundColor: NnkColors.cinzaSuave, // Texto desabilitado
+        elevation: 4,
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: NnkColors.ouroAntigo, width: 2), // Borda dourada
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        textStyle: GoogleFonts.nunito(
+        textStyle: GoogleFonts.cinzel(
+          fontSize: 16, 
           fontWeight: FontWeight.bold,
-          fontSize: 16,
+          letterSpacing: 1.0,
         ),
       ),
     ),
 
-    // --- ESTILO DO FloatingActionButton ---
-    // (Usado em home_page_admin.dart, agenda_list_page.dart)
-    floatingActionButtonTheme: FloatingActionButtonThemeData(
-      backgroundColor: NnkColors.verde, // Cor secundária
-      foregroundColor: Colors.white,
+    // --- INPUTS (Campos de Escrita) ---
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.6), // Levemente transparente
+      contentPadding: const EdgeInsets.all(16),
+      // Borda normal (Traço de pena fino)
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: NnkColors.ouroAntigo, width: 1),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: NnkColors.ouroAntigo, width: 1),
+      ),
+      // Borda focada (Dourado mais forte)
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: NnkColors.tintaCastanha, width: 2),
+      ),
+      // Borda de erro
+      errorBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(8)),
+        borderSide: BorderSide(color: NnkColors.vermelhoLacre, width: 1),
+      ),
+      labelStyle: GoogleFonts.alegreya(color: NnkColors.tintaCastanha.withOpacity(0.7)),
+      hintStyle: GoogleFonts.alegreya(color: NnkColors.cinzaSuave), // Hint com a cor cinza suave
+      prefixIconColor: NnkColors.ouroAntigo,
     ),
 
-    // --- ESTILO DE CARDS ---
-    // (Usado em register_page_admin.dart, list_user_page.dart)
+    // --- CARDS (Páginas Soltas / Cartas) ---
     cardTheme: CardThemeData(
-      color: NnkColors.pergaminho, // Fundo do card
-      elevation: 1.0, // Sombra sutil
+      color: Colors.white,
+      elevation: 2,
+      shadowColor: NnkColors.tintaCastanha.withOpacity(0.2),
+      margin: const EdgeInsets.all(8),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0),
-        // Bordas estilo "desenhado", sutil
-        side: BorderSide(
-          color: NnkColors.marromEscuro.withOpacity(0.2),
-          width: 1.0,
-        ),
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: NnkColors.ouroAntigo.withOpacity(0.3), width: 1),
       ),
     ),
 
-    // --- ESTILO DO ToggleButtons ---
-    // (Usado em home_page_admin.dart, home_page_cliente.dart)
-    toggleButtonsTheme: ToggleButtonsThemeData(
-      fillColor: NnkColors.azulProfundo.withOpacity(0.8),
-      selectedColor: Colors.white,
-      color: NnkColors.azulProfundo,
-      borderRadius: BorderRadius.circular(8.0),
-      borderColor: NnkColors.azulProfundo.withOpacity(0.5),
-      selectedBorderColor: NnkColors.azulProfundo,
-    ),
-
-    // --- ESTILO DOS CHIPS (ChoiceChip, ActionChip) ---
-    // (Usado em agenda_create_page.dart, agenda_edit_page.dart)
+    // --- CHIPS (Etiquetas) ---
     chipTheme: ChipThemeData(
-      backgroundColor: NnkColors.pergaminho,
-      disabledColor: NnkColors.cinzaSuave.withOpacity(0.5),
-      selectedColor: NnkColors.azulProfundo,
-      secondarySelectedColor: NnkColors.azulProfundo,
+      backgroundColor: NnkColors.papelAntigo,
+      disabledColor: NnkColors.cinzaSuave.withOpacity(0.2),
+      selectedColor: NnkColors.ouroAntigo,
+      secondarySelectedColor: NnkColors.ouroAntigo,
       padding: const EdgeInsets.all(8.0),
-      labelStyle: GoogleFonts.nunito(color: NnkColors.marromEscuro),
-      secondaryLabelStyle: GoogleFonts.nunito(color: Colors.white),
+      labelStyle: GoogleFonts.alegreya(color: NnkColors.tintaCastanha),
+      secondaryLabelStyle: GoogleFonts.alegreya(color: Colors.white),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10.0),
-        side: BorderSide(color: NnkColors.azulProfundo.withOpacity(0.5)),
+        side: BorderSide(color: NnkColors.ouroAntigo.withOpacity(0.5)),
       ),
-    ),
-
-    // --- ESTILO DO ExpansionTile ---
-    // (Usado em list_user_page.dart)
-    expansionTileTheme: ExpansionTileThemeData(
-      iconColor: NnkColors.azulProfundo,
-      textColor: NnkColors.azulProfundo,
-      collapsedIconColor: NnkColors.marromEscuro.withOpacity(0.7),
-      collapsedTextColor: NnkColors.marromEscuro,
     ),
   );
 }

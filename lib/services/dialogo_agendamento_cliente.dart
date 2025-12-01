@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:google_fonts/google_fonts.dart'; // Import das fontes
 import 'dart:convert';
 
 // Modelos
@@ -15,6 +16,9 @@ import '../providers/auth_controller.dart';
 
 // Serviços
 import 'dialogo_agendamento_service.dart';
+
+// Tema
+import '../theme/app_theme.dart';
 
 class DialogoAgendamentoCliente {
   static void mostrarDialogoCliente({
@@ -31,6 +35,7 @@ class DialogoAgendamentoCliente {
         context: context,
         titulo: 'Horário Indisponível',
         motivo: appointment.subject,
+        isError: true,
       );
       return;
     }
@@ -61,6 +66,7 @@ class DialogoAgendamentoCliente {
       context: context,
       titulo: 'Erro',
       motivo: 'Não foi possível identificar este horário.',
+      isError: true,
     );
   }
 
@@ -68,16 +74,31 @@ class DialogoAgendamentoCliente {
     required BuildContext context,
     required String titulo,
     required String motivo,
+    bool isError = false,
   }) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(titulo),
-        content: Text(motivo),
+        backgroundColor: NnkColors.papelAntigo,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: isError ? NnkColors.vermelhoLacre : NnkColors.ouroAntigo, width: 2),
+        ),
+        title: Text(
+          titulo,
+          style: GoogleFonts.cinzel(
+            color: isError ? NnkColors.vermelhoLacre : NnkColors.tintaCastanha,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          motivo,
+          style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: 18),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Fechar'),
+            child: Text('Fechar', style: GoogleFonts.cinzel(color: NnkColors.tintaCastanha, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -95,15 +116,27 @@ class DialogoAgendamentoCliente {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Meu Agendamento'),
+          backgroundColor: NnkColors.papelAntigo,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: NnkColors.ouroAntigo, width: 2),
+          ),
+          title: Text(
+            'Meu Agendamento',
+            style: GoogleFonts.cinzel(color: NnkColors.tintaCastanha, fontWeight: FontWeight.bold),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                  'Horário: ${DateFormat('dd/MM/yyyy HH:mm').format(appointment.startTime)}'),
+                'Horário: ${DateFormat('dd/MM/yyyy HH:mm').format(appointment.startTime)}',
+                style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: 18),
+              ),
               Text(
-                  'Duração: ${agendamento.duracao} período${agendamento.duracao > 1 ? 's' : ''}'),
+                'Duração: ${agendamento.duracao} período${agendamento.duracao > 1 ? 's' : ''}',
+                style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: 18),
+              ),
             ],
           ),
           actions: [
@@ -119,7 +152,7 @@ class DialogoAgendamentoCliente {
                   _mostrarErro(context, e);
                 }
               },
-              child: const Text('Excluir', style: TextStyle(color: Colors.red)),
+              child: Text('Excluir', style: GoogleFonts.cinzel(color: NnkColors.vermelhoLacre, fontWeight: FontWeight.bold)),
             ),
             TextButton(
               onPressed: () {
@@ -131,11 +164,11 @@ class DialogoAgendamentoCliente {
                   avisoAgendamento: avisoAgendamento, 
                 );
               },
-              child: const Text('Editar'),
+              child: Text('Editar', style: GoogleFonts.cinzel(color: NnkColors.azulSuave, fontWeight: FontWeight.bold)),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Fechar'),
+              child: Text('Fechar', style: GoogleFonts.cinzel(color: NnkColors.tintaCastanha, fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -211,6 +244,20 @@ class DialogoAgendamentoCliente {
     DateTime dataHoraAgendamento = dataInicial;
     int duracaoSelecionada = 1;
 
+    // Helper de estilo para inputs
+    InputDecoration _inputDeco(String label, IconData icon) {
+      return InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.alegreya(color: NnkColors.tintaCastanha.withOpacity(0.7)),
+        prefixIcon: Icon(icon, color: NnkColors.ouroAntigo),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.5),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: NnkColors.ouroAntigo)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: NnkColors.ouroAntigo)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: NnkColors.tintaCastanha, width: 2)),
+      );
+    }
+
     showDialog(
       context: context,
       builder: (context) {
@@ -218,81 +265,107 @@ class DialogoAgendamentoCliente {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Novo Agendamento'),
+              backgroundColor: NnkColors.papelAntigo,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: NnkColors.ouroAntigo, width: 2),
+              ),
+              title: Text(
+                'Novo Agendamento',
+                style: GoogleFonts.cinzel(color: NnkColors.tintaCastanha, fontWeight: FontWeight.bold),
+              ),
               content: Form(
                 key: formKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Horário:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            TimeOfDay? novaHora;
-                            DateTime? novaData = dataHoraAgendamento;
-                            final TimeOfDay initialTime =
-                                TimeOfDay.fromDateTime(dataHoraAgendamento);
-
-                            if (context.mounted) {
-                              novaHora = await showTimePicker(
-                                context: context,
-                                initialTime: initialTime,
-                              );
-                            }
-                            if (novaHora != null) {
-                              int duracao = duracaoDaAgenda;
-                              if (duracao <= 0) duracao = 30;
-                              int novoMinutoCorrigido =
-                                  (novaHora.minute / duracao).floor() * duracao;
-                              final horaCorrigida = TimeOfDay(
-                                hour: novaHora.hour,
-                                minute: novoMinutoCorrigido,
-                              );
-                              setDialogState(() {
-                                dataHoraAgendamento = DateTime(
-                                  novaData.year,
-                                  novaData.month,
-                                  novaData.day,
-                                  horaCorrigida.hour,
-                                  horaCorrigida.minute,
-                                );
-                              });
-                            }
-                          },
-                          child: Text(
-                            DateFormat(
-                              'dd/MM/yyyy HH:mm',
-                            ).format(dataHoraAgendamento),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: NnkColors.ouroAntigo),
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.white.withOpacity(0.3),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Horário:',
+                            style: GoogleFonts.alegreya(fontWeight: FontWeight.bold, color: NnkColors.tintaCastanha, fontSize: 16),
                           ),
-                        ),
-                      ],
+                          TextButton.icon(
+                            icon: const Icon(Icons.access_time, color: NnkColors.ouroAntigo),
+                            onPressed: () async {
+                              TimeOfDay? novaHora;
+                              DateTime? novaData = dataHoraAgendamento;
+                              final TimeOfDay initialTime =
+                                  TimeOfDay.fromDateTime(dataHoraAgendamento);
+
+                              if (context.mounted) {
+                                novaHora = await showTimePicker(
+                                  context: context,
+                                  initialTime: initialTime,
+                                  builder: (context, child) {
+                                    return Theme(
+                                      data: Theme.of(context).copyWith(
+                                        timePickerTheme: TimePickerThemeData(
+                                          backgroundColor: NnkColors.papelAntigo,
+                                          dialHandColor: NnkColors.tintaCastanha,
+                                          dialBackgroundColor: NnkColors.ouroClaro,
+                                          hourMinuteTextColor: NnkColors.tintaCastanha,
+                                          entryModeIconColor: NnkColors.ouroAntigo,
+                                        ),
+                                        textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: NnkColors.tintaCastanha)),
+                                      ),
+                                      child: child!,
+                                    );
+                                  },
+                                );
+                              }
+                              if (novaHora != null) {
+                                int duracao = duracaoDaAgenda;
+                                if (duracao <= 0) duracao = 30;
+                                int novoMinutoCorrigido =
+                                    (novaHora.minute / duracao).floor() * duracao;
+                                final horaCorrigida = TimeOfDay(
+                                  hour: novaHora.hour,
+                                  minute: novoMinutoCorrigido,
+                                );
+                                setDialogState(() {
+                                  dataHoraAgendamento = DateTime(
+                                    novaData.year,
+                                    novaData.month,
+                                    novaData.day,
+                                    horaCorrigida.hour,
+                                    horaCorrigida.minute,
+                                  );
+                                });
+                              }
+                            },
+                            label: Text(
+                              DateFormat('dd/MM/yyyy HH:mm').format(dataHoraAgendamento),
+                              style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       initialValue: nomeUsuario,
                       readOnly: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Nome do Paciente',
-                        prefixIcon: Icon(Icons.person),
-                        border: OutlineInputBorder(),
-                        filled: true,
-                        fillColor: Color.fromARGB(255, 238, 238, 238),
+                      style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: 16),
+                      decoration: _inputDeco('Nome do Paciente', Icons.person).copyWith(
+                        fillColor: NnkColors.cinzaSuave.withOpacity(0.2), // Visual desabilitado
                       ),
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<int>(
                       value: duracaoSelecionada,
-                      decoration: const InputDecoration(
-                        labelText: 'Períodos (Duração)',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.layers_outlined),
-                      ),
+                      dropdownColor: NnkColors.papelAntigo,
+                      style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: 16),
+                      decoration: _inputDeco('Períodos (Duração)', Icons.layers_outlined),
                       items: [1, 2, 3, 4].map((int valor) {
                         return DropdownMenuItem<int>(
                           value: valor,
@@ -317,9 +390,17 @@ class DialogoAgendamentoCliente {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancelar'),
+                  child: Text('Cancelar', style: GoogleFonts.cinzel(color: NnkColors.vermelhoLacre, fontWeight: FontWeight.bold)),
                 ),
                 ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: NnkColors.tintaCastanha,
+                    foregroundColor: NnkColors.ouroAntigo,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: const BorderSide(color: NnkColors.ouroAntigo),
+                    ),
+                  ),
                   onPressed: isSaving
                       ? null
                       : () async {
@@ -347,16 +428,18 @@ class DialogoAgendamentoCliente {
                                     context: context,
                                     barrierDismissible: false,
                                     builder: (ctxAviso) => AlertDialog(
-                                      title: const Row(
+                                      backgroundColor: NnkColors.papelAntigo,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: NnkColors.ouroAntigo, width: 2)),
+                                      title: Row(
                                         children: [
-                                          Icon(Icons.info_outline, color: Colors.blue),
-                                          SizedBox(width: 8),
-                                          Text('Aviso da Agenda'),
+                                          const Icon(Icons.info_outline, color: NnkColors.azulSuave),
+                                          const SizedBox(width: 8),
+                                          Text('Aviso da Agenda', style: GoogleFonts.cinzel(color: NnkColors.tintaCastanha)),
                                         ],
                                       ),
                                       content: Text(
                                         avisoAgendamento,
-                                        style: const TextStyle(fontSize: 16),
+                                        style: GoogleFonts.alegreya(fontSize: 18, color: NnkColors.tintaCastanha),
                                       ),
                                       actions: [
                                         TextButton(
@@ -364,7 +447,7 @@ class DialogoAgendamentoCliente {
                                             Navigator.of(ctxAviso).pop(); 
                                             Navigator.of(context).pop();  
                                           },
-                                          child: const Text('Entendido'),
+                                          child: Text('Entendido', style: GoogleFonts.cinzel(color: NnkColors.verdeErva, fontWeight: FontWeight.bold)),
                                         ),
                                       ],
                                     ),
@@ -374,7 +457,7 @@ class DialogoAgendamentoCliente {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text('Agendamento criado com sucesso!'),
-                                      backgroundColor: Colors.green,
+                                      backgroundColor: NnkColors.verdeErva,
                                     ),
                                   );
                                 }
@@ -392,9 +475,9 @@ class DialogoAgendamentoCliente {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: NnkColors.ouroAntigo),
                         )
-                      : const Text('Salvar'),
+                      : Text('Salvar', style: GoogleFonts.cinzel(fontWeight: FontWeight.bold)),
                 ),
               ],
             );
@@ -404,14 +487,12 @@ class DialogoAgendamentoCliente {
     );
   }
 
-  // --- ALTERAÇÃO: Atualizado para tratar erro 400 ---
-static void _mostrarErro(BuildContext context, Object e) {
+  static void _mostrarErro(BuildContext context, Object e) {
     if (!context.mounted) return;
     
     String mensagemErro = e.toString();
 
     if (mensagemErro.contains("400")) {
-      // Regex para encontrar o conteúdo de "message"
       final RegExp regex = RegExp(r'"message":"(.*?)"');
       final match = regex.firstMatch(mensagemErro);
 
@@ -426,10 +507,11 @@ static void _mostrarErro(BuildContext context, Object e) {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(mensagemErro),
-        backgroundColor: Colors.red,
+        content: Text(mensagemErro, style: GoogleFonts.alegreya(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: NnkColors.vermelhoLacre,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: const BorderSide(color: NnkColors.ouroAntigo)),
       ),
     );
   }

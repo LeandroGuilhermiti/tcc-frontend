@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../../models/agenda_model.dart';
 import '../../widgets/menu_letral_admin.dart';
 import '../../widgets/agenda_home_compartilhada.dart'; 
-import '../../services/dialogo_agendamento_service.dart'; 
+import '../../services/dialogo_agendamento_service.dart';
+import '../../theme/app_theme.dart'; // Importa NnkColors
 
 class HomePageAdmin extends StatelessWidget {
   final Agenda agenda;
@@ -15,11 +16,27 @@ class HomePageAdmin extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+
       appBar: AppBar(
-        title: Text(agenda.nome),
+        title: Text(
+          agenda.nome.toUpperCase(), 
+          style: const TextStyle(
+            fontFamily: 'Cinzel', 
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.0,
+          ),
+        ),
+        
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(
+            color: NnkColors.ouroAntigo.withOpacity(0.5),
+            height: 1.0,
+          ),
+        ),
         scrolledUnderElevation: 0, 
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor, 
-        elevation: 0, 
+        backgroundColor: NnkColors.papelAntigo,
+        iconTheme: const IconThemeData(color: NnkColors.tintaCastanha),
       ),
       drawer: const AdminDrawer(),
       body: SharedAgendaCalendar(

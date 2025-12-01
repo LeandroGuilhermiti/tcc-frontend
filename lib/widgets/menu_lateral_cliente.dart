@@ -1,109 +1,130 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart'; // Import das fontes
 
-// Importa as páginas para onde o menu vai navegar
+// Importa as páginas e providers
 import '../pages/client_user/selecao_agenda_page.dart';
 import '../providers/auth_controller.dart';
 import '../pages/client_user/editar_dados_cliente.dart';
+import '../theme/app_theme.dart'; // Importa NnkColors
 
-// enum para identificar as páginas
-// Isto ajuda o Drawer a saber qual item deve destacar
+// Enum para identificar as páginas
 enum AppDrawerPage { agendas, perfil }
 
 class AppDrawerCliente extends StatelessWidget {
-  // variável para saber qual é a página atual
   final AppDrawerPage? currentPage;
 
   const AppDrawerCliente({
     super.key,
-    this.currentPage, // Tornamos opcional
+    this.currentPage,
   });
 
-  // --- NOVO (Passo 3) ---
-  // O código que estava em `_buildDrawer` foi movido para aqui,
-  // dentro do método `build` deste widget.
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthController>(context, listen: false);
-    final nome = auth.usuario?.primeiroNome ?? 'Cliente';
+    final nome = auth.usuario?.primeiroNome ?? 'Aventureiro';
     final email = auth.usuario?.email ?? '';
 
-    // --- NOVO (Passo 4) ---
-    // Verificamos qual é a página atual para destacar o item
     final bool isAgendas = currentPage == AppDrawerPage.agendas;
     final bool isPerfil = currentPage == AppDrawerPage.perfil;
 
     return Drawer(
+      backgroundColor: NnkColors.papelAntigo,
       child: Column(
         children: [
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
+                // --- CABEÇALHO (Estilo Igual ao Admin) ---
                 UserAccountsDrawerHeader(
-                  accountName: Text(
-                    nome,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                  decoration: const BoxDecoration(
+                    color: NnkColors.tintaCastanha, 
+                    border: Border(
+                      bottom: BorderSide(color: NnkColors.ouroAntigo, width: 2), 
                     ),
                   ),
-                  accountEmail: Text(email),
+                  accountName: Text(
+                    nome,
+                    style: GoogleFonts.cinzel(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: NnkColors.ouroClaro,
+                    ),
+                  ),
+                  accountEmail: Text(
+                    email,
+                    style: GoogleFonts.alegreya(
+                      color: Colors.white70,
+                      fontSize: 16,
+                    ),
+                  ),
                   currentAccountPicture: CircleAvatar(
-                    backgroundColor: Colors.white,
+                    backgroundColor: NnkColors.ouroAntigo,
                     child: Text(
                       nome.isNotEmpty ? nome[0].toUpperCase() : 'C',
-                      style: const TextStyle(
-                        fontSize: 24,
+                      style: GoogleFonts.cinzel(
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
+                        color: NnkColors.tintaCastanha,
                       ),
                     ),
                   ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor,
-                  ),
                 ),
 
-                // --- Opção 1: Agendas (com lógica de seleção) ---
-                ListTile(
-                  leading: const Icon(Icons.calendar_month_outlined),
-                  title: const Text('Agendas'),
-                  subtitle: const Text('Ver todos profissionais'),
-                  selected: isAgendas, // Destaca o item se for a página atual
-                  onTap: isAgendas
-                      // Se já estiver na página, apenas fecha o menu
-                      ? () => Navigator.pop(context)
-                      // Se estiver noutra página, navega
-                      : () {
-                          Navigator.pop(context); // Fecha o menu
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(
-                              builder: (context) => const SelecaoAgendaPage(),
-                            ),
-                          );
-                        },
+                const SizedBox(height: 10),
+
+                // --- ITEM 1: AGENDAS ---
+                _buildClientTile(
+                  context: context,
+                  icon: Icons.calendar_month_outlined,
+                  iconColor: NnkColors.azulSuave,
+                  title: 'Agendas',
+                  isSelected: isAgendas,
+                  onTap: () {
+                    if (isAgendas) {
+                      Navigator.pop(context);
+                    } else {
+                      Navigator.pop(context);
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (context) => const SelecaoAgendaPage()),
+                      );
+                    }
+                  },
                 ),
 
-                // --- Opção 2: Editar dados (com lógica de seleção) ---
-                ListTile(
-                  leading: const Icon(Icons.person_outline),
-                  title: const Text('Editar dados'),
-                  subtitle: const Text('Atualizar meu perfil'),
-                  selected: isPerfil,
-                  onTap: isPerfil
-                      ? () => Navigator.pop(context) // Já está na página
-                      : () {
-                          Navigator.pop(context);
-                          Navigator.of(context).pushReplacementNamed('/editar_dados_cliente');
-                        },
+                // --- ITEM 2: PERFIL ---
+                _buildClientTile(
+                  context: context,
+                  icon: Icons.person_outline,
+                  iconColor: NnkColors.azulSuave,
+                  title: 'Editar Meus Dados',
+                  isSelected: isPerfil,
+                  onTap: () {
+                    if (isPerfil) {
+                      Navigator.pop(context);
+                    } else {
+                      Navigator.pop(context);
+                      Navigator.of(context).pushReplacementNamed('/editar_dados_cliente');
+                    }
+                  },
                 ),
               ],
             ),
           ),
-          const Divider(height: 1),
+          
+          Divider(color: NnkColors.ouroAntigo.withOpacity(0.5)),
+          
+          // --- ITEM: SAIR ---
           ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Sair', style: TextStyle(color: Colors.red)),
+            leading: const Icon(Icons.logout, color: NnkColors.vermelhoLacre),
+            title: Text(
+              'Encerrar Sessão', 
+              style: GoogleFonts.cinzel(
+                color: NnkColors.vermelhoLacre, 
+                fontWeight: FontWeight.bold
+              )
+            ),
             onTap: () {
               Navigator.pop(context);
               Navigator.of(context).pushReplacementNamed('/login');
@@ -115,4 +136,43 @@ class AppDrawerCliente extends StatelessWidget {
       ),
     );
   }
-}
+
+  Widget _buildClientTile({
+    required BuildContext context,
+    required IconData icon,
+    Color? iconColor,
+    required String title,
+    String? subtitle,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      selected: isSelected,
+      selectedTileColor: NnkColors.ouroAntigo.withOpacity(0.15), // Destaque sutil
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8) // Bordas arredondadas leves
+      ),
+      leading: Icon(
+        icon,
+        color: iconColor ?? (isSelected ? NnkColors.tintaCastanha : NnkColors.ouroAntigo),
+      ),
+      title: Text(
+        title,
+        style: GoogleFonts.cinzel(
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+          color: NnkColors.tintaCastanha,
+        ),
+      ),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle,
+              style: GoogleFonts.alegreya(
+                color: NnkColors.tintaCastanha.withOpacity(0.7),
+                fontSize: 14,
+              ),
+            )
+          : null,
+      onTap: onTap,
+    );
+  }
+  }

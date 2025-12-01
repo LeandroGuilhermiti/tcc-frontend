@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart'; // Import das fontes
 
 // Imports do seu projeto
 import '../../models/user_model.dart';
 import '../../providers/user_provider.dart';
 import '../../services/cep_service.dart';
 import '../../models/endereco_model.dart';
+import '../../theme/app_theme.dart'; // Import do tema
 
 class PacienteEditPage extends StatefulWidget {
   final UserModel paciente;
@@ -31,9 +33,8 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
     'SE': 'Sergipe', 'TO': 'Tocantins',
   };
 
-  // --- ALTERAÇÃO 1: Controladores separados para Nome e Sobrenome ---
-  late TextEditingController _givenNameController; // Nome
-  late TextEditingController _familyNameController; // Sobrenome
+  late TextEditingController _givenNameController; 
+  late TextEditingController _familyNameController; 
   
   late TextEditingController _cpfController;
   late TextEditingController _cepController;
@@ -75,32 +76,26 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
   void _inicializarDados() {
     final p = widget.paciente;
 
-    // --- ALTERAÇÃO 2: Inicialização separada ---
-    // Pega o dado do model, ou string vazia se for null
     _givenNameController = TextEditingController(text: p.primeiroNome ?? '');
     _familyNameController = TextEditingController(text: p.sobrenome ?? '');
     
     _emailController = TextEditingController(text: p.email ?? '');
     
-    // Aplica a máscara nos dados vindos do banco
     _cpfController = TextEditingController(text: _cpfFormatter.maskText(p.cpf ?? ''));
     _cepController = TextEditingController(text: _cepFormatter.maskText(p.cep ?? ''));
     _telefoneController = TextEditingController(text: _telefoneFormatter.maskText(p.telefone ?? ''));
 
-    // Inicializa endereço
-    _ruaController = TextEditingController(text: ''); // Mapear p.rua se existir
+    _ruaController = TextEditingController(text: ''); 
     _numeroController = TextEditingController(text: '');
     _bairroController = TextEditingController(text: '');
     _cidadeController = TextEditingController(text: '');
     _ufSelecionada = null; 
 
-    // Define o tipo inicial
     _tipoSelecionado = p.role == UserRole.admin ? 'admin' : 'cliente';
   }
 
   @override
   void dispose() {
-    // --- ALTERAÇÃO 3: Dispose dos novos controllers ---
     _givenNameController.dispose();
     _familyNameController.dispose();
     
@@ -115,7 +110,7 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
     super.dispose();
   }
 
-  // --- Lógica de CEP (Mantida igual) ---
+  // --- Lógica de CEP ---
   Future<void> _buscarCep() async {
     final cep = _cepFormatter.getUnmaskedText();
     if (cep.length != 8) return;
@@ -136,14 +131,14 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('CEP não encontrado.'),
-          backgroundColor: Colors.orange,
+          backgroundColor: NnkColors.vermelhoLacre, // Estilizado
         ));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Erro ao buscar CEP: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: NnkColors.vermelhoLacre, // Estilizado
         ));
       }
     } finally {
@@ -167,7 +162,7 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
     if (uf == null || cidade.isEmpty || rua.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Preencha UF, Cidade e Rua para buscar o CEP.'),
-        backgroundColor: Colors.orange,
+        backgroundColor: Colors.orange, // Mantido para warnings simples
       ));
       return;
     }
@@ -183,6 +178,7 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Nenhum CEP encontrado.'),
+          backgroundColor: NnkColors.ouroAntigo,
         ));
       }
     } catch (e) {
@@ -199,7 +195,15 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Selecione o CEP Correto'),
+          backgroundColor: NnkColors.papelAntigo,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: NnkColors.ouroAntigo, width: 2),
+          ),
+          title: Text(
+            'Selecione o CEP Correto',
+            style: GoogleFonts.cinzel(fontWeight: FontWeight.bold, color: NnkColors.tintaCastanha),
+          ),
           content: SizedBox(
             width: double.maxFinite,
             child: ListView.builder(
@@ -208,8 +212,9 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
               itemBuilder: (context, index) {
                 final endereco = resultados[index];
                 return ListTile(
-                  title: Text(endereco.cep),
+                  title: Text(endereco.cep, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text('${endereco.logradouro}, ${endereco.bairro}'),
+                  textColor: NnkColors.tintaCastanha,
                   onTap: () {
                     final unmaskedCep = endereco.cep.replaceAll(RegExp(r'[^0-9]'), '');
                     _cepController.value = _cepFormatter.formatEditUpdate(
@@ -228,23 +233,20 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
+              child: const Text('Cancelar', style: TextStyle(color: NnkColors.vermelhoLacre)),
             ),
           ],
         );
       },
     );
   }
-  // --- Fim Lógica CEP ---
 
   Future<void> _salvarAlteracoes() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSaving = true);
 
-    // --- ALTERAÇÃO 4: Montagem do JSON com as chaves corretas ---
     final Map<String, dynamic> dadosAtualizados = {
-      // Usando as chaves que seu Backend Node espera
       'givenName': _givenNameController.text.trim(),
       'familyName': _familyNameController.text.trim(),
       
@@ -269,21 +271,21 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
       if (sucesso && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Dados atualizados com sucesso!'),
-          backgroundColor: Colors.green,
+          backgroundColor: NnkColors.verdeErva, // Estilizado
         ));
         Navigator.pop(context);
       } else if (mounted) {
         final erro = Provider.of<UsuarioProvider>(context, listen: false).error;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text("Falha ao atualizar: $erro"),
-          backgroundColor: Colors.red,
+          backgroundColor: NnkColors.vermelhoLacre, // Estilizado
         ));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text("Erro inesperado: $e"),
-          backgroundColor: Colors.red,
+          backgroundColor: NnkColors.vermelhoLacre, // Estilizado
         ));
       }
     } finally {
@@ -291,10 +293,59 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
     }
   }
 
+  // --- Helper: Estilo dos Campos de Input ---
+  InputDecoration _buildInputDecoration(String label, IconData? icon, {Widget? suffix}) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.alegreya(color: NnkColors.tintaCastanha.withOpacity(0.7)),
+      prefixIcon: icon != null ? Icon(icon, color: NnkColors.ouroAntigo) : null,
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.5),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10.0),
+        borderSide: const BorderSide(color: NnkColors.ouroAntigo),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10.0),
+        borderSide: const BorderSide(color: NnkColors.ouroAntigo),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10.0),
+        borderSide: const BorderSide(color: NnkColors.tintaCastanha, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10.0),
+        borderSide: const BorderSide(color: NnkColors.vermelhoLacre),
+      ),
+    );
+  }
+
+  // --- Helper: Estilo de Texto Interno ---
+  TextStyle _inputTextStyle() {
+    return GoogleFonts.alegreya(fontSize: 18, color: NnkColors.tintaCastanha);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Editar: ${widget.paciente.primeiroNome}')),
+      backgroundColor: NnkColors.papelAntigo,
+      appBar: AppBar(
+        backgroundColor: NnkColors.papelAntigo,
+        iconTheme: const IconThemeData(color: NnkColors.tintaCastanha),
+        title: Text(
+          'Editar: ${widget.paciente.primeiroNome}',
+          style: GoogleFonts.cinzel(
+            color: NnkColors.tintaCastanha,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(color: NnkColors.ouroAntigo.withOpacity(0.5), height: 1.0),
+        ),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -302,27 +353,35 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
           children: [
             // --- Card de Informações Pessoais ---
             Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              color: Colors.white,
+              elevation: 3,
+              shadowColor: NnkColors.tintaCastanha.withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: NnkColors.ouroAntigo.withOpacity(0.4)),
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Informações Pessoais", style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      "Informações Pessoais", 
+                      style: GoogleFonts.cinzel(
+                        fontSize: 20, 
+                        fontWeight: FontWeight.bold,
+                        color: NnkColors.tintaCastanha
+                      )
+                    ),
                     const SizedBox(height: 20),
                     
-                    // --- ALTERAÇÃO 5: Linha com Nome e Sobrenome separados ---
                     Row(
                       children: [
                         Expanded(
                           child: TextFormField(
                             controller: _givenNameController,
-                            decoration: const InputDecoration(
-                              labelText: 'Nome', // Label para UI
-                              prefixIcon: Icon(Icons.person_outline),
-                              border: OutlineInputBorder(),
-                            ),
+                            style: _inputTextStyle(),
+                            decoration: _buildInputDecoration('Nome', Icons.person_outline),
                             validator: (v) => v == null || v.trim().isEmpty ? 'Obrigatório' : null,
                           ),
                         ),
@@ -330,11 +389,8 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
                         Expanded(
                           child: TextFormField(
                             controller: _familyNameController,
-                            decoration: const InputDecoration(
-                              labelText: 'Sobrenome', // Label para UI
-                              border: OutlineInputBorder(),
-                            ),
-                            // Sobrenome é opcional? Se for obrigatório, adicione validação
+                            style: _inputTextStyle(),
+                            decoration: _buildInputDecoration('Sobrenome', null),
                             validator: (v) => v == null || v.trim().isEmpty ? 'Obrigatório' : null,
                           ),
                         ),
@@ -344,11 +400,8 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
                     
                     TextFormField(
                       controller: _cpfController,
-                      decoration: const InputDecoration(
-                        labelText: 'CPF',
-                        prefixIcon: Icon(Icons.badge_outlined),
-                        border: OutlineInputBorder(),
-                      ),
+                      style: _inputTextStyle(),
+                      decoration: _buildInputDecoration('CPF', Icons.badge_outlined),
                       keyboardType: TextInputType.number,
                       inputFormatters: [_cpfFormatter],
                       validator: (v) => v == null || v.length < 14 ? 'CPF inválido' : null,
@@ -361,33 +414,39 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
 
             // --- Card de Contato ---
             Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              color: Colors.white,
+              elevation: 3,
+              shadowColor: NnkColors.tintaCastanha.withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: NnkColors.ouroAntigo.withOpacity(0.4)),
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Contato e Endereço", style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      "Contato e Endereço", 
+                      style: GoogleFonts.cinzel(
+                        fontSize: 20, 
+                        fontWeight: FontWeight.bold,
+                        color: NnkColors.tintaCastanha
+                      )
+                    ),
                     const SizedBox(height: 20),
                     TextFormField(
                       controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(),
-                      ),
+                      style: _inputTextStyle(),
+                      decoration: _buildInputDecoration('Email', Icons.email_outlined),
                       keyboardType: TextInputType.emailAddress,
                       validator: (v) => v == null || !v.contains('@') ? 'Email inválido' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _telefoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Telefone',
-                        prefixIcon: Icon(Icons.phone_outlined),
-                        border: OutlineInputBorder(),
-                      ),
+                      style: _inputTextStyle(),
+                      decoration: _buildInputDecoration('Telefone', Icons.phone_outlined),
                       keyboardType: TextInputType.phone,
                       inputFormatters: [_telefoneFormatter],
                       validator: (v) => v == null || v.length < 15 ? 'Telefone inválido' : null,
@@ -398,6 +457,7 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
                     // --- ÁREA DE ENDEREÇO ---
                     TextFormField(
                       controller: _cepController,
+                      style: _inputTextStyle(),
                       keyboardType: TextInputType.number,
                       inputFormatters: [_cepFormatter],
                       validator: (value) {
@@ -412,29 +472,28 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
                           _limparCamposEndereco();
                         }
                       },
-                      decoration: InputDecoration(
-                        labelText: 'CEP',
-                        hintText: '00000-000',
-                        prefixIcon: const Icon(Icons.location_on_outlined),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: _isSearchingCep
+                      decoration: _buildInputDecoration(
+                        'CEP', 
+                        Icons.location_on_outlined,
+                        suffix: _isSearchingCep
                             ? const Padding(
                                 padding: EdgeInsets.all(12.0),
-                                child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2.0)),
+                                child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2.0, color: NnkColors.ouroAntigo)),
                               )
                             : Tooltip(
                                 message: 'Buscar CEP pelo endereço',
                                 child: IconButton(
-                                  icon: const Icon(Icons.search),
+                                  icon: const Icon(Icons.search, color: NnkColors.tintaCastanha),
                                   onPressed: _buscarCepPorEndereco,
                                 ),
                               ),
-                      ),
+                      ).copyWith(hintText: '00000-000', hintStyle: GoogleFonts.alegreya(color: NnkColors.cinzaSuave)),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _ruaController,
-                      decoration: const InputDecoration(labelText: 'Rua / Logradouro', border: OutlineInputBorder()),
+                      style: _inputTextStyle(),
+                      decoration: _buildInputDecoration('Rua / Logradouro', null),
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -443,7 +502,8 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
                           flex: 3,
                           child: TextFormField(
                             controller: _bairroController,
-                            decoration: const InputDecoration(labelText: 'Bairro', border: OutlineInputBorder()),
+                            style: _inputTextStyle(),
+                            decoration: _buildInputDecoration('Bairro', null),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -451,7 +511,8 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
                           flex: 2,
                           child: TextFormField(
                             controller: _numeroController,
-                            decoration: const InputDecoration(labelText: 'Nº', border: OutlineInputBorder()),
+                            style: _inputTextStyle(),
+                            decoration: _buildInputDecoration('Nº', null),
                             keyboardType: TextInputType.number,
                           ),
                         ),
@@ -464,7 +525,8 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
                           flex: 3,
                           child: TextFormField(
                             controller: _cidadeController,
-                            decoration: const InputDecoration(labelText: 'Cidade', border: OutlineInputBorder()),
+                            style: _inputTextStyle(),
+                            decoration: _buildInputDecoration('Cidade', null),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -473,9 +535,16 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
                           child: DropdownButtonFormField<String>(
                             value: _ufSelecionada,
                             isExpanded: true,
-                            decoration: const InputDecoration(labelText: 'UF', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12.0)),
+                            style: _inputTextStyle(),
+                            dropdownColor: NnkColors.papelAntigo,
+                            decoration: _buildInputDecoration('UF', null).copyWith(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0)
+                            ),
                             items: listaUFs.keys.map((String sigla) {
-                              return DropdownMenuItem<String>(value: sigla, child: Text(sigla));
+                              return DropdownMenuItem<String>(
+                                value: sigla, 
+                                child: Text(sigla, style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha))
+                              );
                             }).toList(),
                             onChanged: (String? novoValor) => setState(() => _ufSelecionada = novoValor),
                             validator: (value) => value == null ? 'UF?' : null,
@@ -489,27 +558,40 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
             ),
             const SizedBox(height: 20),
 
-            // --- ALTERAÇÃO 6: Card exclusivo para Permissões no final ---
+            // --- Permissões ---
             Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              color: Colors.white,
+              elevation: 3,
+              shadowColor: NnkColors.tintaCastanha.withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: NnkColors.ouroAntigo.withOpacity(0.4)),
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Configurações do Sistema", style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      "Configurações do Sistema", 
+                      style: GoogleFonts.cinzel(
+                        fontSize: 20, 
+                        fontWeight: FontWeight.bold,
+                        color: NnkColors.tintaCastanha
+                      )
+                    ),
                     const SizedBox(height: 20),
                     DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                        labelText: 'Tipo de Usuário',
-                        prefixIcon: Icon(Icons.security_outlined),
-                        border: OutlineInputBorder(),
-                      ),
+                      style: _inputTextStyle(),
+                      dropdownColor: NnkColors.papelAntigo,
+                      decoration: _buildInputDecoration('Tipo de Usuário', Icons.security_outlined),
                       value: _tipoSelecionado,
                       items: ['cliente', 'admin'].map((tipo) => DropdownMenuItem(
                         value: tipo,
-                        child: Text(tipo[0].toUpperCase() + tipo.substring(1)),
+                        child: Text(
+                          tipo[0].toUpperCase() + tipo.substring(1),
+                          style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha)
+                        ),
                       )).toList(),
                       onChanged: (value) => setState(() => _tipoSelecionado = value),
                       validator: (value) => value == null ? 'Selecione o tipo' : null,
@@ -519,23 +601,40 @@ class _PacienteEditPageState extends State<PacienteEditPage> {
               ),
             ),
             
-            const SizedBox(height: 24),
+            const SizedBox(height: 30),
 
-            // Botão Salvar
+            // Botão Salvar Estilizado
             SizedBox(
               width: double.infinity,
+              height: 55,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  backgroundColor: NnkColors.tintaCastanha,
+                  foregroundColor: NnkColors.ouroAntigo,
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: NnkColors.ouroAntigo, width: 1.5),
+                  ),
                 ),
                 onPressed: _isSaving ? null : _salvarAlteracoes,
                 child: _isSaving
-                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                    : const Text('Salvar Alterações'),
+                    ? const SizedBox(
+                        height: 24, 
+                        width: 24, 
+                        child: CircularProgressIndicator(color: NnkColors.ouroAntigo, strokeWidth: 3)
+                      )
+                    : Text(
+                        'SALVAR ALTERAÇÕES',
+                        style: GoogleFonts.cinzel(
+                          fontSize: 18, 
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2
+                        ),
+                      ),
               ),
             ),
+            const SizedBox(height: 20),
           ],
         ),
       ),

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart'; // Import necessário para as fontes
 import '../../models/user_model.dart'; 
 import '../../providers/user_provider.dart';
 import '../../widgets/menu_letral_admin.dart'; 
 import 'edit_user_page.dart'; 
+import '../../theme/app_theme.dart'; // Import do tema NnkColors
 
 class PacientesListPage extends StatefulWidget {
   const PacientesListPage({super.key});
@@ -41,26 +43,60 @@ class _PacientesListPageState extends State<PacientesListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: NnkColors.papelAntigo, // Fundo RPG
       appBar: AppBar(
-        title: const Text('Consultar Pacientes'),
+        backgroundColor: NnkColors.papelAntigo,
+        iconTheme: const IconThemeData(color: NnkColors.tintaCastanha),
+        title: Text(
+          'Consultar Pacientes',
+          style: GoogleFonts.cinzel(
+            color: NnkColors.tintaCastanha,
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+          ),
+        ),
+        // Linha dourada abaixo do AppBar (igual ao agenda_edit)
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(
+            color: NnkColors.ouroAntigo.withOpacity(0.5),
+            height: 1.0,
+          ),
+        ),
       ),
       drawer: const AdminDrawer(),
       body: Column(
         children: [
-          // 1. Barra de Pesquisa
+          // 1. Barra de Pesquisa Estilizada
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               controller: _searchController,
+              style: GoogleFonts.alegreya(
+                fontSize: 18, 
+                color: NnkColors.tintaCastanha
+              ),
               decoration: InputDecoration(
                 labelText: 'Pesquisar paciente...',
-                prefixIcon: const Icon(Icons.search),
+                labelStyle: GoogleFonts.alegreya(color: NnkColors.tintaCastanha.withOpacity(0.7)),
+                prefixIcon: const Icon(Icons.search, color: NnkColors.ouroAntigo),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.5),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.0),
+                  borderSide: const BorderSide(color: NnkColors.ouroAntigo),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                  borderSide: const BorderSide(color: NnkColors.ouroAntigo),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                  borderSide: const BorderSide(color: NnkColors.tintaCastanha, width: 2),
                 ),
                 suffixIcon: _filtro.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear),
+                        icon: const Icon(Icons.clear, color: NnkColors.vermelhoLacre),
                         onPressed: () {
                           _searchController.clear();
                         },
@@ -84,20 +120,24 @@ class _PacientesListPageState extends State<PacientesListPage> {
     return Consumer<UsuarioProvider>(
       builder: (context, userProvider, child) {
         if (userProvider.isLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: CircularProgressIndicator(color: NnkColors.ouroAntigo)
+          );
         }
 
         if (userProvider.error != null) {
-          return Center(child: Text('Erro: ${userProvider.error}'));
+          return Center(
+            child: Text(
+              'Erro: ${userProvider.error}',
+              style: GoogleFonts.alegreya(color: NnkColors.vermelhoLacre),
+            )
+          );
         }
 
         // --- LÓGICA DE FILTRO ---
         final List<UserModel> pacientes = userProvider.usuarios;
-            // .where((user) => user.role == UserRole.cliente)
-            // .toList();
-
+        
         final List<UserModel> pacientesFiltrados = pacientes.where((paciente) {
-          // Constrói o nome completo seguro para a pesquisa
           final nomeCompleto = [paciente.primeiroNome, paciente.sobrenome]
               .where((n) => n != null && n.isNotEmpty)
               .join(' ')
@@ -109,8 +149,15 @@ class _PacientesListPageState extends State<PacientesListPage> {
         }).toList();
 
         if (pacientesFiltrados.isEmpty) {
-          return const Center(
-            child: Text('Nenhum paciente encontrado.'),
+          return Center(
+            child: Text(
+              'Nenhum paciente encontrado.',
+              style: GoogleFonts.cinzel(
+                color: NnkColors.tintaCastanha,
+                fontSize: 18,
+                fontWeight: FontWeight.bold
+              ),
+            ),
           );
         }
         // --- FIM DA LÓGICA DE FILTRO ---
@@ -121,38 +168,53 @@ class _PacientesListPageState extends State<PacientesListPage> {
           itemBuilder: (context, index) {
             final paciente = pacientesFiltrados[index];
 
-            // --- ESTA É A CORREÇÃO ---
-            // 1. Junta o primeiro e o último nome numa lista.
             final nomeCompleto = [paciente.primeiroNome, paciente.sobrenome]
-                // 2. Remove todos os 'null' ou strings vazias.
                 .where((n) => n != null && n.isNotEmpty)
-                // 3. Junta o que sobrar com um espaço.
                 .join(' ');
-            // --- FIM DA CORREÇÃO ---
 
             return Card(
-              margin:
-                  const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+              margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              color: Colors.white,
+              elevation: 2,
+              shadowColor: NnkColors.tintaCastanha.withOpacity(0.1),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
+                borderRadius: BorderRadius.circular(12.0),
+                side: BorderSide(color: NnkColors.ouroAntigo.withOpacity(0.4), width: 1),
               ),
               clipBehavior: Clip.antiAlias,
-              child: ExpansionTile(
-                leading: const Icon(Icons.person_outline, size: 30),
-                
-                // 4. Se 'nomeCompleto' estiver vazio, mostra o texto correto.
-                //    Isto substitui o teu código que mostrava "null".
-                title: Text(
-                  nomeCompleto.isEmpty ? 'Nome não cadastrado' : nomeCompleto,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+              child: Theme(
+                // Remove a linha divisória padrão do ExpansionTile
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  backgroundColor: NnkColors.papelAntigo.withOpacity(0.3),
+                  collapsedIconColor: NnkColors.ouroAntigo,
+                  iconColor: NnkColors.tintaCastanha,
+                  leading: CircleAvatar(
+                    backgroundColor: NnkColors.ouroClaro,
+                    child: const Icon(Icons.person_outline, color: NnkColors.tintaCastanha),
+                  ),
+                  
+                  title: Text(
+                    nomeCompleto.isEmpty ? 'Nome não cadastrado' : nomeCompleto,
+                    style: GoogleFonts.cinzel(
+                      fontWeight: FontWeight.bold,
+                      color: NnkColors.tintaCastanha,
+                      fontSize: 16,
+                    ),
+                  ),
+                  
+                  subtitle: Text(
+                    paciente.email ?? 'Email não cadastrado',
+                    style: GoogleFonts.alegreya(
+                      color: NnkColors.tintaCastanha.withOpacity(0.7)
+                    ),
+                  ),
+                  
+                  // O conteúdo que aparece ao expandir
+                  children: [
+                    _buildDetalhesPaciente(paciente, nomeCompleto),
+                  ],
                 ),
-                
-                subtitle: Text(paciente.email ?? 'Email não cadastrado'),
-                
-                // O conteúdo que aparece ao expandir
-                children: [
-                  _buildDetalhesPaciente(paciente, nomeCompleto),
-                ],
               ),
             );
           },
@@ -164,7 +226,8 @@ class _PacientesListPageState extends State<PacientesListPage> {
   // Widget que constrói os detalhes (a caixa expandida)
   Widget _buildDetalhesPaciente(UserModel paciente, String nomeCompletoSeguro) {
     return Container(
-      color: Colors.black.withOpacity(0.03), // Fundo levemente cinza
+      // Fundo levemente dourado/creme em vez de cinza
+      color: NnkColors.ouroClaro.withOpacity(0.3),
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -204,26 +267,37 @@ class _PacientesListPageState extends State<PacientesListPage> {
             'CEP:',
             paciente.cep ?? 'Não informado',
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
-          // Botão de Editar
-          ElevatedButton.icon(
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            label: const Text('Editar Dados'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blueGrey, // Cor temática
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-            ),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => PacienteEditPage(paciente: paciente),
+          // Botão de Editar Estilizado
+          SizedBox(
+            height: 45,
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              label: Text(
+                'Editar Dados',
+                style: GoogleFonts.cinzel(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0
                 ),
-              );
-            },
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: NnkColors.tintaCastanha, // Fundo escuro
+                foregroundColor: NnkColors.ouroAntigo,    // Texto dourado
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  side: const BorderSide(color: NnkColors.ouroAntigo),
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => PacienteEditPage(paciente: paciente),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -237,9 +311,19 @@ class _PacientesListPageState extends State<PacientesListPage> {
       children: [
         Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: GoogleFonts.alegreya(
+            fontWeight: FontWeight.bold,
+            color: NnkColors.tintaCastanha,
+            fontSize: 16
+          ),
         ),
-        Text(value),
+        Text(
+          value,
+          style: GoogleFonts.alegreya(
+            color: NnkColors.tintaCastanha.withOpacity(0.8),
+            fontSize: 16
+          ),
+        ),
       ],
     );
   }

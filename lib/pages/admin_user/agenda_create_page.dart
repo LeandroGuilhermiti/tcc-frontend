@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/agenda_model.dart';
 import '../../models/periodo_model.dart';
 import '../../providers/agenda_provider.dart';
+import '../../theme/app_theme.dart'; // Importa NnkColors
 
 class TimeRange {
   TimeOfDay inicio;
@@ -91,11 +92,11 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
     if (!isFormValid || !isAnyDaySelected || !areHorariosValid) {
       if (!isAnyDaySelected) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Selecione pelo menos um dia de atendimento.'), backgroundColor: Colors.red),
+          const SnackBar(content: Text('Selecione pelo menos um dia de atendimento.'), backgroundColor: NnkColors.vermelhoLacre),
         );
       } else if (!areHorariosValid) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Existem erros nos horários. Por favor, corrija-os.'), backgroundColor: Colors.red),
+          const SnackBar(content: Text('Existem erros nos horários. Por favor, corrija-os.'), backgroundColor: NnkColors.vermelhoLacre),
         );
       }
       return;
@@ -144,9 +145,11 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
           context: context,
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
-            title: const Text('Agenda Salva!'),
+            backgroundColor: NnkColors.papelAntigo,
+            title: const Text('Agenda Salva!', style: TextStyle(fontFamily: 'Cinzel', color: NnkColors.tintaCastanha, fontWeight: FontWeight.bold)),
             content: const Text(
-              'A agenda foi criada com sucesso.\n\nDeseja adicionar bloqueios (férias, ausências) para esta agenda agora?'
+              'A agenda foi criada com sucesso.\n\nDeseja adicionar bloqueios (férias, ausências) para esta agenda agora?',
+              style: TextStyle(fontFamily: 'Alegreya', fontSize: 18),
             ),
             actions: [
               TextButton(
@@ -154,9 +157,10 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
                   Navigator.of(ctx).pop();
                   Navigator.of(context).pop();
                 },
-                child: const Text('Não, concluir'),
+                child: const Text('Não, concluir', style: TextStyle(color: NnkColors.tintaCastanha)),
               ),
               FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: NnkColors.tintaCastanha),
                 onPressed: () {
                   Navigator.of(ctx).pop();
                   Navigator.of(context).pushReplacementNamed(
@@ -164,7 +168,7 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
                     arguments: agendaCriada, 
                   );
                 },
-                child: const Text('Sim, adicionar bloqueios'),
+                child: const Text('Sim, adicionar bloqueios', style: TextStyle(color: NnkColors.ouroAntigo)),
               ),
             ],
           ),
@@ -173,7 +177,7 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao salvar agenda: ${e.toString()}')),
+          SnackBar(content: Text('Erro ao salvar agenda: ${e.toString()}'), backgroundColor: NnkColors.vermelhoLacre),
         );
         setState(() => _isSaving = false); 
       }
@@ -209,7 +213,49 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
     final periodosDoDia = periodosPorDia[dia]!;
     final initialTime = isInicio ? periodosDoDia[index].inicio : periodosDoDia[index].fim;
 
-    final TimeOfDay? horaSelecionada = await showTimePicker(context: context, initialTime: initialTime);
+    final TimeOfDay? horaSelecionada = await showTimePicker(
+      context: context, 
+      initialTime: initialTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: NnkColors.papelAntigo,
+              hourMinuteShape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+                side: BorderSide(color: NnkColors.ouroAntigo, width: 2),
+              ),
+              hourMinuteColor: MaterialStateColor.resolveWith((states) =>
+                  states.contains(MaterialState.selected) 
+                      ? NnkColors.tintaCastanha 
+                      : NnkColors.ouroClaro.withOpacity(0.3)),
+              hourMinuteTextColor: MaterialStateColor.resolveWith((states) =>
+                  states.contains(MaterialState.selected) 
+                      ? NnkColors.ouroAntigo 
+                      : NnkColors.tintaCastanha),
+              dayPeriodBorderSide: const BorderSide(color: NnkColors.ouroAntigo),
+              dayPeriodColor: MaterialStateColor.resolveWith((states) =>
+                  states.contains(MaterialState.selected) ? NnkColors.tintaCastanha : Colors.transparent),
+              dayPeriodTextColor: MaterialStateColor.resolveWith((states) =>
+                  states.contains(MaterialState.selected) ? NnkColors.papelAntigo : NnkColors.tintaCastanha),
+              dialBackgroundColor: NnkColors.ouroClaro.withOpacity(0.5),
+              dialHandColor: NnkColors.tintaCastanha,
+              dialTextColor: MaterialStateColor.resolveWith((states) =>
+                  states.contains(MaterialState.selected) ? NnkColors.ouroAntigo : NnkColors.tintaCastanha),
+              entryModeIconColor: NnkColors.ouroAntigo,
+              helpTextStyle: const TextStyle(fontFamily: 'Cinzel', color: NnkColors.tintaCastanha, fontWeight: FontWeight.bold),
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: NnkColors.tintaCastanha,
+                textStyle: const TextStyle(fontFamily: 'Cinzel', fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
 
     if (horaSelecionada != null) {
       setState(() {
@@ -226,7 +272,24 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Criar Nova Agenda')),
+      backgroundColor: NnkColors.papelAntigo,
+      appBar: AppBar(
+        title: const Text(
+          'Criar Nova Agenda',
+          style: TextStyle(
+            fontFamily: 'Cinzel',
+            fontWeight: FontWeight.bold,
+            color: NnkColors.tintaCastanha
+          ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(
+            color: NnkColors.ouroAntigo.withOpacity(0.5),
+            height: 1.0,
+          ),
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -235,24 +298,51 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
             children: [
               TextFormField(
                 controller: _profissionalController,
+                style: const TextStyle(fontFamily: 'Alegreya', fontSize: 18),
                 decoration: const InputDecoration(labelText: 'Nome do Profissional ou da Agenda', border: OutlineInputBorder()),
                 validator: (value) => value == null || value.trim().isEmpty ? 'Por favor, informe o nome.' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _describeController,
+                style: const TextStyle(fontFamily: 'Alegreya', fontSize: 18),
                 decoration: const InputDecoration(labelText: 'Descrição breve', border: OutlineInputBorder()),
                 validator: (value) => value == null || value.trim().isEmpty ? 'Por favor, informe a descrição.' : null,
               ),
               const SizedBox(height: 20),
-              const Text('Dias de Atendimento', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              
+              const Text(
+                'Dias de Atendimento', 
+                style: TextStyle(
+                  fontSize: 20, 
+                  fontWeight: FontWeight.bold, 
+                  fontFamily: 'Cinzel',
+                  color: NnkColors.tintaCastanha
+                )
+              ),
+              const SizedBox(height: 10),
+              
               Wrap(
                 spacing: 8.0,
                 runSpacing: 4.0,
                 children: diasSemana.map((dia) {
+                  final isSelected = diasSelecionados[dia]!;
                   return ChoiceChip(
-                    label: Text(dia),
-                    selected: diasSelecionados[dia]!,
+                    label: Text(
+                      dia,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : NnkColors.tintaCastanha,
+                        fontFamily: 'Alegreya',
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    selected: isSelected,
+                    selectedColor: NnkColors.ouroAntigo,
+                    backgroundColor: NnkColors.papelAntigo,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: const BorderSide(color: NnkColors.ouroAntigo),
+                    ),
                     onSelected: (bool selecionado) {
                       setState(() {
                         diasSelecionados[dia] = selecionado;
@@ -265,19 +355,37 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
                 }).toList(),
               ),
               const SizedBox(height: 20),
+              
               Column(
                 children: diasSelecionados.entries.where((e) => e.value).map((entry) {
                   final dia = entry.key;
                   final periodos = periodosPorDia[dia] ?? [];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: NnkColors.ouroClaro.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: NnkColors.ouroAntigo.withOpacity(0.3)),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            SizedBox(width: 40, child: Text(dia, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueAccent))),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: NnkColors.tintaCastanha,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                dia,
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: NnkColors.ouroAntigo, fontFamily: 'Cinzel'),
+                              ),
+                            ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Wrap(
@@ -288,26 +396,62 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
                                   ...periodos.asMap().entries.map((periodoEntry) {
                                     int index = periodoEntry.key;
                                     TimeRange range = periodoEntry.value;
-                                    return Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        ActionChip(avatar: const Icon(Icons.access_time, size: 16), label: Text(range.inicio.format(context)), onPressed: () => _selecionarHora(context, dia, index, true)),
-                                        const Padding(padding: EdgeInsets.symmetric(horizontal: 2.0), child: Text('-')),
-                                        ActionChip(avatar: const Icon(Icons.access_time, size: 16), label: Text(range.fim.format(context)), onPressed: () => _selecionarHora(context, dia, index, false)),
-                                        if (periodos.length > 1)
-                                          IconButton(padding: const EdgeInsets.only(left: 4), constraints: const BoxConstraints(), icon: const Icon(Icons.remove_circle, color: Colors.red, size: 20), onPressed: () => _removerPeriodo(dia, index)),
-                                      ],
+                                    
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: NnkColors.papelAntigo,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: NnkColors.ouroAntigo.withOpacity(0.5)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          ActionChip(
+                                            avatar: const Icon(Icons.access_time, size: 14, color: NnkColors.tintaCastanha),
+                                            label: Text(range.inicio.format(context), style: const TextStyle(fontFamily: 'Alegreya', fontWeight: FontWeight.bold)),
+                                            backgroundColor: NnkColors.papelAntigo,
+                                            side: BorderSide.none,
+                                            onPressed: () => _selecionarHora(context, dia, index, true),
+                                          ),
+                                          const Padding(padding: EdgeInsets.symmetric(horizontal: 2.0), child: Text('-', style: TextStyle(color: NnkColors.tintaCastanha))),
+                                          ActionChip(
+                                            avatar: const Icon(Icons.access_time, size: 14, color: NnkColors.tintaCastanha),
+                                            label: Text(range.fim.format(context), style: const TextStyle(fontFamily: 'Alegreya', fontWeight: FontWeight.bold)),
+                                            backgroundColor: NnkColors.papelAntigo,
+                                            side: BorderSide.none,
+                                            onPressed: () => _selecionarHora(context, dia, index, false),
+                                          ),
+                                          if (periodos.length > 1)
+                                            IconButton(
+                                              padding: const EdgeInsets.only(left: 4), 
+                                              constraints: const BoxConstraints(), 
+                                              icon: const Icon(Icons.remove_circle, color: NnkColors.vermelhoLacre, size: 20), 
+                                              onPressed: () => _removerPeriodo(dia, index)
+                                            ),
+                                        ],
+                                      ),
                                     );
                                   }),
                                   if (periodos.length < 4)
-                                    IconButton(icon: const Icon(Icons.add_circle, color: Colors.green), onPressed: () => _adicionarPeriodo(dia), tooltip: 'Adicionar período'),
+                                    IconButton(
+                                      icon: const Icon(Icons.add_circle, color: NnkColors.verdeErva), 
+                                      onPressed: () => _adicionarPeriodo(dia), 
+                                      tooltip: 'Adicionar período'
+                                    ),
                                 ],
                               ),
                             ),
                           ],
                         ),
                         if (_errosDeHorario[dia] != null)
-                          Padding(padding: const EdgeInsets.only(top: 8.0, left: 50), child: Text(_errosDeHorario[dia]!, style: const TextStyle(color: Colors.red, fontSize: 12))),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0, left: 50), 
+                            child: Text(
+                              _errosDeHorario[dia]!, 
+                              style: const TextStyle(color: NnkColors.vermelhoLacre, fontSize: 14, fontFamily: 'Alegreya', fontWeight: FontWeight.bold)
+                            )
+                          ),
                       ],
                     ),
                   );
@@ -326,15 +470,40 @@ class _AgendaCreatePageState extends State<AgendaCreatePage> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _avisoController,
-                decoration: const InputDecoration(labelText: 'Aviso do Agendamento (opcional)', hintText: 'Ex: "Trazer exames anteriores"', border: OutlineInputBorder(), prefixIcon: Icon(Icons.info_outline)),
+                style: const TextStyle(fontFamily: 'Alegreya', fontSize: 18),
+                decoration: const InputDecoration(
+                  labelText: 'Aviso do Agendamento (opcional)', 
+                  hintText: 'Ex: "Trazer exames anteriores"', 
+                  border: OutlineInputBorder(), 
+                  prefixIcon: Icon(Icons.info_outline)
+                ),
               ),
               const SizedBox(height: 30),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), textStyle: const TextStyle(fontSize: 18)),
-                onPressed: _isSaving ? null : _handleSave,
-                child: _isSaving
-                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                    : const Text('Salvar Agenda'),
+              
+              // --- BOTÃO SALVAR ---
+              SizedBox(
+                height: 55,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: NnkColors.tintaCastanha,
+                    foregroundColor: NnkColors.ouroAntigo,
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: NnkColors.ouroAntigo, width: 1.5),
+                    ),
+                    textStyle: const TextStyle(
+                      fontFamily: 'Cinzel', 
+                      fontSize: 18, 
+                      fontWeight: FontWeight.bold, 
+                      letterSpacing: 1.2
+                    )
+                  ),
+                  onPressed: _isSaving ? null : _handleSave,
+                  child: _isSaving
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: NnkColors.ouroAntigo, strokeWidth: 3))
+                      : const Text('Salvar Agenda'),
+                ),
               ),
             ],
           ),

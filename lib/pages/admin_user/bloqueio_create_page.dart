@@ -6,6 +6,7 @@ import '../../models/agenda_model.dart';
 import '../../models/bloqueio_model.dart';
 import '../../providers/agenda_provider.dart';
 import '../../providers/bloqueio_provider.dart';
+import '../../theme/app_theme.dart'; // Importa NnkColors
 
 class BloqueioCreatePage extends StatefulWidget {
   const BloqueioCreatePage({super.key});
@@ -21,7 +22,7 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
   DateTime _dataSelecionada = DateTime.now();
   TimeOfDay _horaInicio = const TimeOfDay(hour: 8, minute: 0);
   
-  // --- ALTERAÇÃO 1: Variável inteira para controlar as horas ---
+  // Variável inteira para controlar as horas
   int _horasSelecionadas = 1; 
   
   final _descricaoController = TextEditingController();
@@ -50,6 +51,20 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
       initialDate: _dataSelecionada,
       firstDate: DateTime.now(),
       lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: NnkColors.tintaCastanha,
+              onPrimary: NnkColors.ouroAntigo,
+              onSurface: NnkColors.tintaCastanha,
+              surface: NnkColors.papelAntigo,
+            ),
+            dialogBackgroundColor: NnkColors.papelAntigo,
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null && picked != _dataSelecionada) {
       setState(() {
@@ -63,9 +78,29 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
       context: context,
       initialTime: _horaInicio,
       builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-          child: child!,
+        return Theme(
+          data: Theme.of(context).copyWith(
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: NnkColors.papelAntigo,
+              hourMinuteColor: MaterialStateColor.resolveWith((states) =>
+                  states.contains(MaterialState.selected) 
+                      ? NnkColors.tintaCastanha 
+                      : NnkColors.ouroClaro.withOpacity(0.3)),
+              hourMinuteTextColor: MaterialStateColor.resolveWith((states) =>
+                  states.contains(MaterialState.selected) 
+                      ? NnkColors.ouroAntigo 
+                      : NnkColors.tintaCastanha),
+              dialHandColor: NnkColors.tintaCastanha,
+              dialBackgroundColor: NnkColors.ouroClaro.withOpacity(0.5),
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(foregroundColor: NnkColors.tintaCastanha),
+            ),
+          ),
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+            child: child!,
+          ),
         );
       },
     );
@@ -80,7 +115,7 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedAgenda == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecione uma agenda')),
+        const SnackBar(content: Text('Selecione uma agenda'), backgroundColor: NnkColors.vermelhoLacre),
       );
       return;
     }
@@ -96,7 +131,7 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
         _horaInicio.minute,
       );
 
-      final int duracaoEmMinutos = _horasSelecionadas ;
+      final int duracaoEmMinutos = _horasSelecionadas;
 
       final novoBloqueio = Bloqueio(
         id: null,
@@ -112,13 +147,13 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bloqueio criado com sucesso!')),
+        const SnackBar(content: Text('Bloqueio criado com sucesso!'), backgroundColor: NnkColors.verdeErva),
       );
 
       Navigator.of(context).pop(); 
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao criar bloqueio: $e')),
+        SnackBar(content: Text('Erro ao criar bloqueio: $e'), backgroundColor: NnkColors.vermelhoLacre),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -154,7 +189,24 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Novo Bloqueio')),
+      backgroundColor: NnkColors.papelAntigo,
+      appBar: AppBar(
+        title: const Text(
+          'Novo Bloqueio',
+          style: TextStyle(
+            fontFamily: 'Cinzel',
+            fontWeight: FontWeight.bold,
+            color: NnkColors.tintaCastanha,
+          ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(
+            color: NnkColors.ouroAntigo.withOpacity(0.5),
+            height: 1.0,
+          ),
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -165,8 +217,10 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
                   labelText: 'Agenda',
-                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.book, color: NnkColors.ouroAntigo),
                 ),
+                dropdownColor: NnkColors.papelAntigo,
+                style: const TextStyle(fontFamily: 'Alegreya', fontSize: 16, color: NnkColors.tintaCastanha),
                 value: _selectedAgenda?.id,
                 items: listaAgendas.map((agenda) {
                   return DropdownMenuItem(
@@ -191,10 +245,12 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
                       child: InputDecorator(
                         decoration: const InputDecoration(
                           labelText: 'Data',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.calendar_today),
+                          prefixIcon: Icon(Icons.calendar_today, color: NnkColors.ouroAntigo),
                         ),
-                        child: Text(DateFormat('dd/MM/yyyy').format(_dataSelecionada)),
+                        child: Text(
+                          DateFormat('dd/MM/yyyy').format(_dataSelecionada),
+                          style: const TextStyle(fontFamily: 'Alegreya', fontSize: 16, color: NnkColors.tintaCastanha),
+                        ),
                       ),
                     ),
                   ),
@@ -205,10 +261,12 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
                       child: InputDecorator(
                         decoration: const InputDecoration(
                           labelText: 'Início',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.access_time),
+                          prefixIcon: Icon(Icons.access_time, color: NnkColors.ouroAntigo),
                         ),
-                        child: Text(_horaInicio.format(context)),
+                        child: Text(
+                          _horaInicio.format(context),
+                          style: const TextStyle(fontFamily: 'Alegreya', fontSize: 16, color: NnkColors.tintaCastanha),
+                        ),
                       ),
                     ),
                   ),
@@ -216,11 +274,10 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
               ),
               const SizedBox(height: 16),
 
-              // --- ALTERAÇÃO 3: Seletor Intuitivo de Horas (+/-) ---
+              // --- Seletor Intuitivo de Horas (+/-) Temático ---
               InputDecorator(
                 decoration: const InputDecoration(
                   labelText: 'Duração (horas inteiras)',
-                  border: OutlineInputBorder(),
                   contentPadding: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
                 ),
                 child: Row(
@@ -229,7 +286,7 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
                     // Botão Menos
                     IconButton(
                       icon: const Icon(Icons.remove_circle_outline, size: 28),
-                      color: Colors.red[400],
+                      color: NnkColors.vermelhoLacre,
                       onPressed: _horasSelecionadas > 1 ? _decrementarHoras : null,
                       tooltip: 'Diminuir horas',
                     ),
@@ -240,14 +297,15 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
                       style: const TextStyle(
                         fontSize: 22, 
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87
+                        fontFamily: 'Cinzel',
+                        color: NnkColors.tintaCastanha
                       ),
                     ),
                     
                     // Botão Mais
                     IconButton(
                       icon: const Icon(Icons.add_circle_outline, size: 28),
-                      color: Theme.of(context).primaryColor,
+                      color: NnkColors.verdeErva,
                       onPressed: _incrementarHoras,
                       tooltip: 'Aumentar horas',
                     ),
@@ -258,10 +316,11 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
 
               TextFormField(
                 controller: _descricaoController,
+                style: const TextStyle(fontFamily: 'Alegreya', fontSize: 16, color: NnkColors.tintaCastanha),
                 decoration: const InputDecoration(
                   labelText: 'Motivo do Bloqueio',
                   hintText: 'Ex: Feriado Municipal, Ausência',
-                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.edit_note, color: NnkColors.ouroAntigo),
                 ),
                 validator: (value) =>
                     (value == null || value.isEmpty) ? 'Informe o motivo' : null,
@@ -272,14 +331,23 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
                 onPressed: _isLoading ? null : _salvarBloqueio,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Theme.of(context).primaryColor,
+                  backgroundColor: NnkColors.tintaCastanha,
+                  foregroundColor: NnkColors.ouroAntigo,
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: NnkColors.ouroAntigo, width: 1.5),
+                  ),
+                  textStyle: const TextStyle(
+                    fontFamily: 'Cinzel', 
+                    fontSize: 18, 
+                    fontWeight: FontWeight.bold, 
+                    letterSpacing: 1.2
+                  ),
                 ),
                 child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        'Criar Bloqueio',
-                        style: TextStyle(color: Colors.white, fontSize: 16),
-                      ),
+                    ? const SizedBox(width: 24, height: 28, child: CircularProgressIndicator(color: NnkColors.ouroAntigo, strokeWidth: 3))
+                    : const Text('Criar Bloqueio'),
               ),
             ],
           ),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/agenda_model.dart';
 import '../../models/periodo_model.dart';
 import '../../providers/agenda_provider.dart';
+import '../../theme/app_theme.dart'; // Importa NnkColors
 
 class TimeRange {
   String? id;
@@ -102,7 +103,7 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao carregar: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Erro ao carregar: $e'), backgroundColor: NnkColors.vermelhoLacre),
         );
         setState(() => _isLoadingPeriods = false);
       }
@@ -159,14 +160,14 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
 
     if (!diasSelecionados.values.any((s) => s)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecione pelo menos um dia.'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Selecione pelo menos um dia.'), backgroundColor: NnkColors.vermelhoLacre),
       );
       return;
     }
 
     if (!_validateTodosOsHorarios()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Corrija os erros nos horários.'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Corrija os erros nos horários.'), backgroundColor: NnkColors.vermelhoLacre),
       );
       return;
     }
@@ -234,14 +235,14 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Salvo com sucesso!'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Grimório atualizado!'), backgroundColor: NnkColors.verdeErva),
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao salvar: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Erro mágico: $e'), backgroundColor: NnkColors.vermelhoLacre),
         );
       }
     } finally {
@@ -290,7 +291,49 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
     final periodosDoDia = periodosPorDia[dia]!;
     final initialTime = isInicio ? periodosDoDia[index].inicio : periodosDoDia[index].fim;
 
-    final TimeOfDay? horaSelecionada = await showTimePicker(context: context, initialTime: initialTime);
+    final TimeOfDay? horaSelecionada = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: NnkColors.papelAntigo,
+              hourMinuteShape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+                side: BorderSide(color: NnkColors.ouroAntigo, width: 2),
+              ),
+              hourMinuteColor: MaterialStateColor.resolveWith((states) =>
+                  states.contains(MaterialState.selected) 
+                      ? NnkColors.tintaCastanha 
+                      : NnkColors.ouroClaro.withOpacity(0.3)),
+              hourMinuteTextColor: MaterialStateColor.resolveWith((states) =>
+                  states.contains(MaterialState.selected) 
+                      ? NnkColors.ouroAntigo 
+                      : NnkColors.tintaCastanha),
+              dayPeriodBorderSide: const BorderSide(color: NnkColors.ouroAntigo),
+              dayPeriodColor: MaterialStateColor.resolveWith((states) =>
+                  states.contains(MaterialState.selected) ? NnkColors.tintaCastanha : Colors.transparent),
+              dayPeriodTextColor: MaterialStateColor.resolveWith((states) =>
+                  states.contains(MaterialState.selected) ? NnkColors.papelAntigo : NnkColors.tintaCastanha),
+              dialBackgroundColor: NnkColors.ouroClaro.withOpacity(0.5),
+              dialHandColor: NnkColors.tintaCastanha,
+              dialTextColor: MaterialStateColor.resolveWith((states) =>
+                  states.contains(MaterialState.selected) ? NnkColors.ouroAntigo : NnkColors.tintaCastanha),
+              entryModeIconColor: NnkColors.ouroAntigo,
+              helpTextStyle: const TextStyle(fontFamily: 'Cinzel', color: NnkColors.tintaCastanha, fontWeight: FontWeight.bold),
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: NnkColors.tintaCastanha,
+                textStyle: const TextStyle(fontFamily: 'Cinzel', fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
 
     if (horaSelecionada != null) {
       setState(() {
@@ -307,35 +350,81 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Editar: ${widget.agenda.nome}')),
+      backgroundColor: NnkColors.papelAntigo,
+      appBar: AppBar(
+        title: Text(
+          'Editar: ${widget.agenda.nome}',
+          style: const TextStyle(
+            fontFamily: 'Cinzel',
+            fontWeight: FontWeight.bold,
+            color: NnkColors.tintaCastanha
+          ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(
+            color: NnkColors.ouroAntigo.withOpacity(0.5),
+            height: 1.0,
+          ),
+        ),
+      ),
       body: _isLoadingPeriods
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: NnkColors.ouroAntigo))
           : Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: Form(
                 key: _formKey,
                 child: ListView(
                   children: [
+                    // --- NOME E DESCRIÇÃO ---
                     TextFormField(
                       controller: _profissionalController,
-                      decoration: const InputDecoration(labelText: 'Nome', border: OutlineInputBorder()),
+                      style: const TextStyle(fontFamily: 'Alegreya', fontSize: 18),
+                      decoration: const InputDecoration(labelText: 'Nome do Profissional'),
                       validator: (v) => v!.isEmpty ? 'Informe o nome' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _describeController,
-                      decoration: const InputDecoration(labelText: 'Descrição', border: OutlineInputBorder()),
+                      style: const TextStyle(fontFamily: 'Alegreya', fontSize: 18),
+                      decoration: const InputDecoration(labelText: 'Descrição da Agenda'),
                       validator: (v) => v!.isEmpty ? 'Informe a descrição' : null,
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
 
-                    const Text('Dias de Atendimento', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    // --- DIAS DE ATENDIMENTO ---
+                    const Text(
+                      'Dias de Atendimento',
+                      style: TextStyle(
+                        fontSize: 20, 
+                        fontWeight: FontWeight.bold, 
+                        fontFamily: 'Cinzel',
+                        color: NnkColors.tintaCastanha
+                      )
+                    ),
+                    const SizedBox(height: 10),
+                    
                     Wrap(
                       spacing: 8,
+                      runSpacing: 8,
                       children: diasSemana.map((dia) {
+                        final isSelected = diasSelecionados[dia]!;
                         return ChoiceChip(
-                          label: Text(dia),
-                          selected: diasSelecionados[dia]!,
+                          label: Text(
+                            dia,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : NnkColors.tintaCastanha,
+                              fontFamily: 'Alegreya',
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          selected: isSelected,
+                          selectedColor: NnkColors.ouroAntigo,
+                          backgroundColor: NnkColors.papelAntigo,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: const BorderSide(color: NnkColors.ouroAntigo),
+                          ),
                           onSelected: (selecionado) {
                             setState(() {
                               diasSelecionados[dia] = selecionado;
@@ -353,71 +442,107 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
                       }).toList(),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
 
+                    // --- PERIODOS ---
                     Column(
                       children: diasSelecionados.entries.where((e) => e.value).map((entry) {
                             final dia = entry.key;
                             final periodos = periodosPorDia[dia] ?? [];
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
+                            
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: NnkColors.ouroClaro.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: NnkColors.ouroAntigo.withOpacity(0.3)),
+                              ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  // --- CABEÇALHO DO DIA ---
                                   Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
-                                      SizedBox(
-                                        width: 40,
-                                        child: Text(dia, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Wrap(
-                                          spacing: 6,
-                                          runSpacing: 8,
-                                          crossAxisAlignment: WrapCrossAlignment.center,
-                                          children: [
-                                            ...periodos.asMap().entries.map((pEntry) {
-                                              int idx = pEntry.key;
-                                              TimeRange rng = pEntry.value;
-                                              return Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  ActionChip(
-                                                    avatar: const Icon(Icons.access_time, size: 16),
-                                                    label: Text(rng.inicio.format(context)),
-                                                    onPressed: () => _selecionarHora(context, dia, idx, true),
-                                                  ),
-                                                  const Text(' - '),
-                                                  ActionChip(
-                                                    avatar: const Icon(Icons.access_time, size: 16),
-                                                    label: Text(rng.fim.format(context)),
-                                                    onPressed: () => _selecionarHora(context, dia, idx, false),
-                                                  ),
-                                                  IconButton(
-                                                    icon: const Icon(Icons.remove_circle, color: Colors.red, size: 20),
-                                                    onPressed: () => _removerPeriodo(dia, idx),
-                                                    padding: EdgeInsets.zero,
-                                                    constraints: const BoxConstraints(),
-                                                  ),
-                                                ],
-                                              );
-                                            }),
-                                            if (periodos.length < 4)
-                                              IconButton(
-                                                icon: const Icon(Icons.add_circle, color: Colors.green),
-                                                onPressed: () => _adicionarPeriodo(dia),
-                                              ),
-                                          ],
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: NnkColors.tintaCastanha,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          dia,
+                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: NnkColors.ouroAntigo, fontFamily: 'Cinzel'),
                                         ),
                                       ),
+                                      const SizedBox(width: 10),
+                                      
+                                      // Botão Adicionar Período (+)
+                                      if (periodos.length < 4)
+                                        IconButton(
+                                          icon: const Icon(Icons.add_circle, color: NnkColors.verdeErva),
+                                          onPressed: () => _adicionarPeriodo(dia),
+                                          tooltip: "Adicionar Períodos",
+                                        ),
                                     ],
                                   ),
+                                  const SizedBox(height: 8),
+                                  
+                                  // --- LISTA DE HORÁRIOS (WRAP) ---
+                                  Wrap(
+                                    spacing: 8.0, 
+                                    runSpacing: 8.0, 
+                                    children: periodos.asMap().entries.map((pEntry) {
+                                      int idx = pEntry.key;
+                                      TimeRange rng = pEntry.value;
+                                      
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: NnkColors.papelAntigo,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: NnkColors.ouroAntigo.withOpacity(0.5)),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            ActionChip(
+                                              avatar: const Icon(Icons.access_time, size: 14, color: NnkColors.tintaCastanha),
+                                              label: Text(rng.inicio.format(context), style: const TextStyle(fontFamily: 'Alegreya', fontWeight: FontWeight.bold)),
+                                              backgroundColor: NnkColors.papelAntigo,
+                                              side: BorderSide.none, 
+                                              onPressed: () => _selecionarHora(context, dia, idx, true),
+                                            ),
+                                            const Padding(
+                                              padding: EdgeInsets.symmetric(horizontal: 2.0),
+                                              child: Icon(Icons.arrow_right_alt, size: 16, color: NnkColors.tintaCastanha),
+                                            ),
+                                            ActionChip(
+                                              avatar: const Icon(Icons.access_time, size: 14, color: NnkColors.tintaCastanha),
+                                              label: Text(rng.fim.format(context), style: const TextStyle(fontFamily: 'Alegreya', fontWeight: FontWeight.bold)),
+                                              backgroundColor: NnkColors.papelAntigo,
+                                              side: BorderSide.none,
+                                              onPressed: () => _selecionarHora(context, dia, idx, false),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            InkWell(
+                                              onTap: () => _removerPeriodo(dia, idx),
+                                              child: const Icon(Icons.remove_circle_outline, color: NnkColors.vermelhoLacre, size: 20),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                  
                                   if (_errosDeHorario[dia] != null)
                                     Padding(
-                                      padding: const EdgeInsets.only(left: 50),
-                                      child: Text(_errosDeHorario[dia]!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: Text(
+                                        _errosDeHorario[dia]!, 
+                                        style: const TextStyle(color: NnkColors.vermelhoLacre, fontSize: 14, fontWeight: FontWeight.bold)
+                                      ),
                                     ),
                                 ],
                               ),
@@ -425,34 +550,66 @@ class _AgendaEditPageState extends State<AgendaEditPage> {
                           }).toList(),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
+                    
+                    // --- DURAÇÃO E AVISO ---
                     DropdownButtonFormField<String>(
                       value: duracaoConsulta,
-                      // Definindo onChanged como null desabilita o campo
-                      onChanged: null, 
+                      onChanged: null, // Desabilitado
                       decoration: InputDecoration(
-                        labelText: 'Duração Padrão (Não editável)',
-                        border: const OutlineInputBorder(),
+                        labelText: 'Duração Padrão (Imutável)',
                         filled: true,
-                        fillColor: Colors.grey.shade200, // Cor de fundo para indicar desabilitado
+                        fillColor: NnkColors.cinzaSuave.withOpacity(0.3), // Visual desabilitado
+                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: NnkColors.cinzaSuave.withOpacity(0.5))),
                       ),
                       items: opcoesDuracao
-                          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                          .map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(color: NnkColors.cinzaSuave))))
                           .toList(),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _avisoController,
-                      decoration: const InputDecoration(labelText: 'Aviso (opcional)', border: OutlineInputBorder()),
+                      style: const TextStyle(fontFamily: 'Alegreya', fontSize: 18),
+                      decoration: const InputDecoration(
+                        labelText: 'Aviso Agendamento (Opcional)', 
+                        prefixIcon: Icon(Icons.info_outline)
+                      ),
                     ),
-                    const SizedBox(height: 30),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-                      onPressed: _isSaving ? null : _handleSave,
-                      child: _isSaving
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text('Salvar Alterações'),
+                    
+                    const SizedBox(height: 40),
+                    
+                    // --- BOTÃO SALVAR (Estilizado) ---
+                    SizedBox(
+                      height: 55,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: NnkColors.tintaCastanha,
+                          foregroundColor: NnkColors.ouroAntigo,
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: const BorderSide(color: NnkColors.ouroAntigo, width: 1.5),
+                          ),
+                        ),
+                        onPressed: _isSaving ? null : _handleSave,
+                        child: _isSaving
+                            ? const SizedBox(
+                                height: 24, 
+                                width: 24, 
+                                child: CircularProgressIndicator(color: NnkColors.ouroAntigo)
+                              )
+                            : const Text(
+                                'SALVAR ALTERAÇÕES',
+                                style: TextStyle(
+                                  fontFamily: 'Cinzel', 
+                                  fontSize: 16, 
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2
+                                ),
+                              ),
+                      ),
                     ),
+                    const SizedBox(height: 18),
                   ],
                 ),
               ),

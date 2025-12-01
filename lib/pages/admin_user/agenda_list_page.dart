@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../models/agenda_model.dart';
-
 import '../../providers/agenda_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart'; // Import das fontes
 
 import 'agenda_create_page.dart';
 import 'agenda_edit_page.dart';
@@ -10,6 +10,7 @@ import 'home_page_admin.dart';
 import 'list_user_page.dart';
 
 import '../../widgets/menu_letral_admin.dart';
+import '../../theme/app_theme.dart'; // Importa NnkColors
 
 class AgendaListPage extends StatefulWidget {
   const AgendaListPage({super.key});
@@ -19,16 +20,8 @@ class AgendaListPage extends StatefulWidget {
 }
 
 class _AgendaListPageState extends State<AgendaListPage> {
-  final List<Color> _cardColors = [
-    Colors.pink.shade300,
-    Colors.purple.shade300,
-    Colors.orange.shade300,
-    Colors.teal.shade300,
-    Colors.blue.shade300,
-    Colors.red.shade300,
-    Colors.indigo.shade300,
-    Colors.green.shade300,
-  ];
+  // Mantemos as cores vivas como pedido
+  final List<Color> _cardColors = NnkColors.coresVivas;
 
   @override
   void initState() {
@@ -49,17 +42,40 @@ class _AgendaListPageState extends State<AgendaListPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Excluir Agenda'),
-        content: Text('Tem a certeza que deseja excluir a agenda "${agenda.nome}"?\nEsta ação não pode ser desfeita.'),
+        backgroundColor: NnkColors.papelAntigo, // Fundo temático
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: NnkColors.ouroAntigo, width: 2),
+        ),
+        title: Text(
+          'Excluir Agenda',
+          style: GoogleFonts.cinzel(
+            color: NnkColors.tintaCastanha, 
+            fontWeight: FontWeight.bold
+          ),
+        ),
+        content: Text(
+          'Tem a certeza que deseja excluir a agenda "${agenda.nome}"?\nEsta ação não pode ser desfeita.',
+          style: GoogleFonts.alegreya(
+            color: NnkColors.tintaCastanha, 
+            fontSize: 18
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar'),
+            child: Text(
+              'Cancelar', 
+              style: GoogleFonts.cinzel(color: NnkColors.tintaCastanha)
+            ),
           ),
           TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: NnkColors.vermelhoLacre),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Excluir'),
+            child: Text(
+              'Excluir', 
+              style: GoogleFonts.cinzel(fontWeight: FontWeight.bold)
+            ),
           ),
         ],
       ),
@@ -74,7 +90,7 @@ class _AgendaListPageState extends State<AgendaListPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Agenda excluída com sucesso!'),
-              backgroundColor: Colors.green,
+              backgroundColor: NnkColors.verdeErva,
             ),
           );
         }
@@ -83,7 +99,7 @@ class _AgendaListPageState extends State<AgendaListPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Erro ao excluir: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: NnkColors.vermelhoLacre,
             ),
           );
         }
@@ -94,6 +110,10 @@ class _AgendaListPageState extends State<AgendaListPage> {
   Future<void> _mostrarOpcoes(BuildContext context, Agenda agenda) async {
     await showModalBottomSheet(
       context: context,
+      backgroundColor: NnkColors.papelAntigo, // Fundo temático
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (BuildContext ctx) {
         return SafeArea(
           child: Column(
@@ -103,17 +123,21 @@ class _AgendaListPageState extends State<AgendaListPage> {
                 padding: const EdgeInsets.all(16.0),
                 child: Text(
                   agenda.nome,
-                  style: const TextStyle(
+                  style: GoogleFonts.cinzel(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
+                    color: NnkColors.tintaCastanha,
                   ),
                 ),
               ),
-              const Divider(height: 1),
+              Divider(height: 1, color: NnkColors.ouroAntigo.withOpacity(0.5)),
 
               ListTile(
-                leading: const Icon(Icons.calendar_month),
-                title: const Text('Ver Calendário'),
+                leading: const Icon(Icons.calendar_month, color: NnkColors.azulSuave),
+                title: Text(
+                  'Ver Calendário',
+                  style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: 18),
+                ),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   Navigator.of(context).push(
@@ -125,8 +149,11 @@ class _AgendaListPageState extends State<AgendaListPage> {
               ),
 
               ListTile(
-                leading: const Icon(Icons.edit),
-                title: const Text('Editar Agenda'),
+                leading: const Icon(Icons.edit, color: NnkColors.azulSuave),
+                title: Text(
+                  'Editar Agenda',
+                  style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: 18),
+                ),
                 onTap: () async {
                   Navigator.of(ctx).pop();
                   await Navigator.of(context).push(
@@ -140,7 +167,10 @@ class _AgendaListPageState extends State<AgendaListPage> {
 
               ListTile(
                 leading: const Icon(Icons.block, color: Colors.orange),
-                title: const Text('Editar Bloqueios'),
+                title: Text(
+                  'Editar Bloqueios',
+                  style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: 18),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   Navigator.of(context).pushNamed(
@@ -150,18 +180,17 @@ class _AgendaListPageState extends State<AgendaListPage> {
                 },
               ),
               
-              const Divider(),
+              Divider(color: NnkColors.ouroAntigo.withOpacity(0.3)),
 
-              // --- NOVA OPÇÃO DE EXCLUIR ---
+              // --- OPÇÃO DE EXCLUIR ---
               ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text(
+                leading: const Icon(Icons.delete, color: NnkColors.vermelhoLacre),
+                title: Text(
                   'Excluir Agenda',
-                  style: TextStyle(color: Colors.red),
+                  style: GoogleFonts.alegreya(color: NnkColors.vermelhoLacre, fontWeight: FontWeight.bold, fontSize: 18),
                 ),
                 onTap: () {
-                  Navigator.pop(ctx); // Fecha o menu primeiro
-                  // Chama a confirmação após fechar o menu
+                  Navigator.pop(ctx);
                   Future.delayed(const Duration(milliseconds: 200), () {
                      if (context.mounted) _confirmarExclusao(context, agenda);
                   });
@@ -169,8 +198,11 @@ class _AgendaListPageState extends State<AgendaListPage> {
               ),
 
               ListTile(
-                leading: const Icon(Icons.close),
-                title: const Text('Cancelar'),
+                leading: const Icon(Icons.close, color: NnkColors.vermelhoLacre),
+                title: Text(
+                  'Cancelar',
+                  style: GoogleFonts.alegreya(color: NnkColors.vermelhoLacre, fontSize: 18),
+                ),
                 onTap: () {
                   Navigator.of(ctx).pop();
                 },
@@ -185,11 +217,27 @@ class _AgendaListPageState extends State<AgendaListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: NnkColors.papelAntigo, // Fundo bege
       appBar: AppBar(
-        title: const Text('Todas Agendas'),
+        backgroundColor: NnkColors.papelAntigo,
+        iconTheme: const IconThemeData(color: NnkColors.tintaCastanha),
+        title: Text(
+          'Todas Agendas', 
+          style: GoogleFonts.cinzel(
+            color: NnkColors.tintaCastanha,
+            fontWeight: FontWeight.bold,
+          )
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(
+            color: NnkColors.ouroAntigo.withOpacity(0.5),
+            height: 1.0,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: NnkColors.tintaCastanha),
             onPressed: _fetchAgendas,
             tooltip: 'Recarregar Agendas',
           ),
@@ -201,7 +249,7 @@ class _AgendaListPageState extends State<AgendaListPage> {
       body: Consumer<AgendaProvider>(
         builder: (context, agendaProvider, child) {
           if (agendaProvider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: NnkColors.ouroAntigo));
           }
 
           if (agendaProvider.erro != null) {
@@ -211,18 +259,18 @@ class _AgendaListPageState extends State<AgendaListPage> {
                 child: Text(
                   'Ocorreu um erro ao buscar as agendas:\n${agendaProvider.erro}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
+                  style: GoogleFonts.alegreya(color: NnkColors.vermelhoLacre, fontSize: 16),
                 ),
               ),
             );
           }
 
           if (agendaProvider.agendas.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
                 'Nenhuma agenda encontrada.\nClique no botão + para criar uma nova.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16),
+                style: GoogleFonts.alegreya(fontSize: 18, color: NnkColors.tintaCastanha),
               ),
             );
           }
@@ -242,7 +290,7 @@ class _AgendaListPageState extends State<AgendaListPage> {
 
               return _AgendaCard(
                 agenda: agenda,
-                cor: cor,
+                cor: cor, // Mantém a cor original do card
                 onTap: () {
                   if (agenda.id != null) {
                     _mostrarOpcoes(context, agenda);
@@ -250,7 +298,7 @@ class _AgendaListPageState extends State<AgendaListPage> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Erro: Agenda sem ID.'),
-                        backgroundColor: Colors.red,
+                        backgroundColor: NnkColors.vermelhoLacre,
                       ),
                     );
                   }
@@ -267,8 +315,16 @@ class _AgendaListPageState extends State<AgendaListPage> {
           );
           _fetchAgendas();
         },
-        child: const Icon(Icons.add),
+        // --- ESTILO RPG DO BOTÃO ---
+        backgroundColor: NnkColors.tintaCastanha, // Fundo Escuro para contraste
+        foregroundColor: NnkColors.ouroAntigo, // Ícone Dourado
+        elevation: 6,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: NnkColors.ouroAntigo, width: 2),
+        ),
         tooltip: 'Criar Nova Agenda',
+        child: const Icon(Icons.add, size: 32),
       ),
     );
   }
@@ -288,12 +344,17 @@ class _AgendaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: cor,
+      color: cor, // Cor mantida
       elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      // Borda subtil para destacar no papel antigo
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.white.withOpacity(0.3), width: 1), 
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
+        splashColor: Colors.white.withOpacity(0.3),
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: Column(
@@ -301,16 +362,17 @@ class _AgendaCard extends StatelessWidget {
             children: [
               Icon(
                 Icons.calendar_today_outlined,
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withOpacity(0.9),
                 size: 24,
               ),
               const Spacer(),
               Text(
                 agenda.nome,
-                style: const TextStyle(
+                style: GoogleFonts.cinzel( // Fonte temática, mas branca para contraste no card
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
+                  shadows: [const Shadow(color: Colors.black26, offset: Offset(1,1), blurRadius: 2)]
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -318,9 +380,10 @@ class _AgendaCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 agenda.descricao,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
-                  fontSize: 12,
+                style: GoogleFonts.alegreya(
+                  color: Colors.white.withOpacity(0.95),
+                  fontSize: 14, // Ligeiramente maior para leitura
+                  fontWeight: FontWeight.w500
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

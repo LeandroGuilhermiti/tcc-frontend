@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:google_fonts/google_fonts.dart'; // Import Fonts
+import 'dart:convert';
+
+// Models e Providers
 import '../models/agendamento_model.dart';
 import '../models/bloqueio_model.dart';
 import '../models/user_model.dart';
 import '../providers/agendamento_provider.dart';
 import '../providers/user_provider.dart';
-import 'package:syncfusion_flutter_calendar/calendar.dart';
-import 'dart:convert';
+
+// Tema
+import '../theme/app_theme.dart';
 
 class DialogoAgendamentoService {
   
@@ -45,6 +51,20 @@ class DialogoAgendamentoService {
       }
     }
 
+    // Helper de estilo para inputs
+    InputDecoration _inputDeco(String label, IconData? icon) {
+      return InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.alegreya(color: NnkColors.tintaCastanha.withOpacity(0.7)),
+        prefixIcon: icon != null ? Icon(icon, color: NnkColors.ouroAntigo) : null,
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.5),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: NnkColors.ouroAntigo)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: NnkColors.ouroAntigo)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: NnkColors.tintaCastanha, width: 2)),
+      );
+    }
+
     showDialog(
       context: context,
       builder: (context) {
@@ -52,61 +72,94 @@ class DialogoAgendamentoService {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text(tituloFinal),
+              backgroundColor: NnkColors.papelAntigo,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: NnkColors.ouroAntigo, width: 2),
+              ),
+              title: Text(
+                tituloFinal,
+                style: GoogleFonts.cinzel(color: NnkColors.tintaCastanha, fontWeight: FontWeight.bold),
+              ),
               content: Form(
                 key: formKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Horário:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            TimeOfDay? novaHora;
-                            DateTime? novaData = dataHoraAgendamento;
-
-                            final TimeOfDay initialTime = TimeOfDay.fromDateTime(dataHoraAgendamento);
-
-                            if (context.mounted) {
-                              novaHora = await showTimePicker(
-                                context: context,
-                                initialTime: initialTime,
-                              );
-                            }
-
-                            if (novaHora != null) {
-                              int duracao = duracaoDaAgenda;
-                              if (duracao <= 0) duracao = 30;
-
-                              int novoMinutoCorrigido = (novaHora.minute / duracao).floor() * duracao;
-
-                              final horaCorrigida = TimeOfDay(
-                                hour: novaHora.hour,
-                                minute: novoMinutoCorrigido,
-                              );
-
-                              setDialogState(() {
-                                dataHoraAgendamento = DateTime(
-                                  novaData.year,
-                                  novaData.month,
-                                  novaData.day,
-                                  horaCorrigida.hour,
-                                  horaCorrigida.minute,
-                                );
-                              });
-                            }
-                          },
-                          child: Text(
-                            DateFormat('dd/MM/yyyy HH:mm').format(dataHoraAgendamento),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: NnkColors.ouroAntigo),
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.white.withOpacity(0.3),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Horário:',
+                            style: GoogleFonts.alegreya(fontWeight: FontWeight.bold, color: NnkColors.tintaCastanha, fontSize: 16),
                           ),
-                        ),
-                      ],
+                          TextButton.icon(
+                            icon: const Icon(Icons.access_time, color: NnkColors.ouroAntigo),
+                            onPressed: () async {
+                              TimeOfDay? novaHora;
+                              DateTime? novaData = dataHoraAgendamento;
+
+                              final TimeOfDay initialTime = TimeOfDay.fromDateTime(dataHoraAgendamento);
+
+                              if (context.mounted) {
+                                novaHora = await showTimePicker(
+                                  context: context,
+                                  initialTime: initialTime,
+                                  builder: (context, child) {
+                                    return Theme(
+                                      data: Theme.of(context).copyWith(
+                                        timePickerTheme: TimePickerThemeData(
+                                          backgroundColor: NnkColors.papelAntigo,
+                                          dialHandColor: NnkColors.tintaCastanha,
+                                          dialBackgroundColor: NnkColors.ouroClaro,
+                                          hourMinuteTextColor: NnkColors.tintaCastanha,
+                                          entryModeIconColor: NnkColors.ouroAntigo,
+                                        ),
+                                        textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: NnkColors.tintaCastanha)),
+                                      ),
+                                      child: child!,
+                                    );
+                                  },
+                                );
+                              }
+
+                              if (novaHora != null) {
+                                int duracao = duracaoDaAgenda;
+                                if (duracao <= 0) duracao = 30;
+
+                                int novoMinutoCorrigido = (novaHora.minute / duracao).floor() * duracao;
+
+                                final horaCorrigida = TimeOfDay(
+                                  hour: novaHora.hour,
+                                  minute: novoMinutoCorrigido,
+                                );
+
+                                setDialogState(() {
+                                  dataHoraAgendamento = DateTime(
+                                    novaData.year,
+                                    novaData.month,
+                                    novaData.day,
+                                    horaCorrigida.hour,
+                                    horaCorrigida.minute,
+                                  );
+                                });
+                              }
+                            },
+                            label: Text(
+                              DateFormat('dd/MM/yyyy HH:mm').format(dataHoraAgendamento),
+                              style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Autocomplete<UserModel>(
@@ -140,9 +193,11 @@ class DialogoAgendamentoService {
                         return TextFormField(
                           controller: internalController,
                           focusNode: fieldFocusNode,
-                          decoration: const InputDecoration(
-                            labelText: 'Nome do Paciente',
+                          style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: 16),
+                          decoration: _inputDeco('Nome do Paciente', null).copyWith(
                             hintText: 'Digite para procurar...',
+                            hintStyle: GoogleFonts.alegreya(color: NnkColors.cinzaSuave),
+                            prefixIcon: const Icon(Icons.person_search, color: NnkColors.ouroAntigo),
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -160,6 +215,8 @@ class DialogoAgendamentoService {
                           alignment: Alignment.topLeft,
                           child: Material(
                             elevation: 4.0,
+                            color: NnkColors.papelAntigo,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: const BorderSide(color: NnkColors.ouroAntigo)),
                             child: ConstrainedBox(
                               constraints: const BoxConstraints(maxHeight: 200),
                               child: ListView.builder(
@@ -172,7 +229,10 @@ class DialogoAgendamentoService {
                                       onSelected(option);
                                     },
                                     child: ListTile(
-                                      title: Text('${option.primeiroNome} ${option.sobrenome ?? ''}'),
+                                      title: Text(
+                                        '${option.primeiroNome} ${option.sobrenome ?? ''}',
+                                        style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha),
+                                      ),
                                     ),
                                   );
                                 },
@@ -186,11 +246,9 @@ class DialogoAgendamentoService {
                     const SizedBox(height: 16),
                     DropdownButtonFormField<int>(
                       value: duracaoSelecionada,
-                      decoration: const InputDecoration(
-                        labelText: 'Períodos (Duração)',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.layers_outlined),
-                      ),
+                      dropdownColor: NnkColors.papelAntigo,
+                      style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: 16),
+                      decoration: _inputDeco('Períodos (Duração)', Icons.layers_outlined),
                       items: [1, 2, 3, 4].map((int valor) {
                         return DropdownMenuItem<int>(
                           value: valor,
@@ -214,9 +272,17 @@ class DialogoAgendamentoService {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancelar'),
+                  child: Text('Cancelar', style: GoogleFonts.cinzel(color: NnkColors.vermelhoLacre, fontWeight: FontWeight.bold)),
                 ),
                 ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: NnkColors.tintaCastanha,
+                    foregroundColor: NnkColors.ouroAntigo,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: const BorderSide(color: NnkColors.ouroAntigo),
+                    ),
+                  ),
                   onPressed: isSaving
                       ? null
                       : () async {
@@ -246,16 +312,18 @@ class DialogoAgendamentoService {
                                     context: context,
                                     barrierDismissible: false,
                                     builder: (ctxAviso) => AlertDialog(
-                                      title: const Row(
+                                      backgroundColor: NnkColors.papelAntigo,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: NnkColors.ouroAntigo, width: 2)),
+                                      title: Row(
                                         children: [
-                                          Icon(Icons.info_outline, color: Colors.blue),
-                                          SizedBox(width: 8),
-                                          Text('Aviso da Agenda'),
+                                          const Icon(Icons.info_outline, color: NnkColors.azulSuave),
+                                          const SizedBox(width: 8),
+                                          Text('Aviso da Agenda', style: GoogleFonts.cinzel(color: NnkColors.tintaCastanha)),
                                         ],
                                       ),
                                       content: Text(
                                         avisoAgendamento,
-                                        style: const TextStyle(fontSize: 16),
+                                        style: GoogleFonts.alegreya(fontSize: 16, color: NnkColors.tintaCastanha),
                                       ),
                                       actions: [
                                         TextButton(
@@ -263,7 +331,7 @@ class DialogoAgendamentoService {
                                             Navigator.of(ctxAviso).pop(); 
                                             Navigator.of(context).pop();  
                                           },
-                                          child: const Text('Entendido'),
+                                          child: Text('Entendido', style: GoogleFonts.cinzel(color: NnkColors.verdeErva, fontWeight: FontWeight.bold)),
                                         ),
                                       ],
                                     ),
@@ -274,18 +342,17 @@ class DialogoAgendamentoService {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                         content: Text('Agendamento criado com sucesso!'),
-                                        backgroundColor: Colors.green,
+                                        backgroundColor: NnkColors.verdeErva,
                                       ),
                                     );
                                   } else {
                                      ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Atualizado com sucesso!')),
+                                      const SnackBar(content: Text('Atualizado com sucesso!'), backgroundColor: NnkColors.verdeErva),
                                     );
                                   }
                                 }
                               }
                             } catch (e) {
-                              // --- ALTERAÇÃO AQUI: Chama a função de tratamento de erro ---
                               _tratarErro(context, e);
                             } finally {
                               if (context.mounted && !(!isEditing && avisoAgendamento != null && avisoAgendamento.trim().isNotEmpty)) {
@@ -298,9 +365,9 @@ class DialogoAgendamentoService {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: NnkColors.ouroAntigo),
                         )
-                      : const Text('Salvar'),
+                      : Text('Salvar', style: GoogleFonts.cinzel(fontWeight: FontWeight.bold)),
                 ),
               ],
             );
@@ -310,7 +377,6 @@ class DialogoAgendamentoService {
     );
   }
 
-// --- FUNÇÃO REFATORADA (VERSÃO ROBUSTA) ---
   static void _tratarErro(BuildContext context, Object e) {
     if (!context.mounted) return;
 
@@ -318,31 +384,26 @@ class DialogoAgendamentoService {
 
     // 1. Verifica se é erro 400
     if (mensagemErro.contains("400")) {
-      
-      // 2. Tenta capturar o texto que está dentro de "message":"..."
-      // Esta Regex procura por: "message":" (qualquer coisa menos aspas) "
       final RegExp regex = RegExp(r'"message":"(.*?)"');
       final match = regex.firstMatch(mensagemErro);
 
       if (match != null) {
-        // Se encontrou, pega o grupo 1 (o texto da mensagem)
         mensagemErro = match.group(1) ?? "Horário indisponível.";
       } else {
-        // Fallback caso o padrão não seja encontrado
         mensagemErro = "O horário solicitado não está disponível (Erro 400).";
       }
       
     } else {
-      // Limpeza genérica para outros erros (remove "Exception:")
       mensagemErro = mensagemErro.replaceAll(RegExp(r'Exception:?\s*'), '');
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(mensagemErro),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating, // Flutua acima de outros elementos
+        content: Text(mensagemErro, style: GoogleFonts.alegreya(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: NnkColors.vermelhoLacre,
+        behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: const BorderSide(color: NnkColors.ouroAntigo)),
       ),
     );
   }
@@ -359,12 +420,14 @@ class DialogoAgendamentoService {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Detalhes do Bloqueio'),
-          content: Text(appointment.subject),
+          backgroundColor: NnkColors.papelAntigo,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: NnkColors.ouroAntigo, width: 2)),
+          title: Text('Detalhes do Bloqueio', style: GoogleFonts.cinzel(color: NnkColors.tintaCastanha, fontWeight: FontWeight.bold)),
+          content: Text(appointment.subject, style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: 18)),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Fechar'),
+              child: Text('Fechar', style: GoogleFonts.cinzel(color: NnkColors.tintaCastanha)),
             ),
           ],
         ),
@@ -378,18 +441,22 @@ class DialogoAgendamentoService {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Detalhes do Agendamento'),
+          backgroundColor: NnkColors.papelAntigo,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: NnkColors.ouroAntigo, width: 2)),
+          title: Text('Detalhes do Agendamento', style: GoogleFonts.cinzel(color: NnkColors.tintaCastanha, fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(appointment.subject),
+              Text(appointment.subject, style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Text(
                 'Horário: ${DateFormat('dd/MM/yyyy HH:mm').format(appointment.startTime)}',
+                style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: 18),
               ),
               Text(
                 'Duração: ${agendamento.duracao} período${agendamento.duracao > 1 ? 's' : ''}',
+                style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha, fontSize: 18),
               ),
             ],
           ),
@@ -403,11 +470,10 @@ class DialogoAgendamentoService {
                   ).removerAgendamento(agendamento);
                   if (context.mounted) Navigator.pop(context);
                 } catch (e) {
-                   // --- ALTERAÇÃO AQUI: Chama a função de tratamento de erro ---
                    if (context.mounted) _tratarErro(context, e);
                 }
               },
-              child: const Text('Excluir', style: TextStyle(color: Colors.red)),
+              child: Text('Excluir', style: GoogleFonts.cinzel(color: NnkColors.vermelhoLacre, fontWeight: FontWeight.bold)),
             ),
 
             TextButton(
@@ -423,12 +489,12 @@ class DialogoAgendamentoService {
                   avisoAgendamento: avisoAgendamento,
                 );
               },
-              child: const Text('Editar'),
+              child: Text('Editar', style: GoogleFonts.cinzel(color: NnkColors.azulSuave, fontWeight: FontWeight.bold)),
             ),
 
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Fechar'),
+              child: Text('Fechar', style: GoogleFonts.cinzel(color: NnkColors.tintaCastanha, fontWeight: FontWeight.bold)),
             ),
           ],
         );

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart'; // Import das fontes
 import 'package:tcc_frontend/providers/auth_controller.dart'; 
+import '../../theme/app_theme.dart'; // Importa NnkColors
 
 class AdminDrawer extends StatelessWidget {
   const AdminDrawer({super.key});
@@ -10,94 +12,99 @@ class AdminDrawer extends StatelessWidget {
     final auth = Provider.of<AuthController>(context, listen: false);
 
     return Drawer(
+      backgroundColor: NnkColors.papelAntigo,
       child: Column(
         children: [
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
+                // --- CABEÇALHO ADMIN ---
                 UserAccountsDrawerHeader(
-                  accountName: const Text(
+                  decoration: const BoxDecoration(
+                    color: NnkColors.tintaCastanha,
+                    border: Border(
+                      bottom: BorderSide(color: NnkColors.ouroAntigo, width: 2),
+                    ),
+                  ),
+                  accountName: Text(
                     "Administrador", 
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: GoogleFonts.cinzel(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: NnkColors.ouroClaro,
+                    ),
                   ),
                   accountEmail: Text(
-                    auth.usuario?.email ?? "admin@email.com",
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor, 
+                    auth.usuario?.email ?? "admin@sistema.com",
+                    style: GoogleFonts.alegreya(
+                      color: Colors.white70,
+                      fontSize: 16,
+                    ),
                   ),
                   currentAccountPicture: CircleAvatar(
-                    backgroundColor: Colors.white,
+                    backgroundColor: NnkColors.ouroAntigo,
                     child: Text(
                       (auth.usuario?.primeiroNome ?? 'A')[0].toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 24,
-                        color: Theme.of(context).primaryColor,
+                      style: GoogleFonts.cinzel(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: NnkColors.tintaCastanha,
                       ),
                     ),
                   ),
                 ),
 
-                ListTile(
-                  leading: const Icon(Icons.apps),
-                  title: const Text('Agendas'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushReplacementNamed(context, '/agendas');
-                  },
+                const SizedBox(height: 10),
+
+                _buildAdminTile(
+                  context, 
+                  icon: Icons.apps, 
+                  title: 'Agendas',
+                  route: '/agendas',
                 ),
 
-                ListTile(
-                  leading: const Icon(Icons.add_circle_outline),
-                  title: const Text('Criar nova agenda'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(context, '/create');
-                  },
+                _buildAdminTile(
+                  context, 
+                  icon: Icons.add_circle_outline, 
+                  title: 'Criar Nova Agenda',
+                  route: '/create',
                 ),
 
-                // --- NOVO ITEM: CRIAR BLOQUEIOS ---
-                ListTile(
-                  leading: const Icon(Icons.block),
-                  title: const Text('Criar bloqueios'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(context, '/bloqueios/create');
-                  },
+                _buildAdminTile(
+                  context, 
+                  icon: Icons.block, 
+                  title: 'Criar Bloqueios',
+                  route: '/bloqueios/create',
                 ),
-                // ----------------------------------
 
-                const Divider(),
+                Divider(color: NnkColors.ouroAntigo.withOpacity(0.5)),
 
-                ListTile(
-                  leading: const Icon(Icons.person_add_alt_1),
-                  title: const Text('Cadastrar usuários'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(context, '/cadastro');
-                  },
+                _buildAdminTile(
+                  context, 
+                  icon: Icons.person_add_alt_1, 
+                  title: 'Cadastrar Usuários',
+                  route: '/cadastro',
                 ),
-                ListTile(
-                  leading: const Icon(Icons.people_outline),
-                  title: const Text('Consultar pacientes'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(context, '/pacientes');
-                  },
+                _buildAdminTile(
+                  context, 
+                  icon: Icons.people_outline, 
+                  title: 'Consultar Pacientes',
+                  route: '/pacientes',
                 ),
               ],
             ),
           ),
 
-          const Divider(), 
+          Divider(color: NnkColors.ouroAntigo.withOpacity(0.5)), 
+          
           ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text(
-              'Sair', 
-              style: TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.bold
+            leading: const Icon(Icons.logout, color: NnkColors.vermelhoLacre),
+            title: Text(
+              'Encerrar Sessão', 
+              style: GoogleFonts.cinzel(
+                color: NnkColors.vermelhoLacre,
+                fontWeight: FontWeight.bold,
               )
             ),
             onTap: () {
@@ -109,6 +116,24 @@ class AdminDrawer extends StatelessWidget {
           const SizedBox(height: 16),
         ],
       ),
+    );
+  }
+
+  Widget _buildAdminTile(BuildContext context, {required IconData icon, required String title, required String route}) {
+    return ListTile(
+      leading: Icon(icon, color: NnkColors.azulSuave),
+      title: Text(
+        title,
+        style: GoogleFonts.alegreya(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: NnkColors.tintaCastanha,
+        ),
+      ),
+      onTap: () {
+        Navigator.pop(context);
+        Navigator.pushNamed(context, route); 
+      },
     );
   }
 }

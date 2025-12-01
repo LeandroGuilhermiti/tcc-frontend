@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart'; // Import das fontes
 import 'package:tcc_frontend/providers/user_provider.dart';
 import 'package:tcc_frontend/services/cep_service.dart';
 import 'package:tcc_frontend/models/endereco_model.dart';
+import '../../theme/app_theme.dart'; // Import do tema
 
 class RegisterPageAdmin extends StatefulWidget {
   const RegisterPageAdmin({super.key});
@@ -101,14 +103,14 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('CEP não encontrado.'),
-          backgroundColor: Colors.orange,
+          backgroundColor: NnkColors.vermelhoLacre, // Estilizado
         ));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Erro ao buscar CEP: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: NnkColors.vermelhoLacre, // Estilizado
         ));
       }
     } finally {
@@ -148,6 +150,7 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Nenhum CEP encontrado.'),
+          backgroundColor: NnkColors.ouroAntigo,
         ));
       }
     } catch (e) {
@@ -164,7 +167,15 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Selecione o CEP Correto'),
+          backgroundColor: NnkColors.papelAntigo,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: NnkColors.ouroAntigo, width: 2),
+          ),
+          title: Text(
+            'Selecione o CEP Correto',
+            style: GoogleFonts.cinzel(fontWeight: FontWeight.bold, color: NnkColors.tintaCastanha),
+          ),
           content: SizedBox(
             width: double.maxFinite,
             child: ListView.builder(
@@ -173,8 +184,9 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
               itemBuilder: (context, index) {
                 final endereco = resultados[index];
                 return ListTile(
-                  title: Text(endereco.cep),
+                  title: Text(endereco.cep, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text('${endereco.logradouro}, ${endereco.bairro}'),
+                  textColor: NnkColors.tintaCastanha,
                   onTap: () {
                     final unmaskedCep = endereco.cep.replaceAll(RegExp(r'[^0-9]'), '');
                     _cepController.value = _cepFormatter.formatEditUpdate(
@@ -193,7 +205,7 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
+              child: const Text('Cancelar', style: TextStyle(color: NnkColors.vermelhoLacre)),
             ),
           ],
         );
@@ -213,7 +225,7 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
       'cpf': _cpfFormatter.getUnmaskedText(),
       'cep': _cepFormatter.getUnmaskedText(),
       'telefone': _telefoneFormatter.getUnmaskedText(),
-      'tipo': _tipoSelecionado == 'admin' ? 1 : 0, // Ajuste para enviar Inteiro
+      'tipo': _tipoSelecionado == 'admin' ? 1 : 0, 
       
       'logradouro': _ruaController.text,
       'numero': _numeroController.text,
@@ -229,21 +241,21 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
       if (sucesso && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Usuário cadastrado com sucesso!'),
-          backgroundColor: Colors.green,
+          backgroundColor: NnkColors.verdeErva, // Estilizado
         ));
         Navigator.pop(context);
       } else if (mounted) {
         final erro = Provider.of<UsuarioProvider>(context, listen: false).error;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text("Falha ao cadastrar: $erro"),
-          backgroundColor: Colors.red,
+          backgroundColor: NnkColors.vermelhoLacre, // Estilizado
         ));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text("Erro inesperado: $e"),
-          backgroundColor: Colors.red,
+          backgroundColor: NnkColors.vermelhoLacre, // Estilizado
         ));
       }
     } finally {
@@ -251,10 +263,59 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
     }
   }
 
+  // --- Método Auxiliar para Estilo dos Campos ---
+  InputDecoration _buildInputDecoration(String label, IconData? icon, {Widget? suffix}) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.alegreya(color: NnkColors.tintaCastanha.withOpacity(0.7)),
+      prefixIcon: icon != null ? Icon(icon, color: NnkColors.ouroAntigo) : null,
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.5),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10.0),
+        borderSide: const BorderSide(color: NnkColors.ouroAntigo),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10.0),
+        borderSide: const BorderSide(color: NnkColors.ouroAntigo),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10.0),
+        borderSide: const BorderSide(color: NnkColors.tintaCastanha, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10.0),
+        borderSide: const BorderSide(color: NnkColors.vermelhoLacre),
+      ),
+    );
+  }
+
+  // --- Método Auxiliar para Estilo de Texto dentro dos Inputs ---
+  TextStyle _inputTextStyle() {
+    return GoogleFonts.alegreya(fontSize: 18, color: NnkColors.tintaCastanha);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Cadastrar Novo Usuário')),
+      backgroundColor: NnkColors.papelAntigo,
+      appBar: AppBar(
+        backgroundColor: NnkColors.papelAntigo,
+        iconTheme: const IconThemeData(color: NnkColors.tintaCastanha),
+        title: Text(
+          'Cadastrar Novo Usuário',
+          style: GoogleFonts.cinzel(
+            color: NnkColors.tintaCastanha,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(color: NnkColors.ouroAntigo.withOpacity(0.5), height: 1.0),
+        ),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -262,25 +323,34 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
           children: [
             // --- Card de Informações Pessoais ---
             Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              color: Colors.white,
+              elevation: 3,
+              shadowColor: NnkColors.tintaCastanha.withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: NnkColors.ouroAntigo.withOpacity(0.4)),
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Informações Pessoais", style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      "Informações Pessoais", 
+                      style: GoogleFonts.cinzel(
+                        fontSize: 20, 
+                        fontWeight: FontWeight.bold,
+                        color: NnkColors.tintaCastanha
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     Row(
                       children: [
                         Expanded(
                           child: TextFormField(
                             controller: _givenNameController,
-                            decoration: const InputDecoration(
-                              labelText: 'Nome',
-                              prefixIcon: Icon(Icons.person_outline),
-                              border: OutlineInputBorder(),
-                            ),
+                            style: _inputTextStyle(),
+                            decoration: _buildInputDecoration('Nome', Icons.person_outline),
                             validator: (value) => value == null || value.trim().isEmpty ? 'Obrigatório' : null,
                           ),
                         ),
@@ -288,10 +358,8 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
                         Expanded(
                           child: TextFormField(
                             controller: _familyNameController,
-                            decoration: const InputDecoration(
-                              labelText: 'Sobrenome',
-                              border: OutlineInputBorder(),
-                            ),
+                            style: _inputTextStyle(),
+                            decoration: _buildInputDecoration('Sobrenome', null),
                             validator: (value) => value == null || value.trim().isEmpty ? 'Obrigatório' : null,
                           ),
                         ),
@@ -300,11 +368,8 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _cpfController,
-                      decoration: const InputDecoration(
-                        labelText: 'CPF',
-                        prefixIcon: Icon(Icons.badge_outlined),
-                        border: OutlineInputBorder(),
-                      ),
+                      style: _inputTextStyle(),
+                      decoration: _buildInputDecoration('CPF', Icons.badge_outlined),
                       keyboardType: TextInputType.number,
                       inputFormatters: [_cpfFormatter],
                       validator: (value) => value == null || value.length < 14 ? 'CPF inválido' : null,
@@ -317,33 +382,39 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
 
             // --- Card de Contato e Endereço ---
             Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              color: Colors.white,
+              elevation: 3,
+              shadowColor: NnkColors.tintaCastanha.withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: NnkColors.ouroAntigo.withOpacity(0.4)),
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Contato e Endereço", style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      "Contato e Endereço", 
+                      style: GoogleFonts.cinzel(
+                        fontSize: 20, 
+                        fontWeight: FontWeight.bold,
+                        color: NnkColors.tintaCastanha
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     TextFormField(
                       controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(),
-                      ),
+                      style: _inputTextStyle(),
+                      decoration: _buildInputDecoration('Email', Icons.email_outlined),
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) => value == null || !value.contains('@') ? 'Email inválido' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _telefoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Telefone',
-                        prefixIcon: Icon(Icons.phone_outlined),
-                        border: OutlineInputBorder(),
-                      ),
+                      style: _inputTextStyle(),
+                      decoration: _buildInputDecoration('Telefone', Icons.phone_outlined),
                       keyboardType: TextInputType.phone,
                       inputFormatters: [_telefoneFormatter],
                       validator: (value) => value == null || value.length < 15 ? 'Telefone inválido' : null,
@@ -353,6 +424,7 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
                     // --- ENDEREÇO ---
                     TextFormField(
                       controller: _cepController,
+                      style: _inputTextStyle(),
                       keyboardType: TextInputType.number,
                       inputFormatters: [_cepFormatter],
                       validator: (value) {
@@ -367,33 +439,28 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
                           _limparCamposEndereco();
                         }
                       },
-                      decoration: InputDecoration(
-                        labelText: 'CEP',
-                        hintText: '00000-000',
-                        prefixIcon: const Icon(Icons.location_on_outlined),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: _isSearchingCep
+                      decoration: _buildInputDecoration(
+                        'CEP', 
+                        Icons.location_on_outlined,
+                        suffix: _isSearchingCep
                             ? const Padding(
                                 padding: EdgeInsets.all(12.0),
-                                child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2.0)),
+                                child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2.0, color: NnkColors.ouroAntigo)),
                               )
                             : Tooltip(
                                 message: 'Buscar CEP pelo endereço',
                                 child: IconButton(
-                                  icon: const Icon(Icons.search),
+                                  icon: const Icon(Icons.search, color: NnkColors.tintaCastanha),
                                   onPressed: _buscarCepPorEndereco,
                                 ),
                               ),
-                      ),
+                      ).copyWith(hintText: '00000-000', hintStyle: GoogleFonts.alegreya(color: NnkColors.cinzaSuave)),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _ruaController,
-                      decoration: const InputDecoration(
-                        labelText: 'Rua / Logradouro',
-                        prefixIcon: Icon(Icons.signpost_outlined),
-                        border: OutlineInputBorder(),
-                      ),
+                      style: _inputTextStyle(),
+                      decoration: _buildInputDecoration('Rua / Logradouro', Icons.signpost_outlined),
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -402,7 +469,8 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
                           flex: 3,
                           child: TextFormField(
                             controller: _bairroController,
-                            decoration: const InputDecoration(labelText: 'Bairro', border: OutlineInputBorder()),
+                            style: _inputTextStyle(),
+                            decoration: _buildInputDecoration('Bairro', null),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -410,7 +478,8 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
                           flex: 2,
                           child: TextFormField(
                             controller: _numeroController,
-                            decoration: const InputDecoration(labelText: 'Nº', border: OutlineInputBorder()),
+                            style: _inputTextStyle(),
+                            decoration: _buildInputDecoration('Nº', null),
                             keyboardType: TextInputType.number,
                           ),
                         ),
@@ -423,21 +492,26 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
                           flex: 3,
                           child: TextFormField(
                             controller: _cidadeController,
-                            decoration: const InputDecoration(labelText: 'Cidade', border: OutlineInputBorder()),
+                            style: _inputTextStyle(),
+                            decoration: _buildInputDecoration('Cidade', null),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
-                          flex: 1,
+                          flex: 2,
                           child: DropdownButtonFormField<String>(
-                            // --- PROTEÇÃO CONTRA ERRO DE VALOR INVÁLIDO ---
-                            // Se _ufSelecionada não estiver na lista (null ou valor sujo), usa null
                             value: (listaUFs.containsKey(_ufSelecionada)) ? _ufSelecionada : null,
-                            
                             isExpanded: true,
-                            decoration: const InputDecoration(labelText: 'UF', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12.0)),
+                            style: _inputTextStyle(),
+                            dropdownColor: NnkColors.papelAntigo,
+                            decoration: _buildInputDecoration('UF', null).copyWith(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+                            ),
                             items: listaUFs.keys.map((String sigla) {
-                              return DropdownMenuItem<String>(value: sigla, child: Text(sigla));
+                              return DropdownMenuItem<String>(
+                                value: sigla, 
+                                child: Text(sigla, style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha))
+                              );
                             }).toList(),
                             onChanged: (String? novoValor) => setState(() => _ufSelecionada = novoValor),
                             validator: (value) => value == null ? 'UF?' : null,
@@ -453,28 +527,38 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
 
             // --- Card Configurações ---
             Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              color: Colors.white,
+              elevation: 3,
+              shadowColor: NnkColors.tintaCastanha.withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: NnkColors.ouroAntigo.withOpacity(0.4)),
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Configurações do Sistema", style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      "Configurações do Sistema", 
+                      style: GoogleFonts.cinzel(
+                        fontSize: 20, 
+                        fontWeight: FontWeight.bold,
+                        color: NnkColors.tintaCastanha
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                        labelText: 'Tipo de Usuário',
-                        prefixIcon: Icon(Icons.security_outlined),
-                        border: OutlineInputBorder(),
-                      ),
-                      
-                      // --- PROTEÇÃO CONTRA ERRO DE VALOR INVÁLIDO ---
+                      style: _inputTextStyle(),
+                      dropdownColor: NnkColors.papelAntigo,
+                      decoration: _buildInputDecoration('Tipo de Usuário', Icons.security_outlined),
                       value: (['cliente', 'admin'].contains(_tipoSelecionado)) ? _tipoSelecionado : null,
-                      
                       items: ['cliente', 'admin'].map((tipo) => DropdownMenuItem(
                         value: tipo,
-                        child: Text(tipo[0].toUpperCase() + tipo.substring(1)),
+                        child: Text(
+                          tipo[0].toUpperCase() + tipo.substring(1),
+                          style: GoogleFonts.alegreya(color: NnkColors.tintaCastanha)
+                        ),
                       )).toList(),
                       onChanged: (value) => setState(() => _tipoSelecionado = value),
                       validator: (value) => value == null ? 'Selecione o tipo' : null,
@@ -484,23 +568,40 @@ class _RegisterPageAdminState extends State<RegisterPageAdmin> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 30),
 
-            // Botão Salvar
+            // Botão Salvar Estilizado
             SizedBox(
               width: double.infinity,
+              height: 55,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  backgroundColor: NnkColors.tintaCastanha,
+                  foregroundColor: NnkColors.ouroAntigo,
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: NnkColors.ouroAntigo, width: 1.5),
+                  ),
                 ),
                 onPressed: _isSaving ? null : _salvarUsuario,
                 child: _isSaving
-                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                    : const Text('Salvar Usuário'),
+                    ? const SizedBox(
+                        height: 24, 
+                        width: 24, 
+                        child: CircularProgressIndicator(color: NnkColors.ouroAntigo, strokeWidth: 3)
+                      )
+                    : Text(
+                        'SALVAR USUÁRIO',
+                        style: GoogleFonts.cinzel(
+                          fontSize: 18, 
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2
+                        ),
+                      ),
               ),
             ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
