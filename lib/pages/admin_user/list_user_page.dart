@@ -269,29 +269,6 @@ class _PacientesListPageState extends State<PacientesListPage> {
           ),
           const SizedBox(height: 20),
 
-          // Botão de Editar
-          ElevatedButton.icon(
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            label: const Text('Editar Dados'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blueGrey, // Cor temática
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-            ),
-            onPressed: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => PacienteEditPage(paciente: paciente),
-                ),
-              );
-
-              if (context.mounted) {
-                Provider.of<UsuarioProvider>(context, listen: false).buscarUsuarios();
-              }
-            },
-          ),
           // Botão de Editar Estilizado
           SizedBox(
             height: 45,
