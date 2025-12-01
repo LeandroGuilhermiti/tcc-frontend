@@ -96,8 +96,7 @@ class _BloqueioCreatePageState extends State<BloqueioCreatePage> {
         _horaInicio.minute,
       );
 
-      // --- ALTERAÇÃO 2: Cálculo simples (Horas Inteiras * 60) ---
-      final int duracaoEmMinutos = _horasSelecionadas * 60;
+      final int duracaoEmMinutos = _horasSelecionadas ;
 
       final novoBloqueio = Bloqueio(
         id: null,
