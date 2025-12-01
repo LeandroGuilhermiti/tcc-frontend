@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import '../../models/agenda_model.dart';
 import '../../widgets/menu_letral_admin.dart';
 import '../../widgets/agenda_home_compartilhada.dart'; 
-import '../../services/dialogo_agendamento_service.dart';
-import '../../theme/app_theme.dart'; // Importa NnkColors
+import '../../services/dialogo_agendamento_service.dart'; // Mantido para criação (onSlotTap)
+import '../../services/dialogo_agendamento_admin.dart'; // <--- NOVO IMPORT
+import '../../theme/app_theme.dart';
 
 class HomePageAdmin extends StatelessWidget {
   final Agenda agenda;
@@ -16,7 +17,6 @@ class HomePageAdmin extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
       appBar: AppBar(
         title: Text(
           agenda.nome.toUpperCase(), 
@@ -26,7 +26,6 @@ class HomePageAdmin extends StatelessWidget {
             letterSpacing: 1.0,
           ),
         ),
-        
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1.0),
           child: Container(
@@ -42,15 +41,17 @@ class HomePageAdmin extends StatelessWidget {
       body: SharedAgendaCalendar(
         agenda: agenda,
 
+        // --- ALTERAÇÃO AQUI: Usa o novo diálogo de Admin ---
         onAppointmentTap: (appointment, ctx) {
-          DialogoAgendamentoService.mostrarDialogoEdicaoAgendamento(
+          DialogoAgendamentoAdmin.mostrarDialogoAdmin(
             context: ctx,
             appointment: appointment,
             duracaoDaAgenda: agenda.duracao,
-            avisoAgendamento: agenda.avisoAgendamento,
           );
         },
 
+        // A criação de novos horários (onSlotTap) mantém-se igual,
+        // usando o serviço base, pois a criação é igual para todos.
         onSlotTap: (date, ctx) {
           if (date.hour == 0 && date.minute == 0) {
             DialogoAgendamentoService.mostrarDialogoApenasHora(

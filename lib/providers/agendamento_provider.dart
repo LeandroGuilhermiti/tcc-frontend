@@ -19,7 +19,6 @@ class AgendamentoProvider extends ChangeNotifier {
   String? get error => _error;
 
   void updateAuth(AuthController newAuth) {
-    // Se o usuário mudou, limpa os agendamentos antigos
     if (_auth?.usuario?.id != newAuth.usuario?.id) {
       _agendamentos = [];
       _error = null;
@@ -28,11 +27,10 @@ class AgendamentoProvider extends ChangeNotifier {
     _auth = newAuth;
   }
 
-  // --- MÉTODO ATUALIZADO PARA ACEITAR FILTROS ---
   Future<void> carregarAgendamentos({
     required String idAgenda,
-    String? idUsuario, // Parâmetro opcional para filtrar por usuário
-    DateTime? dataHora, // Parâmetro opcional para filtrar por data/hora
+    String? idUsuario, 
+    DateTime? dataHora,
   }) async {
     final token = _auth?.usuario?.idToken;
     if (token == null || token.isEmpty) {
@@ -46,7 +44,6 @@ class AgendamentoProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Passa todos os filtros para o serviço.
       _agendamentos = await _service.getAgendamentos(
         idAgenda: idAgenda,
         idUsuario: idUsuario,
@@ -62,60 +59,47 @@ class AgendamentoProvider extends ChangeNotifier {
     }
   }
 
-  // --- ALTERAÇÃO AQUI ---
   Future<void> adicionarAgendamento(Agendamento agendamento) async {
     final token = _auth?.usuario?.idToken;
     if (token == null) throw Exception("Autenticação necessária.");
 
     try {
-      // 1. Chama o serviço para criar o agendamento no banco
       await _service.criarAgendamento(agendamento, token);
-      
-      // 2. Em vez de adicionar localmente, recarrega a lista inteira
-      //    chamando a função 'carregarAgendamentos'.
-      //    Isto garante que a UI será "recarregada" com os dados do servidor.
       await carregarAgendamentos(idAgenda: agendamento.idAgenda);
-      
-      // 'carregarAgendamentos' já chama notifyListeners(), 
-      // então não precisamos de outro aqui.
-
     } catch (e) {
-      rethrow; // O 'dialogo_agendamento_service' irá tratar de mostrar o erro
+      rethrow; 
     }
   }
 
-  Future<void> atualizarAgendamento(Agendamento agendamento) async {
+  // --- NOVO MÉTODO: SUBSTITUIÇÃO (Excluir Antigo -> Criar Novo) ---
+  Future<void> editarViaSubstituicao(Agendamento antigo, Agendamento novo) async {
     final token = _auth?.usuario?.idToken;
     if (token == null) throw Exception("Autenticação necessária.");
 
     try {
-      await _service.atualizarAgendamento(agendamento, token);
+      // 1. Remove o agendamento antigo (o backend usa dataHora antiga para encontrar)
+      await _service.deletarAgendamento(antigo, token);
 
-      // --- ALTERAÇÃO AQUI TAMBÉM (para consistência) ---
-      // Recarrega a lista inteira após atualizar.
-      await carregarAgendamentos(idAgenda: agendamento.idAgenda);
+      // 2. Cria o novo agendamento com os dados atualizados (nova dataHora)
+      await _service.criarAgendamento(novo, token);
+
+      // 3. Atualiza a lista na tela
+      await carregarAgendamentos(idAgenda: novo.idAgenda);
 
     } catch (e) {
       rethrow;
     }
   }
 
-  // --- ALTERAÇÃO AQUI ---
   Future<void> removerAgendamento(Agendamento agendamento) async {
     final token = _auth?.usuario?.idToken;
     if (token == null) throw Exception("Autenticação necessária.");
 
     try {
-      // 1. Chama o serviço para apagar do banco de dados
       await _service.deletarAgendamento(agendamento, token);
-
-      // 2. Em vez de remover localmente, recarrega a lista inteira
-      //    Isto corrige o bug de "desaparecer" e garante a atualização.
       await carregarAgendamentos(idAgenda: agendamento.idAgenda);
-
     } catch (e) {
       rethrow;
     }
   }
 }
-
